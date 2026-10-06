@@ -1,0 +1,3090 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ABAP Copilot Prompt Builder</title>
+  <meta name="description" content="Turn SAP business requirements into structured GitHub Copilot development specifications. Runs entirely in your browser.">
+  <meta name="color-scheme" content="light">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232e3235'/%3E%3Cpath d='M12 6q-7 10 0 20M20 6q7 10 0 20' fill='none' stroke='%2384bd00' stroke-width='3.5' stroke-linecap='round'/%3E%3C/svg%3E">
+  <style>
+/* Theme: MoroHub — charcoal chrome, lime-green accent, white content, rounded 6px controls, Open Sans. */
+:root {
+  --charcoal: #2e3235;
+  --charcoal-2: #24282b;
+  --ink: #23272a;
+  --muted: #5b6267;
+  --green: #84bd00;
+  --green-hover: #93cf0a;
+  --green-text: #4f7500;
+  --green-tint: #f2f8e4;
+  --surface: #ffffff;
+  --surface-2: #f1f1f1;
+  --line: #d7dadc;
+  --line-strong: #b9bec1;
+  --amber: #9a5b00;
+  --amber-tint: #fff5e1;
+  --danger: #b3261e;
+  --radius: 6px;
+  --radius-lg: 10px;
+  --font: 'Open Sans', 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-padding-top: 90px; }
+body { margin: 0; font-family: var(--font); font-size: 15px; line-height: 1.55; color: var(--ink); background: var(--surface); }
+h1, h2, h3 { line-height: 1.25; margin: 0; }
+h3 { font-size: 1.05rem; margin: 1.6rem 0 .6rem; }
+p { margin: 0 0 .75rem; }
+code { font-family: var(--mono); font-size: .88em; background: var(--surface-2); padding: .1em .35em; border-radius: 4px; }
+[hidden] { display: none !important; }
+.container { width: 100%; max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+.muted { color: var(--muted); }
+.small { font-size: .85rem; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.skip-link { position: absolute; left: -999px; top: 8px; background: var(--green); color: #111; padding: 8px 14px; border-radius: var(--radius); z-index: 100; }
+.skip-link:focus { left: 8px; }
+
+:focus-visible { outline: 2px solid var(--charcoal); outline-offset: 2px; box-shadow: 0 0 0 5px rgba(132, 189, 0, .6); }
+.site-header :focus-visible, .site-footer :focus-visible { outline-color: #fff; }
+
+/* ---------- header (MoroHub dark bar) ---------- */
+.site-header { background: var(--charcoal); color: #fff; position: sticky; top: 0; z-index: 40; border-top: 9px solid #fdeee4; }
+.header-inner { display: flex; align-items: center; gap: 28px; min-height: 74px; }
+.brand { display: flex; align-items: center; gap: 14px; color: #fff; text-decoration: none; flex: none; }
+.brand img { display: block; height: 30px; width: auto; }
+.brand-sub { font-weight: 600; font-size: .9rem; padding-left: 14px; border-left: 1px solid rgba(255, 255, 255, .3); color: #dfe2e3; white-space: nowrap; }
+.main-nav { display: flex; gap: 6px; flex: 1; overflow-x: auto; scrollbar-width: none; }
+.main-nav::-webkit-scrollbar { display: none; }
+.nav-link { background: none; border: 0; color: #fff; font: inherit; font-weight: 600; padding: 10px 14px; cursor: pointer; border-radius: var(--radius); white-space: nowrap; }
+.nav-link span::before, .nav-link span::after { color: var(--green); font-weight: 700; opacity: 0; transition: opacity .15s; }
+.nav-link span::before { content: '( '; }
+.nav-link span::after { content: ' )'; }
+.nav-link:hover span::before, .nav-link:hover span::after { opacity: 1; }
+.header-tools { display: flex; align-items: center; gap: 12px; flex: none; }
+.mode-toggle { display: inline-flex; background: #3d4245; border-radius: 999px; padding: 3px; }
+.mode-toggle button { border: 0; background: none; color: #dfe2e3; font: inherit; font-size: .85rem; font-weight: 600; padding: 6px 14px; border-radius: 999px; cursor: pointer; }
+.mode-toggle button[aria-pressed="true"] { background: var(--green); color: #14181a; }
+.icon-btn { width: 40px; height: 40px; border-radius: 50%; border: 0; background: #3d4245; color: #fff; display: inline-grid; place-items: center; cursor: pointer; font: inherit; }
+.icon-btn:hover { background: #4a5054; }
+.icon-btn-light { width: 36px; height: 36px; background: transparent; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius); }
+.icon-btn-light:hover:not(:disabled) { background: var(--surface-2); color: var(--ink); }
+.icon-btn:disabled { opacity: .35; cursor: default; }
+
+/* ---------- hero (the "Let's Meet at Our Hub" banner) ---------- */
+.page { padding-top: 28px; padding-bottom: 56px; }
+.hero { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 30px 36px; margin-bottom: 26px; border-radius: var(--radius); border: 1px solid #4f7f10; color: #fff; overflow: hidden; background: linear-gradient(90deg, #131b24 0%, #1a2530 45%, #213a25 100%); }
+.hero h1 { font-size: clamp(1.7rem, 3.2vw, 2.4rem); font-weight: 400; }
+.hero h1 strong { color: var(--green); font-weight: 700; }
+.hero-sub { font-size: 1.05rem; margin: .6rem 0 .3rem; max-width: 46ch; }
+.hero-note { color: #b9c4bd; margin: 0; font-size: .92rem; }
+.hero-art { width: 300px; flex: none; margin: -30px -36px -30px 0; align-self: stretch; height: auto; }
+
+/* ---------- stepper ---------- */
+.stepper { display: flex; gap: 6px; list-style: none; margin: 0 0 20px; padding: 0; flex-wrap: wrap; }
+.stepper button { display: inline-flex; align-items: center; gap: 8px; background: none; border: 0; font: inherit; font-weight: 600; color: var(--muted); padding: 8px 12px; border-radius: var(--radius); cursor: pointer; }
+.stepper button:hover { color: var(--ink); background: var(--surface-2); }
+.step-n { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #e4e7e8; font-size: .8rem; color: var(--ink); }
+.stepper .is-current { color: var(--ink); }
+.stepper .is-current .step-n { background: var(--green); color: #14181a; }
+.stepper .is-current .step-l::before { content: '( '; color: var(--green); font-weight: 800; }
+.stepper .is-current .step-l::after { content: ' )'; color: var(--green); font-weight: 800; }
+
+/* ---------- layout ---------- */
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 440px; gap: 28px; align-items: start; }
+.panel { background: var(--surface); }
+.main-panel { background: var(--surface-2); border-radius: var(--radius-lg); padding: 28px 30px 30px; outline: none; }
+.preview-panel { position: sticky; top: 92px; border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 18px; display: flex; flex-direction: column; max-height: calc(100vh - 116px); }
+.view-tabs { display: none; margin-bottom: 14px; gap: 6px; }
+.view-tabs button { flex: 1; border: 1.5px solid var(--line-strong); background: #fff; font: inherit; font-weight: 600; padding: 9px; border-radius: var(--radius); cursor: pointer; }
+.view-tabs button[aria-selected="true"] { background: var(--charcoal); color: #fff; border-color: var(--charcoal); }
+body.is-generated .layout { grid-template-columns: minmax(0, 1fr); max-width: 960px; margin-inline: auto; }
+body.is-generated .preview-panel, body.is-generated .view-tabs { display: none; }
+
+.step-count { color: var(--green-text); font-weight: 700; font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; margin-bottom: .3rem; }
+.step-title { font-size: 1.55rem; margin-bottom: .35rem; }
+
+/* ---------- form controls ---------- */
+.field { margin: 0 0 16px; min-width: 0; border: 0; padding: 0; }
+.field.narrow { max-width: 440px; }
+label, legend { display: block; font-weight: 600; font-size: .92rem; margin-bottom: 6px; padding: 0; }
+.hint { font-weight: 400; color: var(--muted); font-size: .8rem; margin-left: 4px; }
+.req { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; background: var(--charcoal); color: #fff; border-radius: 3px; padding: 1px 6px; margin-left: 6px; vertical-align: 1px; }
+input[type="text"], textarea, select { width: 100%; font: inherit; color: var(--ink); background: #fff; border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 10px 12px; }
+textarea { resize: vertical; min-height: 44px; }
+textarea.tall { min-height: 150px; }
+input::placeholder, textarea::placeholder { color: #6e767b; }
+input[aria-invalid="true"], textarea[aria-invalid="true"] { border-color: var(--danger); }
+.field-error { color: var(--danger); font-weight: 600; margin: 6px 0 12px; font-size: .9rem; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+
+.choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.choice { display: inline-flex; align-items: center; margin: 0; font-weight: 600; cursor: pointer; }
+.choice input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.choice span { border: 1.5px solid var(--line-strong); background: #fff; padding: 7px 14px; border-radius: 999px; font-size: .88rem; }
+.choice input:checked + span { background: var(--charcoal); border-color: var(--charcoal); color: #fff; }
+.choice input:checked + span::before { content: '✓ '; color: var(--green); }
+.choice input:focus-visible + span { outline: 2px solid var(--charcoal); outline-offset: 2px; box-shadow: 0 0 0 5px rgba(132, 189, 0, .6); }
+.dod-row .choice span { padding: 0; border: 0; background: none; }
+.dod-row .choice input { position: static; opacity: 1; width: 18px; height: 18px; accent-color: var(--green-text); }
+.dod-row .choice input:checked + span::before { content: ''; }
+
+.btn { font: inherit; font-weight: 700; border-radius: var(--radius); border: 1.5px solid transparent; padding: 10px 20px; cursor: pointer; transition: background .15s, border-color .15s; }
+.btn-lg { padding: 13px 26px; font-size: 1rem; }
+.btn-sm { padding: 5px 12px; font-size: .85rem; }
+.btn-primary { background: var(--green); color: #14181a; }
+.btn-primary:hover:not(:disabled) { background: var(--green-hover); }
+.btn-ghost { background: #fff; border-color: var(--line-strong); color: var(--ink); }
+.btn-ghost:hover { border-color: var(--charcoal); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.link { background: none; border: 0; padding: 0; font: inherit; font-weight: 700; color: var(--green-text); text-decoration: underline; cursor: pointer; }
+
+.type-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; margin: 18px 0; }
+.type-card { position: relative; text-align: left; font: inherit; background: #fff; border: 1.5px solid var(--line-strong); border-radius: var(--radius); padding: 14px 16px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+.type-card:hover { border-color: var(--charcoal); }
+.type-name { font-weight: 700; font-size: 1rem; }
+.type-hint { color: var(--muted); font-size: .82rem; }
+.type-card[aria-pressed="true"] { background: var(--charcoal); border-color: var(--green); color: #fff; box-shadow: inset 4px 0 0 var(--green); }
+.type-card[aria-pressed="true"] .type-hint { color: #cdd3d6; }
+.type-card[aria-pressed="true"]::after { content: '✓'; position: absolute; right: 12px; top: 10px; color: var(--green); font-weight: 800; }
+
+details.more { margin: 18px 0 8px; border-top: 1px solid var(--line-strong); padding-top: 12px; }
+details.more > summary { cursor: pointer; font-weight: 700; padding: 4px 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.chip { font: inherit; font-size: .88rem; font-weight: 600; border: 1.5px solid var(--line-strong); background: #fff; border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.chip:hover { border-color: var(--green-text); color: var(--green-text); }
+
+.card { background: #fff; border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 4px 20px 14px; margin: 18px 0; }
+.card > h3 { margin: 14px 0 12px; padding-left: 10px; border-left: 4px solid var(--green); }
+.card details.more { margin-top: 4px; }
+.row { display: flex; gap: 12px; align-items: flex-start; }
+.card-row { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 12px 0; margin-bottom: 10px; }
+.card-row .field { flex: 1; }
+.card-row .icon-btn-light { margin-top: 28px; flex: none; }
+.dod-row { align-items: center; margin-bottom: 8px; }
+.dod-row input[type="text"] { flex: 1; }
+.empty { color: var(--muted); background: #fff; border: 1px dashed var(--line-strong); border-radius: var(--radius); padding: 14px; }
+.nav-row { display: flex; gap: 10px; align-items: center; margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--line-strong); flex-wrap: wrap; }
+.spacer { flex: 1; }
+
+/* object rows */
+.obj-row { display: grid; grid-template-columns: 150px minmax(0, 1fr) 160px; gap: 10px 12px; align-items: end; margin-bottom: 10px; padding: 12px; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); }
+.obj-row .field { margin: 0; }
+.obj-row .field:nth-child(4) { grid-column: 1 / 3; }
+.obj-row .field label { font-size: .8rem; margin-bottom: 4px; color: var(--muted); }
+.row-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.status-select[data-status="existing"] { border-left: 5px solid var(--green-text); }
+.status-select[data-status="new"] { border-left: 5px solid var(--charcoal); }
+.status-select[data-status="tbc"] { border-left: 5px solid #d8962b; }
+.suggest { margin: 12px 0 4px; }
+
+/* dependency map */
+.depmap { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; overflow-x: auto; }
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree ul { margin-left: 14px; padding-left: 18px; border-left: 2px solid var(--green); }
+.tree li { position: relative; padding: 4px 0; }
+.tree ul > li::before { content: ''; position: absolute; left: -18px; top: 17px; width: 14px; border-top: 2px solid var(--green); }
+.node { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.node.root { background: var(--charcoal); color: #fff; font-weight: 700; padding: 5px 14px; border-radius: var(--radius); }
+.node-label { font-weight: 600; }
+.badge { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; border-radius: 3px; padding: 1px 7px; }
+.s-existing { background: var(--green-tint); color: var(--green-text); border: 1px solid #b9d77a; }
+.s-new { background: var(--charcoal); color: #fff; }
+.s-tbc { background: var(--amber-tint); color: var(--amber); border: 1px solid #e6c48a; }
+.used-by { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 0 8px; font-weight: 400; font-size: .8rem; color: var(--muted); }
+.used-by select { width: auto; max-width: 190px; padding: 3px 8px; font-size: .8rem; }
+
+/* status banner */
+.status { display: flex; gap: 12px; align-items: flex-start; border-radius: var(--radius); padding: 12px 14px; margin: 14px 0; border: 1px solid var(--line); background: #fff; border-left-width: 5px; }
+.status p, .status ul { margin: .2rem 0 0; font-size: .88rem; }
+.status ul { padding-left: 18px; }
+.dot { flex: none; width: 12px; height: 12px; border-radius: 50%; margin-top: 6px; background: #8a9094; }
+.is-ready { background: var(--green-tint); border-color: var(--green); }
+.is-ready .dot { background: var(--green); box-shadow: 0 0 0 3px rgba(132, 189, 0, .3); }
+.is-almost { background: var(--amber-tint); border-color: #e0a63e; }
+.is-almost .dot { background: #e0a63e; }
+.is-blocked { border-color: var(--line-strong); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 14px 0; }
+.stat { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.stat-label { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; color: var(--muted); }
+.stat-val { font-weight: 700; line-height: 1.35; }
+
+/* preview panel */
+.pv-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.pv-head h2 { font-size: 1rem; }
+.seg { display: inline-flex; border: 1.5px solid var(--line-strong); border-radius: var(--radius); overflow: hidden; }
+.seg button { font: inherit; font-size: .8rem; font-weight: 600; border: 0; background: #fff; padding: 5px 12px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--charcoal); color: #fff; }
+.pv-body { flex: 1; overflow: auto; min-height: 200px; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin: 4px 0 12px; }
+.pv-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.preview-panel .status { margin: 10px 0 6px; padding: 8px 12px; }
+#save-note { margin: 10px 0 0; min-height: 1.2em; }
+.md h1 { font-size: 1.25rem; margin: 0 0 .5rem; }
+.md h2 { font-size: 1.05rem; margin: 1.1rem 0 .4rem; padding-bottom: 3px; border-bottom: 2px solid var(--green); }
+.md p { margin: 0 0 .6rem; }
+.md ul, .md ol { margin: 0 0 .7rem; padding-left: 1.3rem; }
+.md ul ul { margin: 0; }
+.md .cb { color: var(--muted); }
+.md pre { background: var(--surface-2); border-radius: var(--radius); padding: 10px 12px; overflow: auto; font-family: var(--mono); font-size: .8rem; margin: 0 0 .7rem; white-space: pre; }
+.md pre code { background: none; padding: 0; }
+.md mark { background: #ffeeb0; padding: 0 3px; border-radius: 3px; }
+.table-wrap { overflow-x: auto; margin: 0 0 .8rem; }
+.md table { border-collapse: collapse; font-size: .85rem; width: 100%; }
+.md th, .md td { border: 1px solid var(--line); padding: 5px 9px; text-align: left; vertical-align: top; }
+.md th { background: var(--surface-2); }
+.gen-head { margin-bottom: 12px; }
+.gen-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
+.gen-seg { margin-bottom: 10px; }
+.gen-doc { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 26px; }
+.gen-doc pre { white-space: pre-wrap; word-break: break-word; margin: 0; font-size: .85rem; }
+
+/* footer, dialog, toast */
+.site-footer { background: var(--charcoal); color: #cfd4d6; padding: 32px 0; margin-top: 24px; }
+.footer-inner { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
+.footer-inner img { height: 34px; width: auto; }
+.footer-inner p { margin: 0; max-width: 70ch; font-size: .9rem; }
+dialog { border: 0; border-radius: var(--radius-lg); padding: 22px 24px; width: min(640px, calc(100vw - 32px)); box-shadow: 0 20px 60px rgba(0, 0, 0, .35); }
+dialog::backdrop { background: rgba(20, 24, 26, .6); }
+.dialog-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.draft-list { list-style: none; margin: 0 0 12px; padding: 0; }
+.draft-list li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.draft-list li > div:first-child { display: flex; flex-direction: column; min-width: 0; }
+.draft-list strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); background: var(--charcoal); color: #fff; border-left: 5px solid var(--green); padding: 12px 18px; border-radius: var(--radius); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 80; max-width: calc(100vw - 32px); }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ---------- responsive ---------- */
+@media (max-width: 1100px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .view-tabs { display: flex; }
+  .layout[data-tab="edit"] .preview-panel { display: none; }
+  .layout[data-tab="preview"] .main-panel { display: none; }
+  .preview-panel { position: static; max-height: none; }
+  .pv-body { max-height: 70vh; }
+}
+@media (max-width: 900px) {
+  .header-inner { flex-wrap: wrap; gap: 8px 16px; padding-block: 10px; }
+  .main-nav { order: 3; flex-basis: 100%; }
+  .brand-sub { display: none; }
+  .header-tools { margin-left: auto; }
+  .hero { padding: 22px; }
+  .hero-art { display: none; }
+}
+@media (max-width: 640px) {
+  .container { padding: 0 16px; }
+  .main-panel { padding: 20px 16px; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .obj-row { grid-template-columns: 1fr; }
+  .obj-row .field:nth-child(4) { grid-column: auto; }
+  .card-row { flex-wrap: wrap; }
+  .step-l { display: none; }
+  .stepper .is-current .step-l { display: inline; }
+  .gen-doc { padding: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+@media print {
+  .site-header, .stepper, .site-footer, .view-tabs, .preview-panel .pv-actions, .nav-row, .gen-actions, .gen-seg { display: none !important; }
+  body.is-generated .layout { max-width: none; }
+}
+
+</style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to the form</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="./" aria-label="ABAP Copilot Prompt Builder – home">
+        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNDAgNDAiIHJvbGU9ImltZyIgYXJpYS1sYWJlbD0iTU9STyI+CiAgPHRpdGxlPk1PUk88L3RpdGxlPgogIDxnIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lam9pbj0ibWl0ZXIiPgogICAgPHBhdGggZD0iTTQgMzVWNmwxMyAxN0wzMCA2djI5IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iNiIvPgogICAgPHBhdGggZD0iTTQ3IDRxLTkgMTYgMCAzMiIgc3Ryb2tlPSIjODRiZDAwIiBzdHJva2Utd2lkdGg9IjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogICAgPHBhdGggZD0iTTY0IDRxOSAxNiAwIDMyIiBzdHJva2U9IiM4NGJkMDAiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgICA8cGF0aCBkPSJNODIgMzVWNWgxMWE4LjUgOC41IDAgMCAxIDAgMTdIODJNOTMgMjJsOCAxMyIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjYiLz4KICAgIDxjaXJjbGUgY3g9IjEyMyIgY3k9IjIwIiByPSIxMyIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjYiLz4KICA8L2c+Cjwvc3ZnPgo=" alt="" width="104" height="30">
+        <span class="brand-sub">Prompt Builder</span>
+      </a>
+      <nav class="main-nav" aria-label="Main">
+        <button type="button" class="nav-link" data-action="new"><span>New Requirement</span></button>
+        <button type="button" class="nav-link" data-action="drafts"><span>Saved Drafts</span></button>
+        <button type="button" class="nav-link" data-action="example"><span>Try Example</span></button>
+        <button type="button" class="nav-link" data-action="import"><span>Import</span></button>
+        <button type="button" class="nav-link" data-action="export"><span>Export</span></button>
+      </nav>
+      <div class="header-tools">
+        <div class="mode-toggle" role="group" aria-label="Mode">
+          <button type="button" data-action="mode" data-mode="quick" aria-pressed="true">Quick</button>
+          <button type="button" data-action="mode" data-mode="advanced" aria-pressed="false">Advanced</button>
+        </div>
+        <button type="button" class="icon-btn" data-action="share" aria-label="Copy share link" title="Copy share link">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="page container">
+    <section id="hero" class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <h1 id="hero-title">ABAP Copilot <strong>Prompt Builder</strong></h1>
+        <p class="hero-sub">Turn SAP business requirements into structured GitHub Copilot development specifications.</p>
+        <p class="hero-note">Build a better specification before you start coding. 5–10 minutes, no account, nothing leaves your browser.</p>
+      </div>
+      <svg class="hero-art" viewBox="0 0 320 160" aria-hidden="true" focusable="false">
+        <path d="M30 150 C 6 120 20 40 70 22 L 300 8 L 300 150 Z" fill="#0f151c" stroke="#84bd00" stroke-width="6" stroke-linejoin="round"/>
+        <g fill="#e9ecec"><rect x="104" y="20" width="9" height="130" rx="2"/><rect x="124" y="19" width="9" height="131" rx="2"/><rect x="144" y="18" width="9" height="132" rx="2"/><rect x="164" y="17" width="9" height="133" rx="2"/><rect x="184" y="16" width="9" height="134" rx="2"/><rect x="204" y="15" width="9" height="135" rx="2"/><rect x="224" y="14" width="9" height="136" rx="2"/><rect x="244" y="13" width="9" height="137" rx="2"/><rect x="264" y="12" width="9" height="138" rx="2"/></g>
+        <g fill="none" stroke="#e9ecec" stroke-width="2"><rect x="46" y="60" width="38" height="24"/><rect x="46" y="88" width="38" height="24"/></g>
+      </svg>
+    </section>
+
+    <ol id="stepper" class="stepper" aria-label="Progress"></ol>
+
+    <div class="view-tabs" role="tablist" aria-label="Form or preview">
+      <button type="button" role="tab" id="tab-edit" aria-selected="true" aria-controls="main" data-action="tab" data-tab="edit">Edit</button>
+      <button type="button" role="tab" id="tab-preview" aria-selected="false" aria-controls="preview" data-action="tab" data-tab="preview">Preview</button>
+    </div>
+
+    <div id="layout" class="layout">
+      <section id="main" class="panel main-panel" tabindex="-1" aria-live="off"></section>
+
+      <aside id="preview" class="panel preview-panel" aria-label="Live preview">
+        <div class="pv-head">
+          <h2>Live preview</h2>
+          <div class="pv-tools">
+            <div class="seg" role="group" aria-label="Preview format">
+              <button type="button" data-action="view-rendered" aria-pressed="true">Preview</button>
+              <button type="button" data-action="view-raw" aria-pressed="false">Markdown</button>
+            </div>
+          </div>
+        </div>
+        <div id="pv-status" role="status"></div>
+        <div id="pv-body" class="pv-body md" tabindex="0" aria-label="Specification preview"></div>
+        <div class="pv-actions">
+          <button type="button" class="btn btn-primary" data-action="download">Download .md</button>
+          <button type="button" class="btn btn-ghost" data-action="copy">Copy Markdown</button>
+        </div>
+        <p id="save-note" class="muted small"></p>
+      </aside>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNDAgNDAiIHJvbGU9ImltZyIgYXJpYS1sYWJlbD0iTU9STyI+CiAgPHRpdGxlPk1PUk88L3RpdGxlPgogIDxnIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lam9pbj0ibWl0ZXIiPgogICAgPHBhdGggZD0iTTQgMzVWNmwxMyAxN0wzMCA2djI5IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iNiIvPgogICAgPHBhdGggZD0iTTQ3IDRxLTkgMTYgMCAzMiIgc3Ryb2tlPSIjODRiZDAwIiBzdHJva2Utd2lkdGg9IjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogICAgPHBhdGggZD0iTTY0IDRxOSAxNiAwIDMyIiBzdHJva2U9IiM4NGJkMDAiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgICA8cGF0aCBkPSJNODIgMzVWNWgxMWE4LjUgOC41IDAgMCAxIDAgMTdIODJNOTMgMjJsOCAxMyIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjYiLz4KICAgIDxjaXJjbGUgY3g9IjEyMyIgY3k9IjIwIiByPSIxMyIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjYiLz4KICA8L2c+Cjwvc3ZnPgo=" alt="" width="120" height="34">
+      <p>Everything runs in your browser. Requirements are never sent to a server or an AI service; drafts live in this browser's local storage only.</p>
+    </div>
+  </footer>
+
+  <dialog id="drafts-dialog" aria-labelledby="drafts-title">
+    <form method="dialog" class="dialog-head">
+      <h2 id="drafts-title">Saved drafts</h2>
+      <button class="icon-btn icon-btn-light" aria-label="Close">✕</button>
+    </form>
+    <div id="drafts-list"></div>
+    <p class="muted small">Drafts are saved automatically in this browser only. Use <strong>Export</strong> to share a project as a file.</p>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <input type="file" id="import-file" accept=".json,application/json" hidden>
+
+  <script>
+// GENERATED by scripts/build-config.js from /config/*.json — do not edit by hand.
+window.APB_CONFIG = {
+ "definitions": {
+  "version": 1,
+  "types": {
+   "REPORT": {
+    "label": "Report",
+    "hint": "ABAP report / ALV program",
+    "mainObject": [
+     "Report"
+    ],
+    "performance": true,
+    "fields": [
+     {
+      "id": "inputs",
+      "label": "Inputs (parameters / select-options)",
+      "kind": "lines",
+      "section": "input",
+      "placeholder": "One per line, e.g.\nPERNR – select-option\nBEGDA / ENDDA – date range"
+     },
+     {
+      "id": "outputType",
+      "label": "Output type",
+      "kind": "multicheck",
+      "section": "output",
+      "options": [
+       {
+        "value": "alv",
+        "label": "ALV"
+       },
+       {
+        "value": "file",
+        "label": "File"
+       },
+       {
+        "value": "api",
+        "label": "API"
+       },
+       {
+        "value": "other",
+        "label": "Other"
+       }
+      ]
+     },
+     {
+      "id": "alvBehavior",
+      "label": "ALV behavior",
+      "kind": "textarea",
+      "section": "functional",
+      "advanced": true,
+      "placeholder": "Layout variants, sorting, subtotals, double-click navigation…"
+     },
+     {
+      "id": "background",
+      "label": "Background execution",
+      "kind": "radio",
+      "section": "functional",
+      "advanced": true,
+      "options": [
+       {
+        "value": "yes",
+        "label": "Yes"
+       },
+       {
+        "value": "no",
+        "label": "No"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "backgroundDetail",
+      "label": "Background execution details",
+      "kind": "text",
+      "section": "functional",
+      "advanced": true,
+      "showIf": {
+       "field": "background",
+       "in": [
+        "yes"
+       ]
+      },
+      "placeholder": "Variant, schedule, spool / output handling"
+     },
+     {
+      "id": "fileOutput",
+      "label": "File output (path, format)",
+      "kind": "text",
+      "section": "output",
+      "advanced": true,
+      "showIf": {
+       "field": "outputType",
+       "includes": "file"
+      }
+     }
+    ]
+   },
+   "CLASS": {
+    "label": "ABAP Class",
+    "hint": "Global class / reusable logic",
+    "mainObject": [
+     "Class"
+    ],
+    "performance": false,
+    "fields": [
+     {
+      "id": "methods",
+      "label": "Methods (inputs → outputs)",
+      "kind": "lines",
+      "section": "functional",
+      "placeholder": "One per line, e.g.\ncalculate_balance( pernr, begda, endda ) → balance table"
+     },
+     {
+      "id": "exceptions",
+      "label": "Exceptions",
+      "kind": "lines",
+      "section": "errors",
+      "placeholder": "One per line, e.g.\nEmployee not found → raise exception"
+     },
+     {
+      "id": "interfaces",
+      "label": "Interfaces to implement",
+      "kind": "lines",
+      "section": "technical",
+      "advanced": true,
+      "placeholder": "One per line"
+     }
+    ]
+   },
+   "RFC": {
+    "label": "RFC / Function Module",
+    "hint": "Remote-enabled or standard function module",
+    "mainObject": [
+     "RFC",
+     "Function Module"
+    ],
+    "performance": true,
+    "fields": [
+     {
+      "id": "sourceSystem",
+      "label": "Source system (caller)",
+      "kind": "text",
+      "section": "technical",
+      "placeholder": "System / client that calls the function"
+     },
+     {
+      "id": "targetSystem",
+      "label": "Target system (where it runs)",
+      "kind": "text",
+      "section": "technical"
+     },
+     {
+      "id": "inputParams",
+      "label": "Input parameters",
+      "kind": "lines",
+      "section": "input",
+      "placeholder": "One per line, e.g.\nIV_PERNR – employee number"
+     },
+     {
+      "id": "outputParams",
+      "label": "Output parameters",
+      "kind": "lines",
+      "section": "output",
+      "placeholder": "One per line, e.g.\nET_BALANCE – leave balance table"
+     },
+     {
+      "id": "errorHandling",
+      "label": "Error handling",
+      "kind": "textarea",
+      "section": "errors",
+      "placeholder": "Exceptions, RETURN table, messages…"
+     },
+     {
+      "id": "authMethod",
+      "label": "Authentication / authorization",
+      "kind": "text",
+      "section": "security",
+      "placeholder": "e.g. technical user, trusted RFC"
+     },
+     {
+      "id": "callMode",
+      "label": "Call mode",
+      "kind": "select",
+      "section": "technical",
+      "advanced": true,
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "sync",
+        "label": "Synchronous"
+       },
+       {
+        "value": "async",
+        "label": "Asynchronous"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "monitoring",
+      "label": "Monitoring / logging",
+      "kind": "text",
+      "section": "technical",
+      "advanced": true
+     }
+    ]
+   },
+   "RAP": {
+    "label": "RAP",
+    "hint": "RESTful ABAP business object",
+    "mainObject": [
+     "RAP"
+    ],
+    "performance": true,
+    "fields": [
+     {
+      "id": "businessObject",
+      "label": "Business object",
+      "kind": "text",
+      "section": "functional"
+     },
+     {
+      "id": "rootEntity",
+      "label": "Root entity",
+      "kind": "text",
+      "section": "functional"
+     },
+     {
+      "id": "childEntities",
+      "label": "Child entities",
+      "kind": "lines",
+      "section": "functional",
+      "placeholder": "One per line"
+     },
+     {
+      "id": "operations",
+      "label": "Operations",
+      "kind": "multicheck",
+      "section": "functional",
+      "options": [
+       {
+        "value": "create",
+        "label": "Create"
+       },
+       {
+        "value": "update",
+        "label": "Update"
+       },
+       {
+        "value": "delete",
+        "label": "Delete"
+       }
+      ]
+     },
+     {
+      "id": "actions",
+      "label": "Actions",
+      "kind": "lines",
+      "section": "functional",
+      "placeholder": "One per line"
+     },
+     {
+      "id": "validations",
+      "label": "Validations",
+      "kind": "lines",
+      "section": "functional",
+      "placeholder": "One per line"
+     },
+     {
+      "id": "determinations",
+      "label": "Determinations",
+      "kind": "lines",
+      "section": "functional",
+      "placeholder": "One per line"
+     },
+     {
+      "id": "draft",
+      "label": "Draft handling",
+      "kind": "radio",
+      "section": "functional",
+      "options": [
+       {
+        "value": "yes",
+        "label": "Yes"
+       },
+       {
+        "value": "no",
+        "label": "No"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "fioriUi",
+      "label": "Fiori Elements UI required?",
+      "kind": "radio",
+      "section": "functional",
+      "options": [
+       {
+        "value": "yes",
+        "label": "Yes"
+       },
+       {
+        "value": "no",
+        "label": "No"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "fioriDetails",
+      "label": "UI notes",
+      "kind": "text",
+      "section": "functional",
+      "showIf": {
+       "field": "fioriUi",
+       "in": [
+        "yes"
+       ]
+      },
+      "placeholder": "e.g. List Report + Object Page"
+     },
+     {
+      "id": "implType",
+      "label": "Implementation type",
+      "kind": "select",
+      "section": "technical",
+      "advanced": true,
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "managed",
+        "label": "Managed"
+       },
+       {
+        "value": "unmanaged",
+        "label": "Unmanaged"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "serviceDefinition",
+      "label": "Service definition",
+      "kind": "text",
+      "section": "technical",
+      "advanced": true
+     },
+     {
+      "id": "serviceBinding",
+      "label": "Service binding",
+      "kind": "select",
+      "section": "technical",
+      "advanced": true,
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "OData V4 – UI",
+        "label": "OData V4 – UI"
+       },
+       {
+        "value": "OData V4 – Web API",
+        "label": "OData V4 – Web API"
+       },
+       {
+        "value": "OData V2 – UI",
+        "label": "OData V2 – UI"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     }
+    ]
+   },
+   "CDS": {
+    "label": "CDS",
+    "hint": "CDS view / view entity",
+    "mainObject": [
+     "CDS"
+    ],
+    "performance": true,
+    "fields": [
+     {
+      "id": "cdsKind",
+      "label": "CDS kind",
+      "kind": "select",
+      "section": "technical",
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "Basic / interface view",
+        "label": "Basic / interface view"
+       },
+       {
+        "value": "Composite view",
+        "label": "Composite view"
+       },
+       {
+        "value": "Consumption view",
+        "label": "Consumption view"
+       },
+       {
+        "value": "Projection view",
+        "label": "Projection view"
+       },
+       {
+        "value": "Extension",
+        "label": "Extension"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "fields",
+      "label": "Fields (mark keys)",
+      "kind": "lines",
+      "section": "functional",
+      "placeholder": "One per line"
+     },
+     {
+      "id": "associations",
+      "label": "Associations",
+      "kind": "lines",
+      "section": "functional",
+      "placeholder": "One per line"
+     },
+     {
+      "id": "filters",
+      "label": "Filters",
+      "kind": "lines",
+      "section": "functional",
+      "placeholder": "One per line"
+     },
+     {
+      "id": "parameters",
+      "label": "Parameters",
+      "kind": "lines",
+      "section": "input",
+      "placeholder": "One per line"
+     },
+     {
+      "id": "annotations",
+      "label": "Annotations / extensibility",
+      "kind": "lines",
+      "section": "technical",
+      "advanced": true
+     }
+    ]
+   },
+   "CAPM": {
+    "label": "CAPM",
+    "hint": "SAP Cloud Application Programming Model",
+    "mainObject": [
+     "CAPM"
+    ],
+    "performance": true,
+    "fields": [
+     {
+      "id": "runtime",
+      "label": "Runtime",
+      "kind": "radio",
+      "section": "technical",
+      "options": [
+       {
+        "value": "Node.js",
+        "label": "Node.js"
+       },
+       {
+        "value": "Java",
+        "label": "Java"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "entities",
+      "label": "Entities",
+      "kind": "lines",
+      "section": "functional",
+      "placeholder": "One per line"
+     },
+     {
+      "id": "services",
+      "label": "Services",
+      "kind": "lines",
+      "section": "functional",
+      "placeholder": "One per line"
+     },
+     {
+      "id": "externalSystems",
+      "label": "External systems",
+      "kind": "lines",
+      "section": "technical",
+      "placeholder": "One per line"
+     },
+     {
+      "id": "authMethod",
+      "label": "Authentication",
+      "kind": "text",
+      "section": "security",
+      "placeholder": "e.g. XSUAA, IAS"
+     },
+     {
+      "id": "deployTarget",
+      "label": "Deployment target",
+      "kind": "select",
+      "section": "technical",
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "SAP BTP Cloud Foundry",
+        "label": "SAP BTP Cloud Foundry"
+       },
+       {
+        "value": "SAP BTP Kyma",
+        "label": "SAP BTP Kyma"
+       },
+       {
+        "value": "Local only",
+        "label": "Local only"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "persistence",
+      "label": "Persistence",
+      "kind": "select",
+      "section": "technical",
+      "advanced": true,
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "SAP HANA Cloud",
+        "label": "SAP HANA Cloud"
+       },
+       {
+        "value": "SQLite (dev)",
+        "label": "SQLite (dev)"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "multitenancy",
+      "label": "Multitenancy",
+      "kind": "radio",
+      "section": "technical",
+      "advanced": true,
+      "options": [
+       {
+        "value": "yes",
+        "label": "Yes"
+       },
+       {
+        "value": "no",
+        "label": "No"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "sapObjectTypes": [
+   "Report",
+   "Class",
+   "Function Module",
+   "RFC",
+   "CDS",
+   "Table",
+   "Infotype",
+   "LDB",
+   "Workflow",
+   "API",
+   "OData",
+   "RAP",
+   "Fiori/UI5",
+   "CAPM",
+   "Authorization Object",
+   "Other"
+  ],
+  "objectStatuses": [
+   {
+    "value": "existing",
+    "label": "Existing"
+   },
+   {
+    "value": "new",
+    "label": "New"
+   },
+   {
+    "value": "tbc",
+    "label": "To Be Confirmed"
+   }
+  ],
+  "common": {
+   "quality": [
+    {
+     "id": "authorization",
+     "label": "Authorization required?",
+     "kind": "radio",
+     "section": "security",
+     "options": [
+      {
+       "value": "yes",
+       "label": "Yes"
+      },
+      {
+       "value": "no",
+       "label": "No"
+      },
+      {
+       "value": "tbc",
+       "label": "To Be Confirmed"
+      }
+     ]
+    },
+    {
+     "id": "authObject",
+     "label": "Authorization object / role",
+     "kind": "text",
+     "section": "security",
+     "showIf": {
+      "field": "authorization",
+      "in": [
+       "yes",
+       "tbc"
+      ]
+     },
+     "placeholder": "Leave empty if unknown"
+    },
+    {
+     "id": "dataVolume",
+     "label": "Expected data volume",
+     "kind": "radio",
+     "section": "performance",
+     "perfOnly": true,
+     "options": [
+      {
+       "value": "small",
+       "label": "Small"
+      },
+      {
+       "value": "medium",
+       "label": "Medium"
+      },
+      {
+       "value": "large",
+       "label": "Large"
+      },
+      {
+       "value": "unknown",
+       "label": "Unknown"
+      }
+     ]
+    },
+    {
+     "id": "performanceReq",
+     "label": "Performance requirement",
+     "kind": "text",
+     "section": "performance",
+     "perfOnly": true,
+     "placeholder": "e.g. Completes within 30 seconds for normal usage"
+    },
+    {
+     "id": "testTypes",
+     "label": "Testing required",
+     "kind": "multicheck",
+     "section": "testing",
+     "options": [
+      {
+       "value": "Unit",
+       "label": "Unit Test"
+      },
+      {
+       "value": "Functional",
+       "label": "Functional Test"
+      },
+      {
+       "value": "Integration",
+       "label": "Integration Test"
+      }
+     ]
+    },
+    {
+     "id": "testScenarios",
+     "label": "Test scenarios",
+     "kind": "lines",
+     "section": "testing",
+     "placeholder": "One per line. Optionally add the expected result after =>\nValid employee => balance is displayed\nUnauthorized employee"
+    },
+    {
+     "id": "cleanCore",
+     "label": "Reuse standard SAP functionality where available?",
+     "kind": "radio",
+     "section": "cleancore",
+     "options": [
+      {
+       "value": "yes",
+       "label": "Yes"
+      },
+      {
+       "value": "no",
+       "label": "No"
+      },
+      {
+       "value": "tbc",
+       "label": "To Be Confirmed"
+      }
+     ]
+    },
+    {
+     "id": "cleanCoreNote",
+     "label": "Existing standard functionality / API / CDS identified?",
+     "kind": "text",
+     "section": "cleancore",
+     "showIf": {
+      "field": "cleanCore",
+      "in": [
+       "yes"
+      ]
+     },
+     "placeholder": "Name it here, or leave empty if none identified yet"
+    }
+   ],
+   "advanced": [
+    {
+     "id": "architecture",
+     "label": "Architecture",
+     "kind": "textarea",
+     "section": "technical",
+     "placeholder": "Layering, main components, patterns"
+    },
+    {
+     "id": "dataModel",
+     "label": "Detailed data model",
+     "kind": "textarea",
+     "section": "technical",
+     "placeholder": "Tables, key fields, relationships"
+    },
+    {
+     "id": "integration",
+     "label": "Integration",
+     "kind": "textarea",
+     "section": "technical",
+     "placeholder": "Interfaces, APIs, systems, protocols"
+    },
+    {
+     "id": "securityDetail",
+     "label": "Security details",
+     "kind": "textarea",
+     "section": "security",
+     "placeholder": "Roles, data privacy, field-level restrictions"
+    },
+    {
+     "id": "errorHandling",
+     "label": "Error handling",
+     "kind": "textarea",
+     "section": "errors",
+     "placeholder": "Messages, logging (e.g. application log), retry behavior"
+    },
+    {
+     "id": "workflow",
+     "label": "Workflow",
+     "kind": "textarea",
+     "section": "technical"
+    },
+    {
+     "id": "deployment",
+     "label": "Deployment",
+     "kind": "textarea",
+     "section": "technical",
+     "placeholder": "Transport / landscape / release notes"
+    },
+    {
+     "id": "detailedTesting",
+     "label": "Detailed testing notes",
+     "kind": "textarea",
+     "section": "testing",
+     "placeholder": "Test data, ATC checks, performance tests"
+    },
+    {
+     "id": "technicalConstraints",
+     "label": "Technical constraints",
+     "kind": "textarea",
+     "section": "technical"
+    },
+    {
+     "id": "packageName",
+     "label": "Package",
+     "kind": "text",
+     "section": "technical"
+    },
+    {
+     "id": "namingConvention",
+     "label": "Naming conventions",
+     "kind": "text",
+     "section": "technical",
+     "placeholder": "e.g. prefix, namespace"
+    },
+    {
+     "id": "sapRelease",
+     "label": "SAP release / ABAP language version",
+     "kind": "text",
+     "section": "technical",
+     "placeholder": "e.g. S/4HANA release, ABAP Cloud or classic"
+    }
+   ]
+  },
+  "suggestions": [
+   {
+    "match": "fiori|ui5|sapui5|\\bapp\\b|screen|dashboard",
+    "type": "Fiori/UI5",
+    "label": "Fiori / UI5"
+   },
+   {
+    "match": "cds|view|employee data|master data|read data|select",
+    "type": "CDS",
+    "label": "CDS"
+   },
+   {
+    "match": "class|logic|calculate|calculation|util|validate|validation",
+    "type": "Class",
+    "label": "ABAP Class"
+   },
+   {
+    "match": "table|database|store|persist|ztable",
+    "type": "Table",
+    "label": "Table"
+   },
+   {
+    "match": "authori[sz]ation|restrict|role|hr users|permission|secur",
+    "type": "Authorization Object",
+    "label": "Authorization"
+   },
+   {
+    "match": "odata|api|service|expose|integrat|external",
+    "type": "API",
+    "label": "API / OData"
+   },
+   {
+    "match": "workflow|approv",
+    "type": "Workflow",
+    "label": "Workflow"
+   }
+  ],
+  "definitionOfDone": [
+   "Implementation completed",
+   "Syntax validated",
+   "Relevant ATC checks completed",
+   "Authorization implemented",
+   "Error handling implemented",
+   "Tests completed",
+   "Acceptance criteria passed",
+   "Documentation updated"
+  ]
+ },
+ "validation": {
+  "version": 1,
+  "mandatory": [
+   {
+    "id": "businessRequirement",
+    "label": "Business requirement",
+    "message": "Describe what needs to be built.",
+    "step": 1,
+    "path": "requirement.text",
+    "minLength": 10
+   },
+   {
+    "id": "developmentObject",
+    "label": "Development object",
+    "message": "Pick at least one development object.",
+    "step": 1,
+    "path": "types",
+    "minItems": 1
+   }
+  ],
+  "recommended": [
+   {
+    "id": "expectedOutput",
+    "label": "Expected output",
+    "step": 2,
+    "important": true,
+    "types": "*",
+    "anyOf": [
+     "requirement.expectedOutput",
+     "details.REPORT.outputType",
+     "details.RFC.outputParams",
+     "details.CLASS.methods",
+     "details.CDS.fields",
+     "details.RAP.rootEntity",
+     "details.CAPM.entities"
+    ],
+    "question": "Expected output."
+   },
+   {
+    "id": "authorization",
+    "label": "Authorization requirement",
+    "step": 4,
+    "important": true,
+    "types": "*",
+    "anyOf": [
+     "quality.authorization"
+    ],
+    "question": "Whether authorization checks are required and which authorization object / role applies."
+   },
+   {
+    "id": "objects",
+    "label": "SAP objects to reuse or create",
+    "step": 3,
+    "important": true,
+    "types": "*",
+    "anyOf": [
+     "objects"
+    ]
+   },
+   {
+    "id": "businessRules",
+    "label": "Key business rules",
+    "step": 2,
+    "types": "*",
+    "anyOf": [
+     "rules"
+    ]
+   },
+   {
+    "id": "testScenarios",
+    "label": "A few test scenarios",
+    "step": 4,
+    "types": "*",
+    "anyOf": [
+     "quality.testScenarios"
+    ]
+   },
+   {
+    "id": "dataVolume",
+    "label": "Expected data volume",
+    "step": 4,
+    "types": [
+     "REPORT",
+     "CDS"
+    ],
+    "anyOf": [
+     "quality.dataVolume",
+     "quality.performanceReq"
+    ],
+    "question": "Expected maximum data volume."
+   },
+   {
+    "id": "rootEntity",
+    "label": "RAP root entity",
+    "step": 4,
+    "types": [
+     "RAP"
+    ],
+    "anyOf": [
+     "details.RAP.rootEntity"
+    ],
+    "question": "RAP root entity."
+   },
+   {
+    "id": "runtime",
+    "label": "CAP runtime (Node.js / Java)",
+    "step": 4,
+    "types": [
+     "CAPM"
+    ],
+    "anyOf": [
+     "details.CAPM.runtime"
+    ],
+    "question": "CAP runtime (Node.js or Java)."
+   },
+   {
+    "id": "deployTarget",
+    "label": "CAP deployment target",
+    "step": 4,
+    "types": [
+     "CAPM"
+    ],
+    "anyOf": [
+     "details.CAPM.deployTarget"
+    ],
+    "question": "CAP deployment target."
+   },
+   {
+    "id": "targetSystem",
+    "label": "RFC target system",
+    "step": 4,
+    "types": [
+     "RFC"
+    ],
+    "anyOf": [
+     "details.RFC.targetSystem"
+    ],
+    "question": "RFC target system."
+   }
+  ]
+ },
+ "templates": {
+  "version": 1,
+  "templates": [
+   {
+    "id": "simple-report",
+    "label": "Simple Report",
+    "description": "Report with selection screen and ALV output",
+    "types": [
+     "REPORT"
+    ],
+    "objects": [
+     {
+      "type": "Report",
+      "name": "",
+      "status": "new",
+      "purpose": "Main report"
+     }
+    ],
+    "details": {
+     "REPORT": {
+      "outputType": [
+       "alv"
+      ]
+     }
+    }
+   },
+   {
+    "id": "abap-class",
+    "label": "ABAP Class",
+    "description": "Reusable global class",
+    "types": [
+     "CLASS"
+    ],
+    "objects": [
+     {
+      "type": "Class",
+      "name": "",
+      "status": "new",
+      "purpose": "Main class"
+     }
+    ]
+   },
+   {
+    "id": "rfc",
+    "label": "RFC",
+    "description": "Remote-enabled function module",
+    "types": [
+     "RFC"
+    ],
+    "objects": [
+     {
+      "type": "RFC",
+      "name": "",
+      "status": "new",
+      "purpose": "Remote-enabled function module"
+     }
+    ]
+   },
+   {
+    "id": "rap-app",
+    "label": "RAP Application",
+    "description": "RAP business object with optional Fiori UI",
+    "types": [
+     "RAP"
+    ],
+    "objects": [
+     {
+      "type": "RAP",
+      "name": "",
+      "status": "new",
+      "purpose": "Business object (behavior definition)"
+     },
+     {
+      "type": "CDS",
+      "name": "",
+      "status": "tbc",
+      "purpose": "Root entity data model"
+     },
+     {
+      "type": "OData",
+      "name": "",
+      "status": "new",
+      "purpose": "Service definition / binding"
+     }
+    ]
+   },
+   {
+    "id": "cds-rap",
+    "label": "CDS + RAP",
+    "description": "CDS data model with a RAP behavior on top",
+    "types": [
+     "CDS",
+     "RAP"
+    ],
+    "objects": [
+     {
+      "type": "CDS",
+      "name": "",
+      "status": "new",
+      "purpose": "Data model"
+     },
+     {
+      "type": "RAP",
+      "name": "",
+      "status": "new",
+      "purpose": "Behavior definition / implementation"
+     }
+    ]
+   },
+   {
+    "id": "capm-app",
+    "label": "CAPM Application",
+    "description": "SAP Cloud Application Programming Model service",
+    "types": [
+     "CAPM"
+    ],
+    "objects": [
+     {
+      "type": "CAPM",
+      "name": "",
+      "status": "new",
+      "purpose": "CAP application / service"
+     }
+    ]
+   },
+   {
+    "id": "full-sap-app",
+    "label": "Full SAP Application",
+    "description": "CDS + RAP + Fiori + Class + Authorization",
+    "types": [
+     "CDS",
+     "RAP",
+     "CLASS"
+    ],
+    "objects": [
+     {
+      "type": "CDS",
+      "name": "",
+      "status": "tbc",
+      "purpose": "Data model"
+     },
+     {
+      "type": "RAP",
+      "name": "",
+      "status": "new",
+      "purpose": "Business object"
+     },
+     {
+      "type": "Class",
+      "name": "",
+      "status": "tbc",
+      "purpose": "Business logic"
+     },
+     {
+      "type": "Fiori/UI5",
+      "name": "",
+      "status": "new",
+      "purpose": "User interface"
+     },
+     {
+      "type": "Authorization Object",
+      "name": "",
+      "status": "tbc",
+      "purpose": "Access control"
+     }
+    ]
+   }
+  ],
+  "example": {
+   "id": "example-leave-balance",
+   "label": "Employee Leave Balance Report",
+   "state": {
+    "project": {
+     "name": "Employee Leave Balance"
+    },
+    "types": [
+     "REPORT"
+    ],
+    "requirement": {
+     "text": "Create a report for HR users to view employee leave entitlement, leave taken and remaining leave balance for a selected date range.",
+     "objective": "Give HR a single view of leave balances per employee.",
+     "users": "HR users",
+     "expectedOutput": "ALV list with leave entitlement, leave taken and remaining balance per employee."
+    },
+    "objects": [
+     {
+      "type": "Table",
+      "name": "PA0001",
+      "status": "existing",
+      "purpose": "Employee organizational assignment"
+     },
+     {
+      "type": "Table",
+      "name": "PA2001",
+      "status": "existing",
+      "purpose": "Absences (leave taken)"
+     },
+     {
+      "type": "Class",
+      "name": "",
+      "status": "existing",
+      "purpose": "Leave calculation"
+     },
+     {
+      "type": "Report",
+      "name": "ZHR_LEAVE_BALANCE",
+      "status": "new",
+      "purpose": "Main report"
+     }
+    ],
+    "rules": [
+     {
+      "condition": "Employee has no remaining leave balance.",
+      "behavior": "Show a zero balance and an information message; do not raise an error."
+     },
+     {
+      "condition": "User is not authorized for the selected employee.",
+      "behavior": "Exclude the employee from the result."
+     }
+    ],
+    "acceptance": [
+     {
+      "text": "When HR selects a valid employee and date range, the report displays leave entitlement, leave taken and remaining balance."
+     }
+    ],
+    "details": {
+     "REPORT": {
+      "inputs": "PERNR – select-option (employee number)\nBEGDA / ENDDA – date range",
+      "outputType": [
+       "alv"
+      ]
+     }
+    },
+    "quality": {
+     "authorization": "yes",
+     "authObject": "",
+     "cleanCore": "yes",
+     "cleanCoreNote": "",
+     "dataVolume": "medium",
+     "performanceReq": "",
+     "testTypes": [
+      "Unit",
+      "Functional",
+      "Integration"
+     ],
+     "testScenarios": "Valid employee\nInvalid employee\nNo leave balance\nUnauthorized employee"
+    }
+   }
+  }
+ }
+};
+
+</script>
+  <script>
+/* Accessors over the configuration (config/*.json, bundled into config-bundle.js). */
+(function (APB) {
+  'use strict';
+  APB.config = window.APB_CONFIG;
+
+  const defs = APB.config.definitions;
+
+  function typeKeys() { return Object.keys(defs.types); }
+
+  /* Visible fields for an object type. Advanced fields are returned separately. */
+  function typeFields(type) {
+    const all = (defs.types[type] && defs.types[type].fields) || [];
+    return { essential: all.filter(function (f) { return !f.advanced; }), advanced: all.filter(function (f) { return f.advanced; }) };
+  }
+
+  /* showIf: { field, in:[...] } | { field, includes:value } evaluated against a values bag. */
+  function isVisible(field, values) {
+    if (!field.showIf) return true;
+    const v = values ? values[field.showIf.field] : undefined;
+    if (field.showIf.in) return field.showIf.in.indexOf(v) >= 0;
+    if (field.showIf.includes !== undefined) return Array.isArray(v) && v.indexOf(field.showIf.includes) >= 0;
+    return true;
+  }
+
+  function optionLabel(field, value) {
+    const o = (field.options || []).filter(function (x) { return x.value === value; })[0];
+    return o ? o.label : value;
+  }
+
+  function performanceRelevant(types) {
+    return types.some(function (t) { return defs.types[t] && defs.types[t].performance; });
+  }
+
+  APB.defs = {
+    types: defs.types,
+    typeKeys: typeKeys,
+    typeFields: typeFields,
+    isVisible: isVisible,
+    optionLabel: optionLabel,
+    performanceRelevant: performanceRelevant,
+    objectTypes: defs.sapObjectTypes,
+    statuses: defs.objectStatuses,
+    quality: defs.common.quality,
+    advanced: defs.common.advanced,
+    suggestions: defs.suggestions,
+    statusLabel: function (v) { const s = defs.objectStatuses.filter(function (x) { return x.value === v; })[0]; return s ? s.label : v; }
+  };
+})(window.APB = window.APB || {});
+
+</script>
+  <script>
+/* Specification model + tiny observable store. The model is tool-neutral:
+   GitHub Copilot is only an output profile (see markdown-generator.js). */
+(function (APB) {
+  'use strict';
+
+  const SCHEMA_VERSION = 1;
+
+  function uid() {
+    return 'x' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-3);
+  }
+
+  function getPath(obj, path) {
+    return String(path).split('.').reduce(function (o, k) { return o == null ? undefined : o[k]; }, obj);
+  }
+
+  function setPath(obj, path, value) {
+    const keys = String(path).split('.');
+    let o = obj;
+    for (let i = 0; i < keys.length - 1; i++) {
+      const k = keys[i];
+      if (o[k] == null || typeof o[k] !== 'object') o[k] = /^\d+$/.test(keys[i + 1]) ? [] : {};
+      o = o[k];
+    }
+    o[keys[keys.length - 1]] = value;
+  }
+
+  function defaultDod() {
+    return APB.config.definitions.definitionOfDone.map(function (text) { return { id: uid(), text: text, on: true }; });
+  }
+
+  function blank() {
+    const now = Date.now();
+    return {
+      schema: SCHEMA_VERSION,
+      id: uid(),
+      project: { name: '' },
+      types: [],
+      requirement: { text: '', objective: '', users: '', expectedOutput: '' },
+      objects: [],
+      rules: [],
+      acceptance: [],
+      assumptions: '',
+      details: {},
+      quality: { authorization: '', authObject: '', dataVolume: '', performanceReq: '', testTypes: ['Unit', 'Functional', 'Integration'], testScenarios: '', cleanCore: '', cleanCoreNote: '' },
+      advanced: {},
+      dod: defaultDod(),
+      meta: { created: now, updated: now }
+    };
+  }
+
+  /* Coerce anything (imported JSON, old drafts) into a valid state. Unknown keys are dropped. */
+  function migrate(input) {
+    const base = blank();
+    if (!input || typeof input !== 'object') return base;
+    const s = base;
+    const known = APB.config.definitions.types;
+    s.id = typeof input.id === 'string' && input.id ? input.id : s.id;
+    s.project.name = str(getPath(input, 'project.name'));
+    s.types = Array.isArray(input.types) ? input.types.filter(function (t) { return known[t]; }) : [];
+    ['text', 'objective', 'users', 'expectedOutput'].forEach(function (k) { s.requirement[k] = str(getPath(input, 'requirement.' + k)); });
+    s.objects = arr(input.objects).map(function (o) {
+      return { id: str(o.id) || uid(), type: str(o.type) || 'Other', name: str(o.name), status: ['existing', 'new', 'tbc'].indexOf(o.status) >= 0 ? o.status : 'tbc', purpose: str(o.purpose), parent: str(o.parent) };
+    });
+    s.rules = arr(input.rules).map(function (r) { return { id: str(r.id) || uid(), condition: str(r.condition), behavior: str(r.behavior) }; });
+    s.acceptance = arr(input.acceptance).map(function (a) { return { id: str(a.id) || uid(), text: str(a.text) }; });
+    s.assumptions = str(input.assumptions);
+    s.details = {};
+    Object.keys(known).forEach(function (t) {
+      const d = input.details && input.details[t];
+      if (d && typeof d === 'object') s.details[t] = JSON.parse(JSON.stringify(d));
+    });
+    if (input.quality && typeof input.quality === 'object') Object.assign(s.quality, JSON.parse(JSON.stringify(input.quality)));
+    if (input.advanced && typeof input.advanced === 'object') s.advanced = JSON.parse(JSON.stringify(input.advanced));
+    if (Array.isArray(input.dod)) s.dod = input.dod.map(function (d) { return { id: str(d.id) || uid(), text: str(d.text), on: d.on !== false }; });
+    if (input.meta && typeof input.meta === 'object') {
+      s.meta.created = Number(input.meta.created) || s.meta.created;
+      s.meta.updated = Number(input.meta.updated) || s.meta.updated;
+    }
+    return s;
+  }
+
+  function str(v) { return typeof v === 'string' ? v : (v == null ? '' : String(v)); }
+  function arr(v) { return Array.isArray(v) ? v.filter(function (x) { return x && typeof x === 'object'; }) : []; }
+
+  /* ---- store ---- */
+  let current = blank();
+  const listeners = [];
+
+  function emit(meta) { listeners.forEach(function (fn) { fn(current, meta || {}); }); }
+
+  APB.state = {
+    uid: uid,
+    getPath: getPath,
+    setPath: setPath,
+    blank: blank,
+    migrate: migrate,
+    get: function () { return current; },
+    subscribe: function (fn) { listeners.push(fn); },
+    set: function (path, value) {
+      setPath(current, path, value);
+      current.meta.updated = Date.now();
+      emit({ path: path });
+    },
+    update: function (fn) {
+      fn(current);
+      current.meta.updated = Date.now();
+      emit({ structural: true });
+    },
+    replace: function (next) {
+      current = migrate(next);
+      emit({ replaced: true, structural: true });
+    }
+  };
+})(window.APB = window.APB || {});
+
+</script>
+  <script>
+/* Mandatory-field checks (only two by design) and shared value helpers. */
+(function (APB) {
+  'use strict';
+  const rules = APB.config.validation;
+
+  /* true when a value carries real content (strings, arrays of strings/objects, objects). */
+  function isFilled(v) {
+    if (v == null) return false;
+    if (typeof v === 'string') return v.trim() !== '';
+    if (Array.isArray(v)) return v.some(function (x) { return typeof x === 'object' ? Object.keys(x).some(function (k) { return k !== 'id' && isFilled(x[k]); }) : isFilled(x); });
+    return true;
+  }
+
+  function checkMandatory(state) {
+    return rules.mandatory.filter(function (r) {
+      const v = APB.state.getPath(state, r.path);
+      if (r.minLength) return !(typeof v === 'string' && v.trim().length >= r.minLength);
+      if (r.minItems) return !(Array.isArray(v) && v.length >= r.minItems);
+      return !isFilled(v);
+    });
+  }
+
+  APB.validation = { rules: rules, isFilled: isFilled, checkMandatory: checkMandatory };
+})(window.APB = window.APB || {});
+
+</script>
+  <script>
+/* "Ready for Copilot" status, dependency tree and open questions.
+   Friendly by design: it never blocks beyond the two mandatory fields. */
+(function (APB) {
+  'use strict';
+  const V = APB.validation;
+  const D = APB.defs;
+  const TBC = '[TO BE CONFIRMED]';
+
+  function objectLabel(o) {
+    return o.type + ' ' + (o.name && o.name.trim() ? o.name.trim() : TBC);
+  }
+
+  function rootLabel(state) {
+    const labels = state.types.map(function (t) { return D.types[t].label; });
+    return labels.length ? labels.join(' + ') : 'Development object';
+  }
+
+  /* Objects form a tree under the development object. obj.parent = id of the object that uses it. */
+  function buildTree(state) {
+    const byId = {};
+    state.objects.forEach(function (o) { byId[o.id] = { obj: o, children: [] }; });
+    const root = { label: rootLabel(state), children: [] };
+    const placed = {};
+    function attach(node, parent) { parent.children.push(node); placed[node.obj.id] = true; }
+    // parents first so that cycles never hide nodes
+    state.objects.forEach(function (o) {
+      const p = o.parent && o.parent !== o.id && byId[o.parent] ? byId[o.parent] : null;
+      if (p && !createsCycle(o, byId)) attach(byId[o.id], p); else attach(byId[o.id], root);
+    });
+    return root;
+  }
+
+  function createsCycle(o, byId) {
+    const seen = {};
+    let cur = o;
+    while (cur && cur.parent && byId[cur.parent]) {
+      if (seen[cur.id]) return true;
+      seen[cur.id] = true;
+      if (cur.parent === o.id) return true;
+      cur = byId[cur.parent].obj;
+    }
+    return false;
+  }
+
+  /* ASCII tree used in the generated Markdown. */
+  function treeToText(root, describe) {
+    const lines = [root.label];
+    (function walk(nodes, prefix) {
+      nodes.forEach(function (n, i) {
+        const last = i === nodes.length - 1;
+        lines.push(prefix + (last ? '└── ' : '├── ') + describe(n.obj));
+        walk(n.children, prefix + (last ? '    ' : '│   '));
+      });
+    })(root.children, '');
+    return lines.join('\n');
+  }
+
+  function counts(state) {
+    const c = { existing: 0, new: 0, tbc: 0, dependencies: state.objects.length };
+    state.objects.forEach(function (o) { c[o.status] = (c[o.status] || 0) + 1; });
+    return c;
+  }
+
+  function ruleApplies(rule, state) {
+    return rule.types === '*' || state.types.some(function (t) { return rule.types.indexOf(t) >= 0; });
+  }
+
+  function missingRecommended(state) {
+    return V.rules.recommended.filter(function (r) {
+      if (!ruleApplies(r, state)) return false;
+      return !r.anyOf.some(function (p) { return V.isFilled(APB.state.getPath(state, p)); });
+    });
+  }
+
+  /* Questions derived from missing info and from explicit "To Be Confirmed" choices. Nothing is invented. */
+  function openQuestions(state) {
+    const q = [];
+    missingRecommended(state).forEach(function (r) { if (r.question) q.push(r.question); });
+
+    state.objects.forEach(function (o) {
+      const name = o.name && o.name.trim();
+      if (o.status === 'tbc') q.push('Confirm whether ' + o.type + (name ? ' ' + name : ' (unnamed)') + ' already exists in the system.');
+      else if (!name) q.push(o.status === 'new' ? 'Proposed name for the new ' + o.type + '.' : 'Name of the existing ' + o.type + (o.purpose ? ' (' + o.purpose + ')' : '') + '.');
+    });
+
+    const qa = state.quality;
+    if (qa.authorization === 'tbc') q.push('Whether authorization checks are required.');
+    if ((qa.authorization === 'yes' || qa.authorization === 'tbc') && !(qa.authObject || '').trim()) q.push('Exact authorization object / role.');
+    if (qa.cleanCore === 'tbc') q.push('Whether standard SAP functionality / released APIs can be reused.');
+
+    state.types.forEach(function (t) {
+      const values = state.details[t] || {};
+      D.typeFields(t).essential.concat(D.typeFields(t).advanced).forEach(function (f) {
+        if ((f.kind === 'radio' || f.kind === 'select') && values[f.id] === 'tbc' && D.isVisible(f, values)) {
+          q.push(f.label + ' (' + D.types[t].label + ').');
+        }
+      });
+    });
+    return q.filter(function (x, i) { return q.indexOf(x) === i; });
+  }
+
+  function evaluate(state) {
+    const mandatory = V.checkMandatory(state);
+    const missing = missingRecommended(state);
+    const important = missing.filter(function (r) { return r.important; });
+    const optional = missing.filter(function (r) { return !r.important; });
+    let level = 'ready';
+    if (mandatory.length) level = 'blocked'; else if (important.length) level = 'almost';
+    return {
+      level: level,
+      mandatory: mandatory,
+      important: important,
+      optional: optional,
+      counts: counts(state),
+      questions: openQuestions(state)
+    };
+  }
+
+  /* Object types worth suggesting from the requirement text (suggestions only; the developer decides). */
+  function suggest(state) {
+    const text = (state.requirement.text + ' ' + state.requirement.objective + ' ' + state.requirement.expectedOutput).toLowerCase();
+    const have = {};
+    state.objects.forEach(function (o) { have[o.type] = true; });
+    const out = [];
+    D.suggestions.forEach(function (s) {
+      if (have[s.type] || out.some(function (x) { return x.type === s.type; })) return;
+      if (new RegExp(s.match, 'i').test(text)) out.push({ type: s.type, label: s.label, status: 'tbc' });
+    });
+    return out;
+  }
+
+  /* The main object of every selected development type, if the developer has not listed one yet. */
+  function mainObjectChips(state) {
+    const have = {};
+    state.objects.forEach(function (o) { have[o.type] = true; });
+    const chips = [];
+    state.types.forEach(function (t) {
+      const kinds = D.types[t].mainObject;
+      if (kinds.some(function (k) { return have[k]; })) return;
+      chips.push({ type: kinds[0], label: 'New ' + D.types[t].label, status: 'new' });
+    });
+    return chips;
+  }
+
+  APB.completeness = {
+    TBC: TBC,
+    evaluate: evaluate,
+    openQuestions: openQuestions,
+    buildTree: buildTree,
+    treeToText: treeToText,
+    objectLabel: objectLabel,
+    suggest: suggest,
+    mainObjectChips: mainObjectChips
+  };
+})(window.APB = window.APB || {});
+
+</script>
+  <script>
+/* Turns the specification model into Markdown. Output "profiles" decide the
+   filename and the closing instruction block; only GitHub Copilot exists today. */
+(function (APB) {
+  'use strict';
+  const D = APB.defs;
+  const C = APB.completeness;
+  const TBC = C.TBC;
+
+  /* ---------- output profiles ---------- */
+  const profiles = {
+    copilot: {
+      id: 'copilot',
+      label: 'GitHub Copilot',
+      filenameSuffix: 'COPILOT_REQUIREMENT',
+      instructionsTitle: 'Copilot Development Instructions',
+      instructions: function (s) {
+        const qa = s.quality;
+        const hasAbap = s.types.some(function (t) { return t !== 'CAPM'; });
+        const hasAc = s.acceptance.some(function (a) { return a.text.trim(); });
+        const named = s.objects.some(function (o) { return o.status === 'new'; }) || (s.advanced.namingConvention || '').trim();
+        return [
+          'Read this entire specification.',
+          'Inspect the existing project/repository before writing code.',
+          'Reuse existing SAP objects (listed here or found in the repository/system). Do not create duplicate functionality.',
+          'Do not invent SAP objects, tables, fields, APIs, CDS views, classes, function modules, workflows, authorization objects, or business rules.',
+          'Anything unknown is marked ' + TBC + ': inspect the repository/system where possible, otherwise ask for clarification instead of inventing an implementation.',
+          named && 'Use the proposed names for new objects and follow the specified naming conventions.',
+          qa.cleanCore !== 'no' && 'Follow SAP Clean Core principles: prefer released APIs, standard SAP functionality and extension mechanisms.',
+          hasAbap && 'Use modern ABAP syntax where applicable.',
+          qa.authorization !== 'no' && 'Implement authorization checks where required and never bypass SAP security.',
+          'Implement proper exception handling and avoid inefficient data access.',
+          'Keep business logic testable and create appropriate tests.',
+          'Identify assumptions instead of silently guessing.',
+          hasAc ? 'Validate the implementation against the acceptance criteria.' : 'Validate the implementation against the requirement.'
+        ].filter(Boolean);
+      },
+      closing: 'Implement incrementally and explain significant assumptions or deviations.'
+    }
+  };
+
+  /* ---------- helpers ---------- */
+  function cell(v) {
+    const t = String(v == null ? '' : v).replace(/\s*\n\s*/g, ' ').replace(/\|/g, '\\|').trim();
+    return t || TBC;
+  }
+
+  function purposeCell(v) { return String(v || '').trim() ? cell(v) : '–'; }
+
+  function table(headers, rows) {
+    const out = ['| ' + headers.join(' | ') + ' |', '|' + headers.map(function () { return '---'; }).join('|') + '|'];
+    rows.forEach(function (r) { out.push('| ' + r.join(' | ') + ' |'); });
+    return out.join('\n');
+  }
+
+  function splitLines(v) {
+    return String(v || '').split(/\r?\n/).map(function (l) { return l.trim().replace(/^[-*•]\s+/, ''); }).filter(Boolean);
+  }
+
+  /* One rendered value per field, or null when the field is empty / hidden. */
+  function fieldValue(field, v) {
+    switch (field.kind) {
+      case 'lines':
+      case 'textarea': {
+        const lines = splitLines(v);
+        if (!lines.length) return null;
+        return lines.length === 1 && field.kind === 'textarea' ? { text: lines[0] } : { lines: lines };
+      }
+      case 'multicheck': {
+        if (!Array.isArray(v) || !v.length) return null;
+        return { text: v.map(function (x) { return D.optionLabel(field, x); }).join(', ') };
+      }
+      case 'radio':
+      case 'select': {
+        if (!v) return null;
+        return { text: v === 'tbc' ? TBC : D.optionLabel(field, v) };
+      }
+      default: {
+        const t = String(v == null ? '' : v).trim();
+        return t ? { text: t } : null;
+      }
+    }
+  }
+
+  function renderItem(label, val) {
+    const sep = /[?:]$/.test(label) ? '' : ':';
+    if (val.lines) return '- **' + label + '**' + sep + '\n' + val.lines.map(function (l) { return '  - ' + l; }).join('\n');
+    return '- **' + label + '**' + sep + ' ' + val.text;
+  }
+
+  /* All filled fields that belong to a Markdown section, across types and cross-cutting groups. */
+  function sectionItems(s, section, skipIds) {
+    const items = [];
+    const multi = s.types.length > 1;
+    s.types.forEach(function (t) {
+      const values = s.details[t] || {};
+      const f = D.typeFields(t);
+      f.essential.concat(f.advanced).forEach(function (field) {
+        if (field.section !== section || !D.isVisible(field, values)) return;
+        const val = fieldValue(field, values[field.id]);
+        if (val) items.push(renderItem(field.label + (multi ? ' (' + D.types[t].label + ')' : ''), val));
+      });
+    });
+    [[D.quality, s.quality], [D.advanced, s.advanced]].forEach(function (g) {
+      g[0].forEach(function (field) {
+        if (field.section !== section || (skipIds && skipIds.indexOf(field.id) >= 0) || !D.isVisible(field, g[1])) return;
+        const val = fieldValue(field, g[1][field.id]);
+        if (val) items.push(renderItem(field.label, val));
+      });
+    });
+    return items;
+  }
+
+  function objectRows(list) {
+    return list.map(function (o) { return [cell(o.type), cell(o.name), purposeCell(o.purpose)]; });
+  }
+
+  /* "When X, Then Y" → structured Given/When/Then. Nothing is invented: missing parts are omitted. */
+  function acceptanceBlock(a, i) {
+    const text = a.text.trim().replace(/\s+/g, ' ');
+    const m = /^(?:given\s+(.*?),\s*)?(?:when\s+(.*?),\s*)(?:then\s+)?(.+)$/i.exec(text);
+    const lines = ['**AC-' + (i + 1) + '**'];
+    if (m) {
+      if (m[1]) lines.push('- **Given** ' + m[1]);
+      lines.push('- **When** ' + m[2]);
+      lines.push('- **Then** ' + m[3].replace(/\.$/, ''));
+    } else {
+      lines.push('- **Then** ' + text.replace(/\.$/, '').replace(/^then\s+/i, ''));
+    }
+    return lines.join('\n');
+  }
+
+  function testCases(s) {
+    const rows = splitLines(s.quality.testScenarios).map(function (l) {
+      const p = l.split(/\s*(?:=>|->)\s*/);
+      return { scenario: p[0], expected: p.slice(1).join(' → ') };
+    });
+    if (!rows.length) return '';
+    const withExpected = rows.some(function (r) { return r.expected; });
+    return withExpected
+      ? table(['ID', 'Scenario', 'Expected result'], rows.map(function (r, i) { return ['TC-' + (i + 1), cell(r.scenario), r.expected ? cell(r.expected) : '–']; }))
+      : table(['ID', 'Scenario'], rows.map(function (r, i) { return ['TC-' + (i + 1), cell(r.scenario)]; }));
+  }
+
+  /* ---------- document ---------- */
+  function build(s, profileId) {
+    const profile = profiles[profileId || 'copilot'];
+    const sections = [];
+    function add(title, body) { if (body && body.trim()) sections.push({ title: title, body: body.trim() }); }
+
+    add('Requirement', s.requirement.text);
+
+    add('Development Object', s.types.map(function (t) { return '- ' + D.types[t].label; }).join('\n'));
+
+    const obj = [];
+    if (s.requirement.objective.trim()) obj.push(s.requirement.objective.trim());
+    if (s.requirement.users.trim()) obj.push('- **Users / Role**: ' + s.requirement.users.trim());
+    add('Business Objective', obj.join('\n\n'));
+
+    const existing = s.objects.filter(function (o) { return o.status === 'existing'; });
+    const tbc = s.objects.filter(function (o) { return o.status === 'tbc'; });
+    const fresh = s.objects.filter(function (o) { return o.status === 'new'; });
+    let ex = existing.length ? table(['Type', 'Name', 'Purpose'], objectRows(existing)) : '';
+    if (tbc.length) ex += (ex ? '\n\n' : '') + '**Existence to be confirmed** (check the system before reusing or creating):\n\n' + table(['Type', 'Name', 'Purpose'], objectRows(tbc));
+    add('Existing Objects', ex);
+    add('New Objects', fresh.length ? table(['Type', 'Proposed name', 'Purpose'], objectRows(fresh)) : '');
+
+    if (s.objects.length) {
+      const tree = C.treeToText(C.buildTree(s), function (o) { return C.objectLabel(o) + ' [' + D.statusLabel(o.status).toLowerCase() + ']'; });
+      add('Dependencies', '```text\n' + tree + '\n```');
+    }
+
+    add('Functional Requirements', sectionItems(s, 'functional').join('\n'));
+    add('Technical Details', sectionItems(s, 'technical').join('\n'));
+
+    const rules = s.rules.filter(function (r) { return r.condition.trim() || r.behavior.trim(); });
+    add('Business Rules', rules.length ? table(['ID', 'Condition', 'Expected behavior'], rules.map(function (r, i) { return ['BR-' + (i + 1), cell(r.condition), cell(r.behavior)]; })) : '');
+
+    add('Input', sectionItems(s, 'input').join('\n'));
+    const out = [];
+    if (s.requirement.expectedOutput.trim()) out.push('- **Expected output**: ' + s.requirement.expectedOutput.trim().replace(/\s*\n\s*/g, ' '));
+    add('Output', out.concat(sectionItems(s, 'output')).join('\n'));
+
+    add('Authorization', sectionItems(s, 'security').join('\n'));
+    add('Error Handling', sectionItems(s, 'errors').join('\n'));
+    add('Performance', sectionItems(s, 'performance').join('\n'));
+
+    const tests = sectionItems(s, 'testing', ['testScenarios']);
+    const cases = testCases(s);
+    add('Testing', tests.join('\n') + (cases ? (tests.length ? '\n\n' : '') + cases : ''));
+
+    const acc = s.acceptance.filter(function (a) { return a.text.trim(); });
+    add('Acceptance Criteria', acc.map(acceptanceBlock).join('\n\n'));
+
+    const cc = sectionItems(s, 'cleancore');
+    if (cc.length && s.quality.cleanCore !== 'no') cc.push('- Prefer released SAP APIs and standard extension mechanisms.');
+    add('Clean Core', cc.join('\n'));
+
+    const assumptions = splitLines(s.assumptions);
+    add('Assumptions', assumptions.map(function (a) { return '- ' + a; }).join('\n'));
+
+    const q = C.openQuestions(s);
+    add('Open Questions', q.map(function (x, i) { return (i + 1) + '. ' + TBC + ' ' + x; }).join('\n'));
+
+    const dod = s.dod.filter(function (d) { return d.on && d.text.trim(); });
+    add('Definition of Done', dod.map(function (d) { return '- [ ] ' + d.text.trim(); }).join('\n'));
+
+    add(profile.instructionsTitle, 'Before implementing:\n\n' + profile.instructions(s).map(function (t, i) { return (i + 1) + '. ' + t; }).join('\n') + '\n\n' + profile.closing);
+
+    const lines = ['# SAP Development Specification', ''];
+    if (s.project.name.trim()) lines.push('**Project:** ' + s.project.name.trim(), '');
+    sections.forEach(function (sec, i) { lines.push('## ' + (i + 1) + '. ' + sec.title, '', sec.body, ''); });
+    return lines.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd() + '\n';
+  }
+
+  function slug(v) { return String(v || '').trim().replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, ''); }
+
+  function filename(s, profileId) {
+    const profile = profiles[profileId || 'copilot'];
+    const firstNew = s.objects.filter(function (o) { return o.status === 'new' && o.name.trim(); })[0];
+    const base = slug(s.project.name) || (firstNew && slug(firstNew.name)) || slug(s.types.join('_')) || 'SAP';
+    return base + '_' + profile.filenameSuffix + '.md';
+  }
+
+  /* ---------- lightweight Markdown → HTML for the preview ---------- */
+  function esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  function inline(t) {
+    return esc(t)
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/\\\|/g, '|')
+      .replace(/\[TO BE CONFIRMED\]/g, '<mark>[TO BE CONFIRMED]</mark>')
+      .replace(/&lt;br&gt;/g, '<br>');
+  }
+
+  function tableCells(line) {
+    return line.replace(/^\|/, '').replace(/\|\s*$/, '').split(/(?<!\\)\|/).map(function (c) { return c.trim(); });
+  }
+
+  function toHtml(md) {
+    const lines = md.split('\n');
+    const html = [];
+    let i = 0;
+    while (i < lines.length) {
+      const l = lines[i];
+      if (/^```/.test(l)) {
+        const buf = [];
+        i++;
+        while (i < lines.length && !/^```/.test(lines[i])) buf.push(lines[i++]);
+        i++;
+        html.push('<pre><code>' + esc(buf.join('\n')) + '</code></pre>');
+      } else if (/^#{1,3}\s/.test(l)) {
+        const lvl = /^#+/.exec(l)[0].length;
+        html.push('<h' + lvl + '>' + inline(l.replace(/^#+\s+/, '')) + '</h' + lvl + '>');
+        i++;
+      } else if (/^\|/.test(l) && /^\|\s*:?-{2,}/.test(lines[i + 1] || '')) {
+        const head = tableCells(l);
+        i += 2;
+        const rows = [];
+        while (i < lines.length && /^\|/.test(lines[i])) rows.push(tableCells(lines[i++]));
+        html.push('<div class="table-wrap"><table><thead><tr>' + head.map(function (h) { return '<th>' + inline(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+          rows.map(function (r) { return '<tr>' + r.map(function (c) { return '<td>' + inline(c) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>');
+      } else if (/^\s*([-*]|\d+\.)\s/.test(l)) {
+        // list block (supports one level of nesting by 2-space indent)
+        const ordered = /^\d+\./.test(l);
+        const items = [];
+        while (i < lines.length && /^\s*([-*]|\d+\.)\s/.test(lines[i])) {
+          const m = /^(\s*)(?:[-*]|\d+\.)\s+(.*)$/.exec(lines[i]);
+          if (m[1].length >= 2 && items.length) items[items.length - 1].sub.push(m[2]); else items.push({ text: m[2], sub: [] });
+          i++;
+        }
+        const tag = ordered ? 'ol' : 'ul';
+        html.push('<' + tag + '>' + items.map(function (it) {
+          const cb = /^\[( |x)\]\s/.exec(it.text);
+          const label = cb ? '<span class="cb" aria-hidden="true">☐</span> ' + inline(it.text.slice(4)) : inline(it.text);
+          return '<li>' + label + (it.sub.length ? '<ul>' + it.sub.map(function (x) { return '<li>' + inline(x) + '</li>'; }).join('') + '</ul>' : '') + '</li>';
+        }).join('') + '</' + tag + '>');
+      } else if (/^\s*$/.test(l)) {
+        i++;
+      } else {
+        const buf = [];
+        while (i < lines.length && lines[i].trim() && !/^(#{1,3}\s|```|\||\s*([-*]|\d+\.)\s)/.test(lines[i])) buf.push(lines[i++]);
+        if (!buf.length) { buf.push(lines[i++]); }
+        html.push('<p>' + buf.map(inline).join('<br>') + '</p>');
+      }
+    }
+    return html.join('\n');
+  }
+
+  APB.markdown = { build: build, filename: filename, toHtml: toHtml, profiles: profiles };
+})(window.APB = window.APB || {});
+
+</script>
+  <script>
+/* Quick-start templates and the demo example (data lives in config/templates.json). */
+(function (APB) {
+  'use strict';
+  const cfg = APB.config.templates;
+
+  function list() { return cfg.templates; }
+
+  /* Templates give structure only; they never fill in made-up business information. */
+  function fromTemplate(id) {
+    const t = cfg.templates.filter(function (x) { return x.id === id; })[0];
+    if (!t) return null;
+    return APB.state.migrate({
+      types: t.types,
+      objects: (t.objects || []).map(function (o) { return Object.assign({ id: APB.state.uid() }, o); }),
+      details: t.details || {}
+    });
+  }
+
+  function example() {
+    const e = JSON.parse(JSON.stringify(cfg.example.state));
+    e.objects.forEach(function (o) { o.id = APB.state.uid(); });
+    e.rules.forEach(function (r) { r.id = APB.state.uid(); });
+    e.acceptance.forEach(function (a) { a.id = APB.state.uid(); });
+    return APB.state.migrate(e);
+  }
+
+  APB.templates = { list: list, fromTemplate: fromTemplate, example: example };
+})(window.APB = window.APB || {});
+
+</script>
+  <script>
+/* Browser-only persistence (localStorage). Nothing leaves the machine. */
+(function (APB) {
+  'use strict';
+  const KEY_DRAFTS = 'apb.drafts.v1';
+  const KEY_CURRENT = 'apb.current.v1';
+  const KEY_MODE = 'apb.mode.v1';
+  const memory = {};
+
+  function read(key) {
+    try { const v = window.localStorage.getItem(key); return v == null ? memory[key] || null : v; } catch (e) { return memory[key] || null; }
+  }
+  function write(key, value) {
+    memory[key] = value;
+    try { window.localStorage.setItem(key, value); return true; } catch (e) { return false; }
+  }
+
+  function drafts() {
+    try { const d = JSON.parse(read(KEY_DRAFTS) || '{}'); return d && typeof d === 'object' ? d : {}; } catch (e) { return {}; }
+  }
+
+  function draftName(s) {
+    const n = s.project.name.trim() || s.requirement.text.trim().split(/\r?\n/)[0].slice(0, 60);
+    return n || 'Untitled requirement';
+  }
+
+  /* A state with nothing typed is not worth keeping as a draft. */
+  function isEmpty(s) {
+    return !s.types.length && !s.requirement.text.trim() && !s.objects.length && !s.rules.length && !s.project.name.trim();
+  }
+
+  const api = {
+    list: function () {
+      const d = drafts();
+      return Object.keys(d).map(function (k) { return d[k]; }).sort(function (a, b) { return b.updated - a.updated; });
+    },
+    save: function (s) {
+      if (isEmpty(s)) return false;
+      const d = drafts();
+      d[s.id] = { id: s.id, name: draftName(s), updated: Date.now(), types: s.types, state: s };
+      write(KEY_CURRENT, s.id);
+      return write(KEY_DRAFTS, JSON.stringify(d));
+    },
+    load: function (id) { const d = drafts()[id]; return d ? d.state : null; },
+    remove: function (id) {
+      const d = drafts();
+      delete d[id];
+      write(KEY_DRAFTS, JSON.stringify(d));
+      if (read(KEY_CURRENT) === id) write(KEY_CURRENT, '');
+    },
+    currentId: function () { return read(KEY_CURRENT) || ''; },
+    setCurrent: function (id) { write(KEY_CURRENT, id); },
+    getMode: function () { return read(KEY_MODE) === 'advanced' ? 'advanced' : 'quick'; },
+    setMode: function (m) { write(KEY_MODE, m); },
+    isEmpty: isEmpty
+  };
+
+  APB.storage = api;
+})(window.APB = window.APB || {});
+
+</script>
+  <script>
+/* Download / copy / project JSON / share link. All client-side. */
+(function (APB) {
+  'use strict';
+  const FORMAT = 'abap-copilot-prompt-builder';
+
+  function download(name, text, mime) {
+    const blob = new Blob([text], { type: (mime || 'text/plain') + ';charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function copy(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text).then(function () { return true; }, function () { return fallbackCopy(text); });
+    }
+    return Promise.resolve(fallbackCopy(text));
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    ta.remove();
+    return ok;
+  }
+
+  function projectJson(state) {
+    return JSON.stringify({ format: FORMAT, version: state.schema, exportedAt: new Date().toISOString(), state: state }, null, 2);
+  }
+
+  function parseProject(text) {
+    let data;
+    try { data = JSON.parse(text); } catch (e) { throw new Error('This file is not valid JSON.'); }
+    const payload = data && data.format === FORMAT ? data.state : data;
+    if (!payload || typeof payload !== 'object' || !('requirement' in payload || 'types' in payload)) throw new Error('This does not look like a project exported from this tool.');
+    const s = APB.state.migrate(payload);
+    s.id = APB.state.uid(); // imports never overwrite an existing draft
+    return s;
+  }
+
+  /* ---- share link: the whole spec travels inside the URL fragment (never sent to any server) ---- */
+  function toB64Url(bytes) {
+    let bin = '';
+    bytes.forEach(function (b) { bin += String.fromCharCode(b); });
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function fromB64Url(str) {
+    const b = atob(str.replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from(b, function (c) { return c.charCodeAt(0); });
+  }
+
+  async function pipe(bytes, stream) {
+    const out = new Response(new Blob([bytes]).stream().pipeThrough(stream));
+    return new Uint8Array(await out.arrayBuffer());
+  }
+
+  async function shareLink(state) {
+    const json = new TextEncoder().encode(JSON.stringify(state));
+    let token;
+    if (typeof CompressionStream === 'function') token = 'z' + toB64Url(await pipe(json, new CompressionStream('deflate-raw')));
+    else token = 'r' + toB64Url(json);
+    return location.href.split('#')[0] + '#s=' + token;
+  }
+
+  async function readShareLink(hash) {
+    const m = /^#s=([zr])([A-Za-z0-9_-]+)$/.exec(hash || '');
+    if (!m) return null;
+    const bytes = fromB64Url(m[2]);
+    const json = m[1] === 'z' ? await pipe(bytes, new DecompressionStream('deflate-raw')) : bytes;
+    const s = APB.state.migrate(JSON.parse(new TextDecoder().decode(json)));
+    s.id = APB.state.uid();
+    return s;
+  }
+
+  APB.exporter = { download: download, copy: copy, projectJson: projectJson, parseProject: parseProject, shareLink: shareLink, readShareLink: readShareLink };
+})(window.APB = window.APB || {});
+
+</script>
+  <script>
+/* UI: 5-step wizard, live preview, drafts. All rendering is plain DOM; state lives in state.js. */
+(function (APB) {
+  'use strict';
+
+  const S = APB.state, D = APB.defs, C = APB.completeness, M = APB.markdown, ST = APB.storage, X = APB.exporter, T = APB.templates, V = APB.validation;
+
+  const STEPS = [
+    { n: 1, title: 'What are you building?', label: 'Build' },
+    { n: 2, title: 'What do you want to build?', label: 'Requirement' },
+    { n: 3, title: 'What SAP objects are involved?', label: 'Objects' },
+    { n: 4, title: 'Details', label: 'Details' },
+    { n: 5, title: 'Review and generate', label: 'Review' }
+  ];
+
+  const ui = { step: 1, mode: ST.getMode(), generated: false, raw: false, tab: 'edit', showErrors: false };
+
+  const $ = function (sel, root) { return (root || document).querySelector(sel); };
+  const $$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
+  function esc(t) { return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  /* ------------------------------------------------------------------ toast */
+  let toastTimer;
+  function toast(msg) {
+    const el = $('#toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2600);
+  }
+
+  /* ------------------------------------------------------ focus-preserving render */
+  function keepFocus(fn) {
+    const a = document.activeElement;
+    let key = null, sel = null;
+    if (a && a.dataset && (a.dataset.bind || a.dataset.multi || a.dataset.check)) {
+      key = { attr: a.dataset.bind ? 'data-bind' : a.dataset.multi ? 'data-multi' : 'data-check', val: a.dataset.bind || a.dataset.multi || a.dataset.check, value: (a.type === 'radio' || a.type === 'checkbox') ? a.value : null };
+      try { sel = [a.selectionStart, a.selectionEnd]; } catch (e) { sel = null; }
+    }
+    fn();
+    if (key) {
+      let q = '[' + key.attr + '="' + key.val + '"]';
+      if (key.value !== null) q += '[value="' + String(key.value).replace(/"/g, '\\"') + '"]';
+      const el = $(q);
+      if (el) {
+        el.focus();
+        try { if (sel && el.setSelectionRange && sel[0] != null) el.setSelectionRange(sel[0], sel[1]); } catch (e) { /* not a text control */ }
+      }
+    }
+  }
+
+  /* ----------------------------------------------------------- field renderers */
+  function fieldId(path) { return 'f-' + path.replace(/[^a-z0-9]+/gi, '-'); }
+
+  function choiceHtml(type, path, field, value, rerender, groupName) {
+    return '<div class="choices">' + field.options.map(function (o) {
+      const checked = type === 'radio' ? value === o.value : Array.isArray(value) && value.indexOf(o.value) >= 0;
+      const attrs = type === 'radio'
+        ? 'type="radio" name="' + esc(groupName) + '" data-bind="' + esc(path) + '"' + rerender
+        : 'type="checkbox" data-multi="' + esc(path) + '"' + rerender;
+      return '<label class="choice"><input ' + attrs + ' value="' + esc(o.value) + '"' + (checked ? ' checked' : '') + '><span>' + esc(o.label) + '</span></label>';
+    }).join('') + '</div>';
+  }
+
+  /* group = all fields rendered together (needed to know which fields drive conditional ones). */
+  function fieldHtml(field, values, basePath, group) {
+    if (!D.isVisible(field, values)) return '';
+    const path = basePath + '.' + field.id;
+    const id = fieldId(path);
+    const v = values[field.id];
+    const rerender = group.some(function (f) { return f.showIf && f.showIf.field === field.id; }) ? ' data-rerender' : '';
+    const ph = field.placeholder ? ' placeholder="' + esc(field.placeholder) + '"' : '';
+    let control;
+    switch (field.kind) {
+      case 'textarea':
+      case 'lines':
+        control = '<textarea id="' + id + '" rows="3" data-bind="' + esc(path) + '"' + ph + '>' + esc(v || '') + '</textarea>';
+        break;
+      case 'select':
+        control = '<select id="' + id + '" data-bind="' + esc(path) + '"' + rerender + '>' + field.options.map(function (o) {
+          return '<option value="' + esc(o.value) + '"' + (v === o.value ? ' selected' : '') + '>' + esc(o.label) + '</option>';
+        }).join('') + '</select>';
+        break;
+      case 'radio':
+      case 'multicheck':
+        return '<fieldset class="field"><legend>' + esc(field.label) + '</legend>' + choiceHtml(field.kind === 'radio' ? 'radio' : 'check', path, field, v, rerender, path) + '</fieldset>';
+      default:
+        control = '<input id="' + id + '" type="text" data-bind="' + esc(path) + '" value="' + esc(v || '') + '"' + ph + '>';
+    }
+    const hint = field.kind === 'lines' ? ' <span class="hint">one per line</span>' : '';
+    return '<div class="field"><label for="' + id + '">' + esc(field.label) + hint + '</label>' + control + '</div>';
+  }
+
+  function fieldsHtml(fields, values, basePath, all) {
+    return fields.map(function (f) { return fieldHtml(f, values, basePath, all || fields); }).join('');
+  }
+
+  /* ------------------------------------------------------------ step renderers */
+  function rowRemove(action, i, what) {
+    return '<button type="button" class="icon-btn icon-btn-light" data-action="' + action + '" data-i="' + i + '" aria-label="Remove ' + esc(what) + '">✕</button>';
+  }
+
+  function step1(s) {
+    const missing = ui.showErrors ? V.checkMandatory(s).map(function (r) { return r.id; }) : [];
+    const cards = D.typeKeys().map(function (k) {
+      const on = s.types.indexOf(k) >= 0;
+      return '<button type="button" class="type-card" data-action="toggle-type" data-type="' + k + '" aria-pressed="' + on + '">' +
+        '<span class="type-name">' + esc(D.types[k].label) + '</span><span class="type-hint">' + esc(D.types[k].hint) + '</span></button>';
+    }).join('');
+    const tpls = T.list().map(function (t) {
+      return '<button type="button" class="chip" data-action="template" data-id="' + t.id + '" title="' + esc(t.description) + '">' + esc(t.label) + '</button>';
+    }).join('');
+    return '<h2 class="step-title">' + STEPS[0].title + '</h2>' +
+      '<p class="muted">Pick one or more. Everything after this adapts to your choice.</p>' +
+      '<div class="type-grid" role="group" aria-label="Development object">' + cards + '</div>' +
+      (missing.indexOf('developmentObject') >= 0 ? '<p class="field-error" role="alert">Pick at least one development object.</p>' : '') +
+      '<div class="field"><label for="req">Business requirement <span class="req">required</span></label>' +
+      '<textarea id="req" class="tall" rows="7" data-bind="requirement.text" placeholder="Describe what needs to be built, or paste the existing business requirement…"' + (missing.indexOf('businessRequirement') >= 0 ? ' aria-invalid="true" aria-describedby="req-err"' : '') + '>' + esc(s.requirement.text) + '</textarea>' +
+      (missing.indexOf('businessRequirement') >= 0 ? '<p id="req-err" class="field-error" role="alert">Describe what needs to be built (a sentence or two is enough).</p>' : '') + '</div>' +
+      '<div class="field narrow"><label for="proj">Project / requirement name <span class="hint">optional · used for the file name</span></label>' +
+      '<input id="proj" type="text" data-bind="project.name" value="' + esc(s.project.name) + '" placeholder="e.g. Employee Leave Balance"></div>' +
+      '<details class="more"><summary>Start from a template</summary><p class="muted small">Templates add the structure only — no made-up business details.</p><div class="chips">' + tpls + '</div></details>' +
+      nav(false, 'Continue');
+  }
+
+  function step2(s) {
+    const rules = s.rules.map(function (r, i) {
+      return '<div class="row card-row"><div class="field"><label for="rc' + i + '">Condition</label><input id="rc' + i + '" type="text" data-bind="rules.' + i + '.condition" value="' + esc(r.condition) + '" placeholder="e.g. Employee has no remaining leave balance."></div>' +
+        '<div class="field"><label for="rb' + i + '">Expected behavior</label><input id="rb' + i + '" type="text" data-bind="rules.' + i + '.behavior" value="' + esc(r.behavior) + '" placeholder="e.g. Prevent submission and show an error message."></div>' +
+        rowRemove('remove-rule', i, 'rule ' + (i + 1)) + '</div>';
+    }).join('');
+    const acc = s.acceptance.map(function (a, i) {
+      return '<div class="row card-row"><div class="field"><label for="ac' + i + '">Criterion ' + (i + 1) + '</label><textarea id="ac' + i + '" rows="2" data-bind="acceptance.' + i + '.text" placeholder="e.g. When HR selects a valid date range, the report displays entitlement, leave taken and remaining balance.">' + esc(a.text) + '</textarea></div>' +
+        rowRemove('remove-ac', i, 'criterion ' + (i + 1)) + '</div>';
+    }).join('');
+    return '<h2 class="step-title">' + STEPS[1].title + '</h2>' +
+      '<p class="muted">Only the requirement was mandatory — everything here is optional but helps Copilot.</p>' +
+      '<div class="field"><label for="obj">Business objective</label><textarea id="obj" rows="2" data-bind="requirement.objective" placeholder="Why is this needed?">' + esc(s.requirement.objective) + '</textarea></div>' +
+      '<div class="grid-2"><div class="field"><label for="usr">Users / role</label><input id="usr" type="text" data-bind="requirement.users" value="' + esc(s.requirement.users) + '" placeholder="e.g. HR users"></div>' +
+      '<div class="field"><label for="eo">Expected output</label><input id="eo" type="text" data-bind="requirement.expectedOutput" value="' + esc(s.requirement.expectedOutput) + '" placeholder="e.g. ALV list with balance per employee"></div></div>' +
+      '<h3>Important business rules</h3>' + rules +
+      '<button type="button" class="btn btn-ghost" data-action="add-rule">+ Add Business Rule</button>' +
+      '<details class="more"' + (s.acceptance.length || s.assumptions ? ' open' : '') + '><summary>Acceptance criteria &amp; assumptions</summary>' +
+      '<h3>Acceptance criteria</h3><p class="muted small">Write them naturally. “When …, …” is turned into Given / When / Then in the Markdown.</p>' + acc +
+      '<button type="button" class="btn btn-ghost" data-action="add-ac">+ Add Acceptance Criterion</button>' +
+      '<div class="field"><label for="asm">Assumptions <span class="hint">one per line · only what you state is included</span></label><textarea id="asm" rows="3" data-bind="assumptions" placeholder="e.g. Existing leave calculation class will be reused.">' + esc(s.assumptions) + '</textarea></div></details>' +
+      nav(true, 'Continue');
+  }
+
+  function objectRow(o, i, n) {
+    return '<div class="obj-row" role="group" aria-label="Object ' + (i + 1) + '">' +
+      '<div class="field"><label for="ot' + i + '">Type</label><select id="ot' + i + '" data-bind="objects.' + i + '.type">' + D.objectTypes.map(function (t) { return '<option' + (t === o.type ? ' selected' : '') + '>' + esc(t) + '</option>'; }).join('') + '</select></div>' +
+      '<div class="field"><label for="on' + i + '">Name</label><input id="on' + i + '" type="text" data-bind="objects.' + i + '.name" value="' + esc(o.name) + '" placeholder="e.g. ZHR_LEAVE_BALANCE" autocapitalize="characters" spellcheck="false"></div>' +
+      '<div class="field"><label for="os' + i + '">Status</label><select id="os' + i + '" class="status-select" data-status="' + o.status + '" data-status-sel data-bind="objects.' + i + '.status">' + D.statuses.map(function (st) { return '<option value="' + st.value + '"' + (st.value === o.status ? ' selected' : '') + '>' + st.label + '</option>'; }).join('') + '</select></div>' +
+      '<div class="field"><label for="op' + i + '">Purpose</label><input id="op' + i + '" type="text" data-bind="objects.' + i + '.purpose" value="' + esc(o.purpose) + '" placeholder="Short purpose"></div>' +
+      '<div class="row-actions">' +
+      '<button type="button" class="icon-btn icon-btn-light" data-action="move-object" data-i="' + i + '" data-dir="-1" aria-label="Move object ' + (i + 1) + ' up"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
+      '<button type="button" class="icon-btn icon-btn-light" data-action="move-object" data-i="' + i + '" data-dir="1" aria-label="Move object ' + (i + 1) + ' down"' + (i === n - 1 ? ' disabled' : '') + '>↓</button>' +
+      rowRemove('remove-object', i, 'object ' + (i + 1)) + '</div></div>';
+  }
+
+  function suggestionsHtml(s) {
+    const chips = C.mainObjectChips(s).map(function (c) { return { c: c, group: 'main' }; })
+      .concat(C.suggest(s).map(function (c) { return { c: c, group: 'sug' }; }));
+    if (!chips.length) return '';
+    return '<div class="suggest"><p class="muted small" id="sug-h">Possible related objects — suggestions only, you decide:</p><div class="chips" aria-labelledby="sug-h">' +
+      chips.map(function (x) {
+        return '<button type="button" class="chip" data-action="add-chip" data-type="' + esc(x.c.type) + '" data-status="' + x.c.status + '">+ ' + esc(x.c.label) + '</button>';
+      }).join('') + '</div></div>';
+  }
+
+  function step3(s) {
+    return '<h2 class="step-title">' + STEPS[2].title + '</h2>' +
+      '<p class="muted">List what already exists (to reuse) and what is new. Each object needs only a type, a name, a status and a short purpose.</p>' +
+      '<div id="obj-rows">' + s.objects.map(function (o, i) { return objectRow(o, i, s.objects.length); }).join('') + '</div>' +
+      (s.objects.length ? '' : '<p class="empty">No objects yet. Add the tables, CDS views, classes… Copilot should reuse or create.</p>') +
+      '<button type="button" class="btn btn-ghost" data-action="add-object">+ Add Object</button>' +
+      '<div id="suggest">' + suggestionsHtml(s) + '</div>' +
+      '<h3>Dependency map</h3><p class="muted small">Built from the objects above. Use “used by” to nest an object under another one.</p>' +
+      '<div id="depmap" class="depmap"></div>' +
+      nav(true, 'Continue');
+  }
+
+  function step4(s) {
+    const q = s.quality;
+    const adv = ui.mode === 'advanced';
+    const cards = s.types.map(function (t) {
+      const f = D.typeFields(t);
+      const values = s.details[t] || {};
+      const all = f.essential.concat(f.advanced);
+      return '<section class="card" aria-labelledby="h-' + t + '"><h3 id="h-' + t + '">' + esc(D.types[t].label) + '</h3>' +
+        fieldsHtml(f.essential, values, 'details.' + t, all) +
+        (f.advanced.length ? '<details class="more"' + (adv ? ' open' : '') + '><summary>Advanced details</summary>' + fieldsHtml(f.advanced, values, 'details.' + t, all) + '</details>' : '') +
+        '</section>';
+    }).join('');
+    const perfRelevant = D.performanceRelevant(s.types);
+    const quality = D.quality.filter(function (f) { return !f.perfOnly || perfRelevant || adv; });
+    const advSections = adv
+      ? '<section class="card" aria-labelledby="h-adv"><h3 id="h-adv">Advanced sections</h3>' + fieldsHtml(D.advanced, s.advanced, 'advanced') + '</section>'
+      : '<p class="muted small">Need architecture, integration or deployment details? Switch to <button type="button" class="link" data-action="mode" data-mode="advanced">Advanced mode</button>.</p>';
+    return '<h2 class="step-title">' + STEPS[3].title + '</h2>' +
+      '<p class="muted">Only questions relevant to what you selected. Skip anything you do not know — it becomes an open question for Copilot, not an invention.</p>' +
+      (cards || '<p class="empty">Select a development object in step 1 to see its questions.</p>') +
+      '<section class="card" aria-labelledby="h-q"><h3 id="h-q">Authorization, testing &amp; clean core</h3>' + fieldsHtml(quality, q, 'quality', D.quality) + '</section>' +
+      advSections + nav(true, 'Continue');
+  }
+
+  function step5(s) {
+    const ev = C.evaluate(s);
+    const c = ev.counts;
+    const dod = s.dod.map(function (d, i) {
+      return '<div class="row dod-row"><label class="choice"><input type="checkbox" data-check="dod.' + i + '.on"' + (d.on ? ' checked' : '') + ' aria-label="Include item ' + (i + 1) + '"><span class="sr-only">Include</span></label>' +
+        '<input type="text" data-bind="dod.' + i + '.text" value="' + esc(d.text) + '" aria-label="Definition of done item ' + (i + 1) + '">' + rowRemove('remove-dod', i, 'item ' + (i + 1)) + '</div>';
+    }).join('');
+    return '<h2 class="step-title">' + STEPS[4].title + '</h2>' +
+      statusHtml(ev, true) +
+      '<div class="stats">' +
+      stat('Objects', c.existing + ' existing<br>' + c.new + ' new' + (c.tbc ? '<br>' + c.tbc + ' to confirm' : '')) +
+      stat('Dependencies', c.dependencies + ' identified') +
+      stat('Open questions', String(ev.questions.length)) +
+      stat('Rules &amp; criteria', s.rules.filter(function (r) { return V.isFilled([r]); }).length + ' rules<br>' + s.acceptance.filter(function (a) { return a.text.trim(); }).length + ' criteria') + '</div>' +
+      (ev.optional.length ? '<p class="muted small">Optional information not specified: ' + ev.optional.map(function (r) { return esc(r.label.toLowerCase()); }).join(', ') + '.</p>' : '') +
+      '<h3>Definition of done</h3><p class="muted small">Checked items are added to the document. Edit freely.</p>' + dod +
+      '<button type="button" class="btn btn-ghost" data-action="add-dod">+ Add item</button>' +
+      '<div class="nav-row"><button type="button" class="btn btn-ghost" data-action="back">Back</button><span class="spacer"></span>' +
+      (ev.level === 'almost' ? '<button type="button" class="btn btn-ghost" data-action="missing">Add Missing Details</button>' : '') +
+      '<button type="button" class="btn btn-primary btn-lg" data-action="generate"' + (ev.mandatory.length ? ' disabled' : '') + '>Generate Specification</button></div>' +
+      (ev.mandatory.length ? '<p class="field-error" role="alert">Still needed: ' + ev.mandatory.map(function (r) { return esc(r.label.toLowerCase()); }).join(' and ') + '.</p>' : '');
+  }
+
+  function stat(label, html) { return '<div class="stat"><span class="stat-label">' + label + '</span><span class="stat-val">' + html + '</span></div>'; }
+
+  function statusHtml(ev, detailed) {
+    if (ev.level === 'blocked') {
+      return '<div class="status is-blocked"><span class="dot" aria-hidden="true"></span><div><strong>Almost there</strong>' + (detailed ? '<p>Add ' + ev.mandatory.map(function (r) { return esc(r.label.toLowerCase()); }).join(' and ') + ' to get started.</p>' : '') + '</div></div>';
+    }
+    if (ev.level === 'almost') {
+      return '<div class="status is-almost"><span class="dot" aria-hidden="true"></span><div><strong>A few details could improve the result</strong>' +
+        '<p>Consider adding:</p><ul>' + ev.important.map(function (r) { return '<li>' + esc(r.label) + '</li>'; }).join('') + '</ul></div></div>';
+    }
+    return '<div class="status is-ready"><span class="dot" aria-hidden="true"></span><div><strong>Ready for Copilot</strong>' + (detailed ? '<p>Your requirement contains the essential information.</p>' : '') + '</div></div>';
+  }
+
+  function nav(back, nextLabel) {
+    return '<div class="nav-row">' + (back ? '<button type="button" class="btn btn-ghost" data-action="back">Back</button>' : '') + '<span class="spacer"></span>' +
+      '<button type="button" class="btn btn-primary" data-action="next">' + nextLabel + ' <span aria-hidden="true">→</span></button></div>';
+  }
+
+  function generatedView(s) {
+    const md = M.build(s);
+    return '<div class="gen-head"><h2 class="step-title">Your specification is ready</h2>' +
+      '<p class="muted"><code>' + esc(M.filename(s)) + '</code> · drop it into your workspace and reference it in Copilot Chat (<code>#file</code> in VS Code, or attach it in Eclipse ADT).</p></div>' +
+      '<div class="gen-actions"><button type="button" class="btn btn-primary btn-lg" data-action="download">Download .md</button>' +
+      '<button type="button" class="btn btn-ghost" data-action="copy">Copy Markdown</button>' +
+      '<button type="button" class="btn btn-ghost" data-action="export">Export project (.json)</button>' +
+      '<button type="button" class="btn btn-ghost" data-action="share">Copy share link</button>' +
+      '<button type="button" class="btn btn-ghost" data-action="edit">Review Details</button></div>' +
+      '<div class="seg gen-seg" role="group" aria-label="Format"><button type="button" data-action="view-rendered" aria-pressed="' + !ui.raw + '">Preview</button><button type="button" data-action="view-raw" aria-pressed="' + ui.raw + '">Markdown</button></div>' +
+      '<div class="gen-doc md" tabindex="0" aria-label="Generated specification">' + (ui.raw ? '<pre>' + esc(md) + '</pre>' : M.toHtml(md)) + '</div>';
+  }
+
+  /* ----------------------------------------------------------------- dep map */
+  function renderMap() {
+    const el = $('#depmap');
+    if (!el) return;
+    const s = S.get();
+    const root = C.buildTree(s);
+    const idx = {};
+    s.objects.forEach(function (o, i) { idx[o.id] = i; });
+    function node(n) {
+      const o = n.obj, i = idx[o.id];
+      const opts = ['<option value="">Development object</option>'].concat(s.objects.filter(function (x) { return x.id !== o.id; }).map(function (x) {
+        return '<option value="' + x.id + '"' + (o.parent === x.id ? ' selected' : '') + '>' + esc(C.objectLabel(x)) + '</option>';
+      })).join('');
+      return '<li><span class="node"><span class="badge s-' + o.status + '">' + esc(D.statusLabel(o.status)) + '</span> <span class="node-label">' + esc(C.objectLabel(o)) + '</span>' +
+        (o.purpose ? ' <span class="muted small">– ' + esc(o.purpose) + '</span>' : '') +
+        ' <label class="used-by"><span>used by</span><select data-bind="objects.' + i + '.parent" aria-label="' + esc(C.objectLabel(o)) + ' used by">' + opts + '</select></label></span>' +
+        (n.children.length ? '<ul>' + n.children.map(node).join('') + '</ul>' : '') + '</li>';
+    }
+    el.innerHTML = '<ul class="tree"><li><span class="node root">' + esc(root.label) + '</span>' + (root.children.length ? '<ul>' + root.children.map(node).join('') + '</ul>' : '') + '</li></ul>' +
+      (root.children.length ? '' : '<p class="muted small">Objects you add will appear here.</p>');
+  }
+
+  /* ---------------------------------------------------------------- render core */
+  function renderStepper() {
+    $('#stepper').innerHTML = STEPS.map(function (st) {
+      const cur = !ui.generated && st.n === ui.step;
+      return '<li><button type="button" data-action="goto" data-step="' + st.n + '"' + (cur ? ' aria-current="step"' : '') + ' class="' + (cur ? 'is-current' : '') + '"><span class="step-n">' + st.n + '</span><span class="step-l">' + st.label + '</span></button></li>';
+    }).join('');
+  }
+
+  function renderMain() {
+    const s = S.get();
+    keepFocus(function () {
+      const main = $('#main');
+      let html;
+      if (ui.generated) html = generatedView(s);
+      else html = [step1, step2, step3, step4, step5][ui.step - 1](s);
+      main.innerHTML = '<p class="step-count">' + (ui.generated ? 'Done' : 'Step ' + ui.step + ' of 5') + '</p>' + html;
+    });
+    renderStepper();
+    renderMap();
+    document.body.classList.toggle('is-generated', ui.generated);
+    $('#hero').hidden = ui.generated || ui.step !== 1;
+    $$('.mode-toggle button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.mode === ui.mode)); });
+    renderPreview();
+  }
+
+  let pvQueued = false;
+  function renderPreview() {
+    if (pvQueued) return;
+    pvQueued = true;
+    requestAnimationFrame(function () {
+      pvQueued = false;
+      const s = S.get();
+      const md = M.build(s);
+      $('#pv-status').innerHTML = statusHtml(C.evaluate(s), false);
+      const blank = !s.requirement.text.trim() && !s.types.length && !s.objects.length;
+      $('#pv-body').innerHTML = blank ? '<p class="muted">Your specification builds here as you fill in the form. Nothing is generated until you have something to say.</p>' : ui.raw ? '<pre>' + esc(md) + '</pre>' : M.toHtml(md);
+      $$('[data-action="view-rendered"]').forEach(function (b) { b.setAttribute('aria-pressed', String(!ui.raw)); });
+      $$('[data-action="view-raw"]').forEach(function (b) { b.setAttribute('aria-pressed', String(ui.raw)); });
+      if (ui.generated) {
+        const g = $('.gen-doc');
+        if (g) g.innerHTML = ui.raw ? '<pre>' + esc(md) + '</pre>' : M.toHtml(md);
+      }
+    });
+  }
+
+  function setStep(n) {
+    ui.step = Math.max(1, Math.min(5, n));
+    ui.generated = false;
+    ui.showErrors = false;
+    renderMain();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* ------------------------------------------------------------- state changes */
+  let saveTimer;
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () {
+      const ok = ST.save(S.get());
+      $('#save-note').textContent = ST.isEmpty(S.get()) ? '' : (ok ? 'Draft saved in this browser.' : 'Could not save locally (storage unavailable).');
+    }, 400);
+  }
+
+  S.subscribe(function (state, meta) {
+    renderPreview();
+    scheduleSave();
+    if (meta.path && /^(objects|types)/.test(meta.path)) {
+      keepFocus(renderMap);
+      const sug = $('#suggest');
+      if (sug && meta.path.indexOf('.name') < 0) sug.innerHTML = suggestionsHtml(state);
+    }
+  });
+
+  function addObject(type, status) {
+    S.update(function (s) { s.objects.push({ id: S.uid(), type: type || 'Table', name: '', status: status || 'tbc', purpose: '', parent: '' }); });
+    renderMain();
+    const last = $$('#obj-rows .obj-row').pop();
+    if (last) $('input[type="text"]', last).focus();
+  }
+
+  function loadState(next, msg) {
+    ST.save(S.get());
+    S.replace(next);
+    ui.step = 1;
+    ui.generated = false;
+    ui.showErrors = false;
+    ST.setCurrent(S.get().id);
+    renderMain();
+    if (msg) toast(msg);
+  }
+
+  function updateSteps(fn) { S.update(fn); renderMain(); }
+
+  /* ------------------------------------------------------------------ drafts */
+  function openDrafts() {
+    const list = ST.list();
+    $('#drafts-list').innerHTML = list.length ? '<ul class="draft-list">' + list.map(function (d) {
+      return '<li><div><strong>' + esc(d.name) + '</strong><span class="muted small">' + esc((d.types || []).join(' + ') || 'no object selected') + ' · ' + new Date(d.updated).toLocaleString() + (d.id === S.get().id ? ' · current' : '') + '</span></div>' +
+        '<div class="row-actions"><button type="button" class="btn btn-ghost btn-sm" data-action="resume" data-id="' + esc(d.id) + '">Resume</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-action="delete-draft" data-id="' + esc(d.id) + '">Delete</button></div></li>';
+    }).join('') + '</ul>' : '<p class="empty">No saved drafts yet. Your work is saved automatically as you type.</p>';
+    const dlg = $('#drafts-dialog');
+    if (typeof dlg.showModal === 'function') { if (!dlg.open) dlg.showModal(); } else dlg.setAttribute('open', '');
+  }
+
+  function closeDrafts() { const dlg = $('#drafts-dialog'); if (dlg.open && dlg.close) dlg.close(); }
+
+  /* ----------------------------------------------------------------- actions */
+  function copyMarkdown() {
+    Promise.resolve(X.copy(M.build(S.get()))).then(function (ok) { toast(ok ? 'Markdown copied to clipboard' : 'Copy failed – select the text in Markdown view instead'); });
+  }
+
+  const actions = {
+    'toggle-type': function (el) {
+      const t = el.dataset.type;
+      S.update(function (s) { const i = s.types.indexOf(t); if (i >= 0) s.types.splice(i, 1); else s.types.push(t); });
+      renderMain();
+    },
+    goto: function (el) { setStep(Number(el.dataset.step)); },
+    next: function () {
+      if (ui.step === 1) {
+        if (V.checkMandatory(S.get()).length) { ui.showErrors = true; renderMain(); const bad = $('[aria-invalid="true"], .field-error'); if (bad) bad.scrollIntoView({ block: 'center' }); return; }
+      }
+      setStep(ui.step + 1);
+    },
+    back: function () { setStep(ui.step - 1); },
+    template: function (el) {
+      const t = T.fromTemplate(el.dataset.id);
+      const cur = S.get();
+      if (t) {
+        // keep what was already typed in step 1; templates only add structure
+        t.requirement = cur.requirement;
+        t.project = cur.project;
+        t.id = cur.id;
+        S.replace(t);
+        renderMain();
+        toast('Template applied');
+      }
+    },
+    example: function () { loadState(T.example(), 'Example loaded: Employee Leave Balance Report'); },
+    new: function () { loadState(S.blank(), 'Started a new requirement'); },
+    drafts: openDrafts,
+    resume: function (el) {
+      const d = ST.load(el.dataset.id);
+      closeDrafts();
+      if (d) loadState(d, 'Draft resumed');
+    },
+    'delete-draft': function (el) {
+      const id = el.dataset.id;
+      ST.remove(id);
+      if (id === S.get().id) { S.replace(S.blank()); ui.step = 1; ui.generated = false; renderMain(); }
+      openDrafts();
+      toast('Draft deleted');
+    },
+    import: function () { $('#import-file').click(); },
+    export: function () {
+      const s = S.get();
+      X.download(M.filename(s).replace(/\.md$/, '.json'), X.projectJson(s), 'application/json');
+      toast('Project exported');
+    },
+    share: function () {
+      X.shareLink(S.get()).then(function (url) {
+        return X.copy(url).then(function (ok) { toast(ok ? 'Share link copied (' + Math.ceil(url.length / 1024) + ' KB). Anyone with it can open this spec.' : 'Could not copy the link'); });
+      }, function () { toast('Could not create a share link – use Export instead'); });
+    },
+    mode: function (el) {
+      ui.mode = el.dataset.mode;
+      ST.setMode(ui.mode);
+      renderMain();
+    },
+    tab: function (el) { setTab(el.dataset.tab); },
+    'add-object': function () { addObject('Table', 'existing'); },
+    'add-chip': function (el) { addObject(el.dataset.type, el.dataset.status); },
+    'remove-object': function (el) {
+      const i = Number(el.dataset.i);
+      updateSteps(function (s) {
+        const gone = s.objects.splice(i, 1)[0];
+        s.objects.forEach(function (o) { if (gone && o.parent === gone.id) o.parent = ''; });
+      });
+    },
+    'move-object': function (el) {
+      const i = Number(el.dataset.i), j = i + Number(el.dataset.dir);
+      updateSteps(function (s) { if (j >= 0 && j < s.objects.length) { const t = s.objects[i]; s.objects[i] = s.objects[j]; s.objects[j] = t; } });
+    },
+    'add-rule': function () { updateSteps(function (s) { s.rules.push({ id: S.uid(), condition: '', behavior: '' }); }); focusLast('[data-bind$=".condition"]'); },
+    'remove-rule': function (el) { updateSteps(function (s) { s.rules.splice(Number(el.dataset.i), 1); }); },
+    'add-ac': function () { updateSteps(function (s) { s.acceptance.push({ id: S.uid(), text: '' }); }); focusLast('[data-bind^="acceptance."]'); },
+    'remove-ac': function (el) { updateSteps(function (s) { s.acceptance.splice(Number(el.dataset.i), 1); }); },
+    'add-dod': function () { updateSteps(function (s) { s.dod.push({ id: S.uid(), text: '', on: true }); }); focusLast('[data-bind$=".text"]'); },
+    'remove-dod': function (el) { updateSteps(function (s) { s.dod.splice(Number(el.dataset.i), 1); }); },
+    missing: function () {
+      const ev = C.evaluate(S.get());
+      const first = ev.important[0] || ev.optional[0];
+      if (first) setStep(first.step);
+    },
+    generate: function () {
+      if (V.checkMandatory(S.get()).length) return;
+      ui.generated = true;
+      renderMain();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      $('#main').focus({ preventScroll: true });
+    },
+    edit: function () { ui.generated = false; ui.step = 5; renderMain(); },
+    download: function () {
+      const s = S.get();
+      if (V.checkMandatory(s).length) { toast('Add a requirement and a development object first'); return; }
+      X.download(M.filename(s), M.build(s), 'text/markdown');
+      toast('Downloaded ' + M.filename(s));
+    },
+    copy: copyMarkdown,
+    'view-raw': function () { ui.raw = true; renderPreview(); },
+    'view-rendered': function () { ui.raw = false; renderPreview(); }
+  };
+
+  function focusLast(sel) { const els = $$('#main ' + sel); const el = els[els.length - 1]; if (el) el.focus(); }
+
+  function setTab(tab) {
+    ui.tab = tab;
+    $('#layout').dataset.tab = tab;
+    $$('.view-tabs [role="tab"]').forEach(function (b) { b.setAttribute('aria-selected', String(b.dataset.tab === tab)); });
+  }
+
+  /* ------------------------------------------------------------------ events */
+  document.addEventListener('click', function (e) {
+    const el = e.target.closest('[data-action]');
+    if (!el || el.disabled) return;
+    const fn = actions[el.dataset.action];
+    if (fn) fn(el);
+  });
+
+  document.addEventListener('input', function (e) {
+    const t = e.target;
+    if (!t.dataset || !t.dataset.bind || t.type === 'radio' || t.tagName === 'SELECT') return;
+    S.set(t.dataset.bind, t.value);
+  });
+
+  document.addEventListener('change', function (e) {
+    const t = e.target;
+    if (!t.dataset) return;
+    if (t.dataset.bind && (t.type === 'radio' || t.tagName === 'SELECT')) {
+      S.set(t.dataset.bind, t.value);
+      if (t.dataset.statusSel !== undefined) t.dataset.status = t.value;
+      if (t.hasAttribute('data-rerender')) renderMain();
+    } else if (t.dataset.multi) {
+      const cur = (S.getPath(S.get(), t.dataset.multi) || []).slice();
+      const i = cur.indexOf(t.value);
+      if (t.checked && i < 0) cur.push(t.value);
+      if (!t.checked && i >= 0) cur.splice(i, 1);
+      S.set(t.dataset.multi, cur);
+      if (t.hasAttribute('data-rerender')) renderMain();
+    } else if (t.dataset.check) {
+      S.set(t.dataset.check, t.checked);
+    } else if (t.id === 'import-file' && t.files && t.files[0]) {
+      const file = t.files[0];
+      file.text().then(function (text) {
+        try { loadState(X.parseProject(text), 'Imported ' + file.name); } catch (err) { toast(err.message); }
+      });
+      t.value = '';
+    }
+  });
+
+  $('#drafts-dialog').addEventListener('click', function (e) { if (e.target === this) closeDrafts(); });
+
+  /* ---------------------------------------------------------------- bootstrap */
+  async function init() {
+    let loaded = false;
+    try {
+      const shared = await X.readShareLink(location.hash);
+      if (shared) {
+        S.replace(shared);
+        ST.save(S.get());
+        history.replaceState(null, '', location.pathname + location.search);
+        loaded = true;
+        setTimeout(function () { toast('Shared specification loaded as a new draft'); }, 300);
+      }
+    } catch (e) { setTimeout(function () { toast('The share link could not be read'); }, 300); }
+    if (!loaded) {
+      const d = ST.currentId() && ST.load(ST.currentId());
+      if (d) S.replace(d);
+    }
+    ui.step = 1;
+    setTab('edit');
+    renderMain();
+  }
+
+  init();
+})(window.APB = window.APB || {});
+
+</script>
+</body>
+</html>
