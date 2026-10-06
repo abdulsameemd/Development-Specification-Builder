@@ -9,8 +9,8 @@ const read = function (p) { return fs.readFileSync(path.join(root, p), 'utf8'); 
 require('child_process').execFileSync(process.execPath, [path.join(__dirname, 'build-config.js')], { stdio: 'inherit' });
 
 let html = read('index.html');
-const logo = 'data:image/svg+xml;base64,' + Buffer.from(read('assets/morohub-logo.svg')).toString('base64');
-html = html.split('assets/morohub-logo.svg').join(logo);
+const logo = 'data:image/png;base64,' + fs.readFileSync(path.join(root, 'assets/morohub-logo.png')).toString('base64');
+html = html.split('assets/morohub-logo.png').join(logo);
 html = html.replace('<link rel="stylesheet" href="css/styles.css">', function () { return '<style>\n' + read('css/styles.css') + '\n</style>'; });
 html = html.replace(/<script src="(js\/[^"]+)"><\/script>/g, function (_, src) {
   return '<script>\n' + read(src).replace(/<\/script/gi, '<\\/script') + '\n</script>';

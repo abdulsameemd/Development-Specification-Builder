@@ -83,7 +83,7 @@ js/
   export.js             download, copy, JSON import/export, share link
   app.js                UI
 scripts/build-config.js
-assets/morohub-logo.svg
+assets/morohub-logo.png
 ```
 
 The model in `state.js` does not depend on Copilot; Copilot is just an **output profile** in `markdown-generator.js`. Claude Code, Codex, Cursor and others can be added as further profiles.
@@ -100,7 +100,7 @@ Click **Try Example** for the *Employee Leave Balance Report* demo.
 
 ## Branding assets
 
-The MoroHub logo in `assets/morohub-logo.svg` is a recreation of the wordmark. To use the official file, overwrite that path with the original SVG. The font stack is `Open Sans` → `Segoe UI` → system fonts (no external font loading, to keep the app offline-capable).
+`assets/morohub-logo.png` is the MoroHub logo (transparent background, 4x upscaled from the supplied 101×33 image). For the sharpest result on high-DPI screens, replace it with the original SVG and update the two `<img>` paths in `index.html`. The font stack is `Open Sans` → `Segoe UI` → system fonts (no external font loading, to keep the app offline-capable).
 
 ## Roadmap
 
