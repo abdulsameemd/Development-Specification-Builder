@@ -125,8 +125,12 @@
     const important = missing.filter(function (r) { return r.important; });
     let level = 'ready';
     if (mandatory.length) level = 'blocked'; else if (important.length) level = 'almost';
+    const applicable = V.rules.recommended.filter(function (r) { return ruleApplies(r, state); }).length;
+    const total = V.rules.mandatory.length * 2 + applicable;
+    const done = (V.rules.mandatory.length - mandatory.length) * 2 + (applicable - missing.length);
     return {
       level: level,
+      progress: total ? done / total : 0,
       mandatory: mandatory,
       important: important,
       optional: missing.filter(function (r) { return !r.important; }),

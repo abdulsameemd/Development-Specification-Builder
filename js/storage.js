@@ -49,6 +49,8 @@
     },
     currentId: function () { return read(KEY_CURRENT) || ''; },
     setCurrent: function (id) { write(KEY_CURRENT, id); },
+    getTheme: function () { return read('apb.theme.v1') === 'light' ? 'light' : 'dark'; },
+    setTheme: function (t) { write('apb.theme.v1', t); },
     getMode: function () { return read(KEY_MODE) === 'advanced' ? 'advanced' : 'quick'; },
     setMode: function (m) { write(KEY_MODE, m); },
     isEmpty: isEmpty

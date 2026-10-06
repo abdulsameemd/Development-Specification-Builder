@@ -12,6 +12,23 @@
     { n: 5, title: 'Review and generate', label: 'Review' }
   ];
 
+  /* Line icons (24px grid) for the development types. */
+  const ICONS = {
+    REPORT: '<path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/>',
+    CLASS: '<path d="M8 4c-2 0-3 1-3 3v2c0 1.5-1 2-2 3 1 1 2 1.5 2 3v2c0 2 1 3 3 3M16 4c2 0 3 1 3 3v2c0 1.5 1 2 2 3-1 1-2 1.5-2 3v2c0 2-1 3-3 3"/>',
+    RFC: '<path d="M4 8h13l-3-3M20 16H7l3 3"/>',
+    RAP: '<path d="M12 3 3 8l9 5 9-5-9-5z"/><path d="m3 13 9 5 9-5"/>',
+    CDS: '<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+    CAPM: '<path d="M7 18a4 4 0 0 1-.6-8A6 6 0 0 1 18 9a4.5 4.5 0 0 1-.5 9H7z"/>',
+    DDIC: '<path d="M3 5h18v14H3zM3 10h18M9 10v9M15 10v9"/>',
+    ENH: '<path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/>',
+    ODATA: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3z"/>',
+    FIORI: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>',
+    IDOC: '<path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/>',
+    FORM: '<path d="M6 9V3h12v6M6 18H4v-7h16v7h-2M7 14h10v7H7z"/>'
+  };
+  function icon(k) { return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[k] || ICONS.REPORT) + '</svg>'; }
+
   const ui = { step: 1, mode: ST.getMode(), generated: false, raw: false, tab: 'edit', showErrors: false, open: {} };
 
   const $ = function (sel, root) { return (root || document).querySelector(sel); };
@@ -180,7 +197,7 @@
     const cards = D.typeKeys().map(function (k) {
       const on = s.types.indexOf(k) >= 0;
       return '<button type="button" class="type-card" data-action="toggle-type" data-type="' + k + '" aria-pressed="' + on + '">' +
-        '<span class="type-name">' + esc(D.types[k].label) + '</span><span class="type-hint">' + esc(D.types[k].hint) + '</span></button>';
+        '<span class="type-ico">' + icon(k) + '</span><span class="type-name">' + esc(D.types[k].label) + '</span><span class="type-hint">' + esc(D.types[k].hint) + '</span></button>';
     }).join('');
     const tpls = T.list().map(function (t) {
       return '<button type="button" class="chip" data-action="template" data-id="' + t.id + '" title="' + esc(t.description) + '">' + esc(t.label) + '</button>';
@@ -337,15 +354,25 @@
       (ev.mandatory.length ? '<p class="field-error" role="alert">Still needed: ' + ev.mandatory.map(function (r) { return esc(r.label.toLowerCase()); }).join(' and ') + '.</p>' : '');
   }
 
+  /* Readiness ring: a visual cue only — no percentage, by design. */
+  function ring(ev) {
+    const C2 = 2 * Math.PI * 18;
+    const p = Math.max(0.04, Math.min(1, ev.progress || 0));
+    const glyph = ev.level === 'ready' ? '✓' : ev.level === 'almost' ? '…' : '·';
+    return '<svg class="ring" viewBox="0 0 44 44" aria-hidden="true"><defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d9f99d"/><stop offset=".5" stop-color="#84bd00"/><stop offset="1" stop-color="#2dd4bf"/></linearGradient></defs>' +
+      '<circle class="track" cx="22" cy="22" r="18"/><circle class="val" cx="22" cy="22" r="18" stroke-dasharray="' + C2.toFixed(1) + '" stroke-dashoffset="' + (C2 * (1 - p)).toFixed(1) + '"/>' +
+      '<text x="22" y="22">' + glyph + '</text></svg>';
+  }
+
   function statusHtml(ev, detailed) {
     if (ev.level === 'blocked') {
-      return '<div class="status is-blocked"><span class="dot" aria-hidden="true"></span><div><strong>Almost there</strong>' + (detailed ? '<p>Add ' + ev.mandatory.map(function (r) { return esc(r.label.toLowerCase()); }).join(' and ') + ' to get started.</p>' : '') + '</div></div>';
+      return '<div class="status is-blocked">' + ring(ev) + '<div><strong>Almost there</strong>' + (detailed ? '<p>Add ' + ev.mandatory.map(function (r) { return esc(r.label.toLowerCase()); }).join(' and ') + ' to get started.</p>' : '') + '</div></div>';
     }
     if (ev.level === 'almost') {
-      return '<div class="status is-almost"><span class="dot" aria-hidden="true"></span><div><strong>A few details could improve the result</strong>' +
+      return '<div class="status is-almost">' + ring(ev) + '<div><strong>A few details could improve the result</strong>' +
         '<p>Consider adding:</p><ul>' + ev.important.map(function (r) { return '<li>' + esc(r.label) + '</li>'; }).join('') + '</ul></div></div>';
     }
-    return '<div class="status is-ready"><span class="dot" aria-hidden="true"></span><div><strong>Ready for Copilot</strong>' + (detailed ? '<p>Your requirement contains the essential information.</p>' : '') + '</div></div>';
+    return '<div class="status is-ready">' + ring(ev) + '<div><strong>Ready for Copilot</strong>' + (detailed ? '<p>Your requirement contains the essential information.</p>' : '') + '</div></div>';
   }
 
   function generatedView(s) {
@@ -385,14 +412,18 @@
 
   /* ---------------------------------------------------------------- render core */
   function renderStepper() {
-    $('#stepper').innerHTML = STEPS.map(function (st) {
+    const el = $('#stepper');
+    el.style.setProperty('--p', ui.generated ? 1 : (ui.step - 1) / (STEPS.length - 1));
+    el.innerHTML = STEPS.map(function (st) {
       const cur = !ui.generated && st.n === ui.step;
-      return '<li><button type="button" data-action="goto" data-step="' + st.n + '"' + (cur ? ' aria-current="step"' : '') + ' class="' + (cur ? 'is-current' : '') + '"><span class="step-n">' + st.n + '</span><span class="step-l">' + st.label + '</span></button></li>';
+      const cls = cur ? 'is-current' : (ui.generated || st.n < ui.step) ? 'is-done' : '';
+      return '<li><button type="button" data-action="goto" data-step="' + st.n + '"' + (cur ? ' aria-current="step"' : '') + ' class="' + cls + '"><span class="step-n">' + st.n + '</span><span class="step-l">' + st.label + '</span></button></li>';
     }).join('');
   }
 
   function renderMain() {
     const s = S.get();
+    if (stream) { clearInterval(stream.timer); stream = null; }
     keepFocus(function () {
       const html = ui.generated ? generatedView(s) : [step1, step2, step3, step4, step5][ui.step - 1](s);
       $('#main').innerHTML = '<p class="step-count">' + (ui.generated ? 'Done' : 'Step ' + ui.step + ' of 5') + '</p>' + html;
@@ -415,6 +446,7 @@
       const s = S.get();
       const md = M.build(s);
       $('#pv-status').innerHTML = statusHtml(C.evaluate(s), false);
+      $('#pv-file').textContent = M.filename(s);
       const blank = !s.requirement.text.trim() && !s.types.length && !s.objects.length;
       $('#pv-body').innerHTML = blank ? '<p class="muted">Your specification builds here as you fill in the form.</p>' : ui.raw ? '<pre>' + esc(md) + '</pre>' : M.toHtml(md);
       $$('[data-action="view-rendered"]').forEach(function (b) { b.setAttribute('aria-pressed', String(!ui.raw)); });
@@ -707,7 +739,21 @@
       renderMain();
       window.scrollTo({ top: 0, behavior: 'smooth' });
       $('#main').focus({ preventScroll: true });
+      streamDoc();
     },
+    'skip-stream': function () { stopStream(true); },
+    start: function () {
+      if (ui.step !== 1 || ui.generated) setStep(1);
+      const r = $('#req');
+      if (r) { r.scrollIntoView({ behavior: 'smooth', block: 'center' }); r.focus({ preventScroll: true }); }
+    },
+    theme: function () {
+      const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+      document.documentElement.dataset.theme = next;
+      ST.setTheme(next);
+      toast(next === 'light' ? 'Light theme' : 'Dark theme');
+    },
+    palette: openPalette,
     edit: function () { ui.generated = false; ui.step = 5; renderMain(); },
     download: function () {
       const s = S.get();
@@ -727,6 +773,148 @@
     $('#layout').dataset.tab = tab;
     $$('.view-tabs [role="tab"]').forEach(function (b) { b.setAttribute('aria-selected', String(b.dataset.tab === tab)); });
   }
+
+  /* ------------------------------------------------------- generation effects */
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let stream = null;
+
+  /* Reveal the finished document line by line, like an AI answer streaming in. Purely cosmetic. */
+  function streamDoc() {
+    const doc = $('.gen-doc');
+    if (!doc || reduceMotion || ui.raw) { confetti(); return; }
+    const lines = M.build(S.get()).split('\n');
+    const bar = document.createElement('div');
+    bar.className = 'streambar';
+    bar.innerHTML = '<span class="dots" aria-hidden="true"><span></span><span></span><span></span></span><span>Generating specification…</span><button type="button" class="btn btn-ghost btn-sm" data-action="skip-stream">Skip</button>';
+    doc.parentNode.insertBefore(bar, doc);
+    doc.classList.add('streaming');
+    let n = 0;
+    const step = Math.max(2, Math.ceil(lines.length / 45));
+    stream = { bar: bar, doc: doc, timer: setInterval(function () {
+      n += step;
+      doc.innerHTML = M.toHtml(lines.slice(0, n).join('\n'));
+      if (n >= lines.length) stopStream(false);
+    }, 28) };
+  }
+
+  function stopStream(skipped) {
+    if (!stream) return;
+    clearInterval(stream.timer);
+    stream.doc.classList.remove('streaming');
+    stream.doc.innerHTML = M.toHtml(M.build(S.get()));
+    stream.bar.remove();
+    stream = null;
+    if (!skipped) confetti();
+    toast('Specification ready ✦');
+  }
+
+  function confetti() {
+    if (reduceMotion) return;
+    const fx = $('#fx');
+    const colors = ['#a3e635', '#84bd00', '#2dd4bf', '#d9f99d', '#8b5cf6', '#ffffff'];
+    let html = '';
+    for (let i = 0; i < 70; i++) {
+      html += '<i style="left:' + (Math.random() * 100).toFixed(1) + 'vw;background:' + colors[i % colors.length] +
+        ';--x:' + ((Math.random() - .5) * 30).toFixed(1) + 'vw;--r:' + Math.round(Math.random() * 900 - 450) + 'deg;--d:' + (1.2 + Math.random() * 1.3).toFixed(2) + 's;animation-delay:' + (Math.random() * .25).toFixed(2) + 's"></i>';
+    }
+    fx.innerHTML = html;
+    setTimeout(function () { fx.innerHTML = ''; }, 3000);
+  }
+
+  /* Hero typewriter. */
+  function startRotator() {
+    const el = $('#rotator-text');
+    if (!el || reduceMotion) return;
+    const words = ['ABAP reports', 'RAP business objects', 'CDS view entities', 'RFC function modules', 'CAP services', 'DDIC tables', 'BAdI implementations', 'Fiori apps'];
+    let w = 0, i = words[0].length, del = true;
+    (function tick() {
+      const word = words[w];
+      i += del ? -1 : 1;
+      el.textContent = word.slice(0, i);
+      let wait = del ? 35 : 70;
+      if (!del && i === word.length) { del = true; wait = 1600; }
+      else if (del && i === 0) { del = false; w = (w + 1) % words.length; wait = 250; }
+      setTimeout(tick, wait);
+    })();
+  }
+
+  /* --------------------------------------------------------- command palette */
+  let palItems = [], palIndex = 0;
+
+  function commands() {
+    const list = [
+      { g: 'Navigate', i: '1', t: 'Step 1 · What are you building?', run: function () { setStep(1); } },
+      { g: 'Navigate', i: '2', t: 'Step 2 · Requirement details', run: function () { setStep(2); } },
+      { g: 'Navigate', i: '3', t: 'Step 3 · SAP objects', run: function () { setStep(3); } },
+      { g: 'Navigate', i: '4', t: 'Step 4 · Specify objects', run: function () { setStep(4); } },
+      { g: 'Navigate', i: '5', t: 'Step 5 · Review & generate', run: function () { setStep(5); } },
+      { g: 'Create', i: '✦', t: 'Generate specification', run: function () { setStep(5); actions.generate(); } },
+      { g: 'Create', i: '+', t: 'New requirement', run: actions.new },
+      { g: 'Create', i: '⬇', t: 'Download .md', run: actions.download },
+      { g: 'Create', i: '⧉', t: 'Copy Markdown', run: actions.copy },
+      { g: 'Share', i: '⇪', t: 'Export project (.json)', run: actions.export },
+      { g: 'Share', i: '⇩', t: 'Import project (.json)', run: actions.import },
+      { g: 'Share', i: '🔗', t: 'Copy share link', run: actions.share },
+      { g: 'Drafts', i: '☰', t: 'Saved drafts', run: openDrafts },
+      { g: 'View', i: '◐', t: 'Toggle light / dark theme', run: actions.theme },
+      { g: 'View', i: '⚙', t: ui.mode === 'advanced' ? 'Switch to Quick mode' : 'Switch to Advanced mode', run: function () { actions.mode({ dataset: { mode: ui.mode === 'advanced' ? 'quick' : 'advanced' } }); } }
+    ];
+    T.examples().forEach(function (e) { list.push({ g: 'Example', i: e.module, t: e.label, run: function () { loadState(T.example(e.id), 'Example loaded'); } }); });
+    D.typeKeys().forEach(function (k) {
+      const on = S.get().types.indexOf(k) >= 0;
+      list.push({ g: 'Build', i: '◇', t: (on ? 'Remove ' : 'Add ') + D.types[k].label, run: function () { actions['toggle-type']({ dataset: { type: k } }); } });
+    });
+    D.objectTypes.forEach(function (t) { list.push({ g: 'Object', i: '+', t: 'Add object: ' + t, run: function () { setStep(3); addObject(t, 'new'); } }); });
+    return list;
+  }
+
+  function renderPalette() {
+    const q = $('#palette-input').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    palItems = commands().filter(function (c) { const h = (c.t + ' ' + c.g).toLowerCase(); return q.every(function (w) { return h.indexOf(w) >= 0; }); }).slice(0, 40);
+    palIndex = Math.min(palIndex, Math.max(0, palItems.length - 1));
+    $('#palette-list').innerHTML = palItems.length ? palItems.map(function (c, i) {
+      return '<li role="option" id="pal-' + i + '" data-pal="' + i + '" aria-selected="' + (i === palIndex) + '"><span class="p-ico" aria-hidden="true">' + esc(c.i) + '</span><span>' + esc(c.t) + '</span><span class="p-group">' + esc(c.g) + '</span></li>';
+    }).join('') : '<li class="p-empty">No matching command</li>';
+    $('#palette-input').setAttribute('aria-activedescendant', palItems.length ? 'pal-' + palIndex : '');
+    const sel = $('#pal-' + palIndex);
+    if (sel) sel.scrollIntoView({ block: 'nearest' });
+  }
+
+  function openPalette() {
+    closeDialogs();
+    $('#palette-input').value = '';
+    palIndex = 0;
+    renderPalette();
+    openDialog('#palette');
+    $('#palette-input').focus();
+  }
+
+  function runPalette(i) {
+    const c = palItems[i];
+    if (!c) return;
+    closeDialogs();
+    c.run();
+  }
+
+  $('#palette-input').addEventListener('input', function () { palIndex = 0; renderPalette(); });
+  $('#palette-input').addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); palIndex = Math.min(palItems.length - 1, palIndex + 1); renderPalette(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); palIndex = Math.max(0, palIndex - 1); renderPalette(); }
+    else if (e.key === 'Enter') { e.preventDefault(); runPalette(palIndex); }
+  });
+  $('#palette-list').addEventListener('click', function (e) { const li = e.target.closest('[data-pal]'); if (li) runPalette(Number(li.dataset.pal)); });
+  $('#palette-list').addEventListener('mousemove', function (e) {
+    const li = e.target.closest('[data-pal]');
+    if (li && Number(li.dataset.pal) !== palIndex) { palIndex = Number(li.dataset.pal); renderPalette(); }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); openPalette(); return; }
+    if (e.altKey && !ui.generated && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
+      e.preventDefault();
+      setStep(ui.step + (e.key === 'ArrowRight' ? 1 : -1));
+    }
+  });
 
   /* ------------------------------------------------------------------ events */
   document.addEventListener('click', function (e) {
@@ -811,6 +999,8 @@
 
   async function init() {
     renderDatalists();
+    document.documentElement.dataset.theme = ST.getTheme();
+    startRotator();
     let loaded = false;
     try {
       const shared = await X.readShareLink(location.hash);

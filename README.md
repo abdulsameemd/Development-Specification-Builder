@@ -7,7 +7,8 @@ A small, static web app that helps an SAP developer give GitHub Copilot the righ
 - **No backend, no database, no login, no AI API.** Open `index.html` — that's it.
 - **Private by design.** Requirements never leave your browser. Drafts are kept in the browser's local storage only.
 - **Easy to share.** Send the `.md`, an exported project `.json`, or a share link. Or host the folder on any static host.
-- Styled with the MoroHub look: charcoal chrome, lime-green accent, rounded controls.
+- "AI studio" look in the MoroHub colours (lime on charcoal): dark by default with a light theme, glass panels, animated aurora, a readiness ring, a streaming reveal + confetti when the spec is generated (all motion is switched off when the OS asks for reduced motion).
+- Keyboard first: **Ctrl/⌘ K** command palette (steps, examples, add objects, download, share, theme…), **Alt + ← / →** between steps, **Enter** for the next grid row.
 
 ## How to run
 
