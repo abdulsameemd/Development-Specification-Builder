@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "templates": [
+    {
+      "id": "simple-report", "label": "Simple Report", "description": "Report with selection screen and ALV output",
+      "types": ["REPORT"],
+      "objects": [ { "type": "Report", "name": "", "status": "new", "purpose": "Main report" } ],
+      "details": { "REPORT": { "outputType": ["alv"] } }
+    },
+    {
+      "id": "abap-class", "label": "ABAP Class", "description": "Reusable global class",
+      "types": ["CLASS"],
+      "objects": [ { "type": "Class", "name": "", "status": "new", "purpose": "Main class" } ]
+    },
+    {
+      "id": "rfc", "label": "RFC", "description": "Remote-enabled function module",
+      "types": ["RFC"],
+      "objects": [ { "type": "RFC", "name": "", "status": "new", "purpose": "Remote-enabled function module" } ]
+    },
+    {
+      "id": "rap-app", "label": "RAP Application", "description": "RAP business object with optional Fiori UI",
+      "types": ["RAP"],
+      "objects": [
+        { "type": "RAP", "name": "", "status": "new", "purpose": "Business object (behavior definition)" },
+        { "type": "CDS", "name": "", "status": "tbc", "purpose": "Root entity data model" },
+        { "type": "OData", "name": "", "status": "new", "purpose": "Service definition / binding" }
+      ]
+    },
+    {
+      "id": "cds-rap", "label": "CDS + RAP", "description": "CDS data model with a RAP behavior on top",
+      "types": ["CDS", "RAP"],
+      "objects": [
+        { "type": "CDS", "name": "", "status": "new", "purpose": "Data model" },
+        { "type": "RAP", "name": "", "status": "new", "purpose": "Behavior definition / implementation" }
+      ]
+    },
+    {
+      "id": "capm-app", "label": "CAPM Application", "description": "SAP Cloud Application Programming Model service",
+      "types": ["CAPM"],
+      "objects": [ { "type": "CAPM", "name": "", "status": "new", "purpose": "CAP application / service" } ]
+    },
+    {
+      "id": "full-sap-app", "label": "Full SAP Application", "description": "CDS + RAP + Fiori + Class + Authorization",
+      "types": ["CDS", "RAP", "CLASS"],
+      "objects": [
+        { "type": "CDS", "name": "", "status": "tbc", "purpose": "Data model" },
+        { "type": "RAP", "name": "", "status": "new", "purpose": "Business object" },
+        { "type": "Class", "name": "", "status": "tbc", "purpose": "Business logic" },
+        { "type": "Fiori/UI5", "name": "", "status": "new", "purpose": "User interface" },
+        { "type": "Authorization Object", "name": "", "status": "tbc", "purpose": "Access control" }
+      ]
+    }
+  ],
+  "example": {
+    "id": "example-leave-balance",
+    "label": "Employee Leave Balance Report",
+    "state": {
+      "project": { "name": "Employee Leave Balance" },
+      "types": ["REPORT"],
+      "requirement": {
+        "text": "Create a report for HR users to view employee leave entitlement, leave taken and remaining leave balance for a selected date range.",
+        "objective": "Give HR a single view of leave balances per employee.",
+        "users": "HR users",
+        "expectedOutput": "ALV list with leave entitlement, leave taken and remaining balance per employee."
+      },
+      "objects": [
+        { "type": "Table", "name": "PA0001", "status": "existing", "purpose": "Employee organizational assignment" },
+        { "type": "Table", "name": "PA2001", "status": "existing", "purpose": "Absences (leave taken)" },
+        { "type": "Class", "name": "", "status": "existing", "purpose": "Leave calculation" },
+        { "type": "Report", "name": "ZHR_LEAVE_BALANCE", "status": "new", "purpose": "Main report" }
+      ],
+      "rules": [
+        { "condition": "Employee has no remaining leave balance.", "behavior": "Show a zero balance and an information message; do not raise an error." },
+        { "condition": "User is not authorized for the selected employee.", "behavior": "Exclude the employee from the result." }
+      ],
+      "acceptance": [
+        { "text": "When HR selects a valid employee and date range, the report displays leave entitlement, leave taken and remaining balance." }
+      ],
+      "details": {
+        "REPORT": {
+          "inputs": "PERNR – select-option (employee number)\nBEGDA / ENDDA – date range",
+          "outputType": ["alv"]
+        }
+      },
+      "quality": {
+        "authorization": "yes",
+        "authObject": "",
+        "cleanCore": "yes",
+        "cleanCoreNote": "",
+        "dataVolume": "medium",
+        "performanceReq": "",
+        "testTypes": ["Unit", "Functional", "Integration"],
+        "testScenarios": "Valid employee\nInvalid employee\nNo leave balance\nUnauthorized employee"
+      }
+    }
+  }
+}

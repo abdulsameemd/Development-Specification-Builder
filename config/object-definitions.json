@@ -1,0 +1,165 @@
+{
+  "version": 1,
+  "types": {
+    "REPORT": {
+      "label": "Report",
+      "hint": "ABAP report / ALV program",
+      "mainObject": ["Report"],
+      "performance": true,
+      "fields": [
+        { "id": "inputs", "label": "Inputs (parameters / select-options)", "kind": "lines", "section": "input", "placeholder": "One per line, e.g.\nPERNR – select-option\nBEGDA / ENDDA – date range" },
+        { "id": "outputType", "label": "Output type", "kind": "multicheck", "section": "output", "options": [
+          { "value": "alv", "label": "ALV" }, { "value": "file", "label": "File" }, { "value": "api", "label": "API" }, { "value": "other", "label": "Other" } ] },
+        { "id": "alvBehavior", "label": "ALV behavior", "kind": "textarea", "section": "functional", "advanced": true, "placeholder": "Layout variants, sorting, subtotals, double-click navigation…" },
+        { "id": "background", "label": "Background execution", "kind": "radio", "section": "functional", "advanced": true, "options": [
+          { "value": "yes", "label": "Yes" }, { "value": "no", "label": "No" }, { "value": "tbc", "label": "To Be Confirmed" } ] },
+        { "id": "backgroundDetail", "label": "Background execution details", "kind": "text", "section": "functional", "advanced": true, "showIf": { "field": "background", "in": ["yes"] }, "placeholder": "Variant, schedule, spool / output handling" },
+        { "id": "fileOutput", "label": "File output (path, format)", "kind": "text", "section": "output", "advanced": true, "showIf": { "field": "outputType", "includes": "file" } }
+      ]
+    },
+    "CLASS": {
+      "label": "ABAP Class",
+      "hint": "Global class / reusable logic",
+      "mainObject": ["Class"],
+      "performance": false,
+      "fields": [
+        { "id": "methods", "label": "Methods (inputs → outputs)", "kind": "lines", "section": "functional", "placeholder": "One per line, e.g.\ncalculate_balance( pernr, begda, endda ) → balance table" },
+        { "id": "exceptions", "label": "Exceptions", "kind": "lines", "section": "errors", "placeholder": "One per line, e.g.\nEmployee not found → raise exception" },
+        { "id": "interfaces", "label": "Interfaces to implement", "kind": "lines", "section": "technical", "advanced": true, "placeholder": "One per line" }
+      ]
+    },
+    "RFC": {
+      "label": "RFC / Function Module",
+      "hint": "Remote-enabled or standard function module",
+      "mainObject": ["RFC", "Function Module"],
+      "performance": true,
+      "fields": [
+        { "id": "sourceSystem", "label": "Source system (caller)", "kind": "text", "section": "technical", "placeholder": "System / client that calls the function" },
+        { "id": "targetSystem", "label": "Target system (where it runs)", "kind": "text", "section": "technical" },
+        { "id": "inputParams", "label": "Input parameters", "kind": "lines", "section": "input", "placeholder": "One per line, e.g.\nIV_PERNR – employee number" },
+        { "id": "outputParams", "label": "Output parameters", "kind": "lines", "section": "output", "placeholder": "One per line, e.g.\nET_BALANCE – leave balance table" },
+        { "id": "errorHandling", "label": "Error handling", "kind": "textarea", "section": "errors", "placeholder": "Exceptions, RETURN table, messages…" },
+        { "id": "authMethod", "label": "Authentication / authorization", "kind": "text", "section": "security", "placeholder": "e.g. technical user, trusted RFC" },
+        { "id": "callMode", "label": "Call mode", "kind": "select", "section": "technical", "advanced": true, "options": [
+          { "value": "", "label": "— select —" }, { "value": "sync", "label": "Synchronous" }, { "value": "async", "label": "Asynchronous" }, { "value": "tbc", "label": "To Be Confirmed" } ] },
+        { "id": "monitoring", "label": "Monitoring / logging", "kind": "text", "section": "technical", "advanced": true }
+      ]
+    },
+    "RAP": {
+      "label": "RAP",
+      "hint": "RESTful ABAP business object",
+      "mainObject": ["RAP"],
+      "performance": true,
+      "fields": [
+        { "id": "businessObject", "label": "Business object", "kind": "text", "section": "functional" },
+        { "id": "rootEntity", "label": "Root entity", "kind": "text", "section": "functional" },
+        { "id": "childEntities", "label": "Child entities", "kind": "lines", "section": "functional", "placeholder": "One per line" },
+        { "id": "operations", "label": "Operations", "kind": "multicheck", "section": "functional", "options": [
+          { "value": "create", "label": "Create" }, { "value": "update", "label": "Update" }, { "value": "delete", "label": "Delete" } ] },
+        { "id": "actions", "label": "Actions", "kind": "lines", "section": "functional", "placeholder": "One per line" },
+        { "id": "validations", "label": "Validations", "kind": "lines", "section": "functional", "placeholder": "One per line" },
+        { "id": "determinations", "label": "Determinations", "kind": "lines", "section": "functional", "placeholder": "One per line" },
+        { "id": "draft", "label": "Draft handling", "kind": "radio", "section": "functional", "options": [
+          { "value": "yes", "label": "Yes" }, { "value": "no", "label": "No" }, { "value": "tbc", "label": "To Be Confirmed" } ] },
+        { "id": "fioriUi", "label": "Fiori Elements UI required?", "kind": "radio", "section": "functional", "options": [
+          { "value": "yes", "label": "Yes" }, { "value": "no", "label": "No" }, { "value": "tbc", "label": "To Be Confirmed" } ] },
+        { "id": "fioriDetails", "label": "UI notes", "kind": "text", "section": "functional", "showIf": { "field": "fioriUi", "in": ["yes"] }, "placeholder": "e.g. List Report + Object Page" },
+        { "id": "implType", "label": "Implementation type", "kind": "select", "section": "technical", "advanced": true, "options": [
+          { "value": "", "label": "— select —" }, { "value": "managed", "label": "Managed" }, { "value": "unmanaged", "label": "Unmanaged" }, { "value": "tbc", "label": "To Be Confirmed" } ] },
+        { "id": "serviceDefinition", "label": "Service definition", "kind": "text", "section": "technical", "advanced": true },
+        { "id": "serviceBinding", "label": "Service binding", "kind": "select", "section": "technical", "advanced": true, "options": [
+          { "value": "", "label": "— select —" }, { "value": "OData V4 – UI", "label": "OData V4 – UI" }, { "value": "OData V4 – Web API", "label": "OData V4 – Web API" }, { "value": "OData V2 – UI", "label": "OData V2 – UI" }, { "value": "tbc", "label": "To Be Confirmed" } ] }
+      ]
+    },
+    "CDS": {
+      "label": "CDS",
+      "hint": "CDS view / view entity",
+      "mainObject": ["CDS"],
+      "performance": true,
+      "fields": [
+        { "id": "cdsKind", "label": "CDS kind", "kind": "select", "section": "technical", "options": [
+          { "value": "", "label": "— select —" }, { "value": "Basic / interface view", "label": "Basic / interface view" }, { "value": "Composite view", "label": "Composite view" }, { "value": "Consumption view", "label": "Consumption view" }, { "value": "Projection view", "label": "Projection view" }, { "value": "Extension", "label": "Extension" }, { "value": "tbc", "label": "To Be Confirmed" } ] },
+        { "id": "fields", "label": "Fields (mark keys)", "kind": "lines", "section": "functional", "placeholder": "One per line" },
+        { "id": "associations", "label": "Associations", "kind": "lines", "section": "functional", "placeholder": "One per line" },
+        { "id": "filters", "label": "Filters", "kind": "lines", "section": "functional", "placeholder": "One per line" },
+        { "id": "parameters", "label": "Parameters", "kind": "lines", "section": "input", "placeholder": "One per line" },
+        { "id": "annotations", "label": "Annotations / extensibility", "kind": "lines", "section": "technical", "advanced": true }
+      ]
+    },
+    "CAPM": {
+      "label": "CAPM",
+      "hint": "SAP Cloud Application Programming Model",
+      "mainObject": ["CAPM"],
+      "performance": true,
+      "fields": [
+        { "id": "runtime", "label": "Runtime", "kind": "radio", "section": "technical", "options": [
+          { "value": "Node.js", "label": "Node.js" }, { "value": "Java", "label": "Java" }, { "value": "tbc", "label": "To Be Confirmed" } ] },
+        { "id": "entities", "label": "Entities", "kind": "lines", "section": "functional", "placeholder": "One per line" },
+        { "id": "services", "label": "Services", "kind": "lines", "section": "functional", "placeholder": "One per line" },
+        { "id": "externalSystems", "label": "External systems", "kind": "lines", "section": "technical", "placeholder": "One per line" },
+        { "id": "authMethod", "label": "Authentication", "kind": "text", "section": "security", "placeholder": "e.g. XSUAA, IAS" },
+        { "id": "deployTarget", "label": "Deployment target", "kind": "select", "section": "technical", "options": [
+          { "value": "", "label": "— select —" }, { "value": "SAP BTP Cloud Foundry", "label": "SAP BTP Cloud Foundry" }, { "value": "SAP BTP Kyma", "label": "SAP BTP Kyma" }, { "value": "Local only", "label": "Local only" }, { "value": "tbc", "label": "To Be Confirmed" } ] },
+        { "id": "persistence", "label": "Persistence", "kind": "select", "section": "technical", "advanced": true, "options": [
+          { "value": "", "label": "— select —" }, { "value": "SAP HANA Cloud", "label": "SAP HANA Cloud" }, { "value": "SQLite (dev)", "label": "SQLite (dev)" }, { "value": "tbc", "label": "To Be Confirmed" } ] },
+        { "id": "multitenancy", "label": "Multitenancy", "kind": "radio", "section": "technical", "advanced": true, "options": [
+          { "value": "yes", "label": "Yes" }, { "value": "no", "label": "No" }, { "value": "tbc", "label": "To Be Confirmed" } ] }
+      ]
+    }
+  },
+  "sapObjectTypes": ["Report", "Class", "Function Module", "RFC", "CDS", "Table", "Infotype", "LDB", "Workflow", "API", "OData", "RAP", "Fiori/UI5", "CAPM", "Authorization Object", "Other"],
+  "objectStatuses": [
+    { "value": "existing", "label": "Existing" },
+    { "value": "new", "label": "New" },
+    { "value": "tbc", "label": "To Be Confirmed" }
+  ],
+  "common": {
+    "quality": [
+      { "id": "authorization", "label": "Authorization required?", "kind": "radio", "section": "security", "options": [
+        { "value": "yes", "label": "Yes" }, { "value": "no", "label": "No" }, { "value": "tbc", "label": "To Be Confirmed" } ] },
+      { "id": "authObject", "label": "Authorization object / role", "kind": "text", "section": "security", "showIf": { "field": "authorization", "in": ["yes", "tbc"] }, "placeholder": "Leave empty if unknown" },
+      { "id": "dataVolume", "label": "Expected data volume", "kind": "radio", "section": "performance", "perfOnly": true, "options": [
+        { "value": "small", "label": "Small" }, { "value": "medium", "label": "Medium" }, { "value": "large", "label": "Large" }, { "value": "unknown", "label": "Unknown" } ] },
+      { "id": "performanceReq", "label": "Performance requirement", "kind": "text", "section": "performance", "perfOnly": true, "placeholder": "e.g. Completes within 30 seconds for normal usage" },
+      { "id": "testTypes", "label": "Testing required", "kind": "multicheck", "section": "testing", "options": [
+        { "value": "Unit", "label": "Unit Test" }, { "value": "Functional", "label": "Functional Test" }, { "value": "Integration", "label": "Integration Test" } ] },
+      { "id": "testScenarios", "label": "Test scenarios", "kind": "lines", "section": "testing", "placeholder": "One per line. Optionally add the expected result after =>\nValid employee => balance is displayed\nUnauthorized employee" },
+      { "id": "cleanCore", "label": "Reuse standard SAP functionality where available?", "kind": "radio", "section": "cleancore", "options": [
+        { "value": "yes", "label": "Yes" }, { "value": "no", "label": "No" }, { "value": "tbc", "label": "To Be Confirmed" } ] },
+      { "id": "cleanCoreNote", "label": "Existing standard functionality / API / CDS identified?", "kind": "text", "section": "cleancore", "showIf": { "field": "cleanCore", "in": ["yes"] }, "placeholder": "Name it here, or leave empty if none identified yet" }
+    ],
+    "advanced": [
+      { "id": "architecture", "label": "Architecture", "kind": "textarea", "section": "technical", "placeholder": "Layering, main components, patterns" },
+      { "id": "dataModel", "label": "Detailed data model", "kind": "textarea", "section": "technical", "placeholder": "Tables, key fields, relationships" },
+      { "id": "integration", "label": "Integration", "kind": "textarea", "section": "technical", "placeholder": "Interfaces, APIs, systems, protocols" },
+      { "id": "securityDetail", "label": "Security details", "kind": "textarea", "section": "security", "placeholder": "Roles, data privacy, field-level restrictions" },
+      { "id": "errorHandling", "label": "Error handling", "kind": "textarea", "section": "errors", "placeholder": "Messages, logging (e.g. application log), retry behavior" },
+      { "id": "workflow", "label": "Workflow", "kind": "textarea", "section": "technical" },
+      { "id": "deployment", "label": "Deployment", "kind": "textarea", "section": "technical", "placeholder": "Transport / landscape / release notes" },
+      { "id": "detailedTesting", "label": "Detailed testing notes", "kind": "textarea", "section": "testing", "placeholder": "Test data, ATC checks, performance tests" },
+      { "id": "technicalConstraints", "label": "Technical constraints", "kind": "textarea", "section": "technical" },
+      { "id": "packageName", "label": "Package", "kind": "text", "section": "technical" },
+      { "id": "namingConvention", "label": "Naming conventions", "kind": "text", "section": "technical", "placeholder": "e.g. prefix, namespace" },
+      { "id": "sapRelease", "label": "SAP release / ABAP language version", "kind": "text", "section": "technical", "placeholder": "e.g. S/4HANA release, ABAP Cloud or classic" }
+    ]
+  },
+  "suggestions": [
+    { "match": "fiori|ui5|sapui5|\\bapp\\b|screen|dashboard", "type": "Fiori/UI5", "label": "Fiori / UI5" },
+    { "match": "cds|view|employee data|master data|read data|select", "type": "CDS", "label": "CDS" },
+    { "match": "class|logic|calculate|calculation|util|validate|validation", "type": "Class", "label": "ABAP Class" },
+    { "match": "table|database|store|persist|ztable", "type": "Table", "label": "Table" },
+    { "match": "authori[sz]ation|restrict|role|hr users|permission|secur", "type": "Authorization Object", "label": "Authorization" },
+    { "match": "odata|api|service|expose|integrat|external", "type": "API", "label": "API / OData" },
+    { "match": "workflow|approv", "type": "Workflow", "label": "Workflow" }
+  ],
+  "definitionOfDone": [
+    "Implementation completed",
+    "Syntax validated",
+    "Relevant ATC checks completed",
+    "Authorization implemented",
+    "Error handling implemented",
+    "Tests completed",
+    "Acceptance criteria passed",
+    "Documentation updated"
+  ]
+}

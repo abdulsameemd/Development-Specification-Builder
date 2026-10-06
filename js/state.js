@@ -1,0 +1,114 @@
+/* Specification model + tiny observable store. The model is tool-neutral:
+   GitHub Copilot is only an output profile (see markdown-generator.js). */
+(function (APB) {
+  'use strict';
+
+  const SCHEMA_VERSION = 1;
+
+  function uid() {
+    return 'x' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-3);
+  }
+
+  function getPath(obj, path) {
+    return String(path).split('.').reduce(function (o, k) { return o == null ? undefined : o[k]; }, obj);
+  }
+
+  function setPath(obj, path, value) {
+    const keys = String(path).split('.');
+    let o = obj;
+    for (let i = 0; i < keys.length - 1; i++) {
+      const k = keys[i];
+      if (o[k] == null || typeof o[k] !== 'object') o[k] = /^\d+$/.test(keys[i + 1]) ? [] : {};
+      o = o[k];
+    }
+    o[keys[keys.length - 1]] = value;
+  }
+
+  function defaultDod() {
+    return APB.config.definitions.definitionOfDone.map(function (text) { return { id: uid(), text: text, on: true }; });
+  }
+
+  function blank() {
+    const now = Date.now();
+    return {
+      schema: SCHEMA_VERSION,
+      id: uid(),
+      project: { name: '' },
+      types: [],
+      requirement: { text: '', objective: '', users: '', expectedOutput: '' },
+      objects: [],
+      rules: [],
+      acceptance: [],
+      assumptions: '',
+      details: {},
+      quality: { authorization: '', authObject: '', dataVolume: '', performanceReq: '', testTypes: ['Unit', 'Functional', 'Integration'], testScenarios: '', cleanCore: '', cleanCoreNote: '' },
+      advanced: {},
+      dod: defaultDod(),
+      meta: { created: now, updated: now }
+    };
+  }
+
+  /* Coerce anything (imported JSON, old drafts) into a valid state. Unknown keys are dropped. */
+  function migrate(input) {
+    const base = blank();
+    if (!input || typeof input !== 'object') return base;
+    const s = base;
+    const known = APB.config.definitions.types;
+    s.id = typeof input.id === 'string' && input.id ? input.id : s.id;
+    s.project.name = str(getPath(input, 'project.name'));
+    s.types = Array.isArray(input.types) ? input.types.filter(function (t) { return known[t]; }) : [];
+    ['text', 'objective', 'users', 'expectedOutput'].forEach(function (k) { s.requirement[k] = str(getPath(input, 'requirement.' + k)); });
+    s.objects = arr(input.objects).map(function (o) {
+      return { id: str(o.id) || uid(), type: str(o.type) || 'Other', name: str(o.name), status: ['existing', 'new', 'tbc'].indexOf(o.status) >= 0 ? o.status : 'tbc', purpose: str(o.purpose), parent: str(o.parent) };
+    });
+    s.rules = arr(input.rules).map(function (r) { return { id: str(r.id) || uid(), condition: str(r.condition), behavior: str(r.behavior) }; });
+    s.acceptance = arr(input.acceptance).map(function (a) { return { id: str(a.id) || uid(), text: str(a.text) }; });
+    s.assumptions = str(input.assumptions);
+    s.details = {};
+    Object.keys(known).forEach(function (t) {
+      const d = input.details && input.details[t];
+      if (d && typeof d === 'object') s.details[t] = JSON.parse(JSON.stringify(d));
+    });
+    if (input.quality && typeof input.quality === 'object') Object.assign(s.quality, JSON.parse(JSON.stringify(input.quality)));
+    if (input.advanced && typeof input.advanced === 'object') s.advanced = JSON.parse(JSON.stringify(input.advanced));
+    if (Array.isArray(input.dod)) s.dod = input.dod.map(function (d) { return { id: str(d.id) || uid(), text: str(d.text), on: d.on !== false }; });
+    if (input.meta && typeof input.meta === 'object') {
+      s.meta.created = Number(input.meta.created) || s.meta.created;
+      s.meta.updated = Number(input.meta.updated) || s.meta.updated;
+    }
+    return s;
+  }
+
+  function str(v) { return typeof v === 'string' ? v : (v == null ? '' : String(v)); }
+  function arr(v) { return Array.isArray(v) ? v.filter(function (x) { return x && typeof x === 'object'; }) : []; }
+
+  /* ---- store ---- */
+  let current = blank();
+  const listeners = [];
+
+  function emit(meta) { listeners.forEach(function (fn) { fn(current, meta || {}); }); }
+
+  APB.state = {
+    uid: uid,
+    getPath: getPath,
+    setPath: setPath,
+    blank: blank,
+    migrate: migrate,
+    get: function () { return current; },
+    subscribe: function (fn) { listeners.push(fn); },
+    set: function (path, value) {
+      setPath(current, path, value);
+      current.meta.updated = Date.now();
+      emit({ path: path });
+    },
+    update: function (fn) {
+      fn(current);
+      current.meta.updated = Date.now();
+      emit({ structural: true });
+    },
+    replace: function (next) {
+      current = migrate(next);
+      emit({ replaced: true, structural: true });
+    }
+  };
+})(window.APB = window.APB || {});
