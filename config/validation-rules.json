@@ -1,32 +1,23 @@
 {
-  "version": 1,
+  "version": 2,
   "mandatory": [
     { "id": "businessRequirement", "label": "Business requirement", "message": "Describe what needs to be built.", "step": 1, "path": "requirement.text", "minLength": 10 },
     { "id": "developmentObject", "label": "Development object", "message": "Pick at least one development object.", "step": 1, "path": "types", "minItems": 1 }
   ],
   "recommended": [
-    { "id": "expectedOutput", "label": "Expected output", "step": 2, "important": true, "types": "*",
-      "anyOf": ["requirement.expectedOutput", "details.REPORT.outputType", "details.RFC.outputParams", "details.CLASS.methods", "details.CDS.fields", "details.RAP.rootEntity", "details.CAPM.entities"],
-      "question": "Expected output." },
+    { "id": "objectSpecs", "label": "Technical design of new / changed objects", "step": 4, "important": true, "types": "*",
+      "anyOf": ["specs:all"] },
     { "id": "authorization", "label": "Authorization requirement", "step": 4, "important": true, "types": "*",
       "anyOf": ["quality.authorization"],
-      "question": "Whether authorization checks are required and which authorization object / role applies." },
+      "question": "Whether authority checks are required and which authorization object applies." },
     { "id": "objects", "label": "SAP objects to reuse or create", "step": 3, "important": true, "types": "*",
       "anyOf": ["objects"] },
-    { "id": "businessRules", "label": "Key business rules", "step": 2, "types": "*",
-      "anyOf": ["rules"] },
-    { "id": "testScenarios", "label": "A few test scenarios", "step": 4, "types": "*",
-      "anyOf": ["quality.testScenarios"] },
-    { "id": "dataVolume", "label": "Expected data volume", "step": 4, "types": ["REPORT", "CDS"],
-      "anyOf": ["quality.dataVolume", "quality.performanceReq"],
-      "question": "Expected maximum data volume." },
-    { "id": "rootEntity", "label": "RAP root entity", "step": 4, "types": ["RAP"],
-      "anyOf": ["details.RAP.rootEntity"], "question": "RAP root entity." },
-    { "id": "runtime", "label": "CAP runtime (Node.js / Java)", "step": 4, "types": ["CAPM"],
-      "anyOf": ["details.CAPM.runtime"], "question": "CAP runtime (Node.js or Java)." },
-    { "id": "deployTarget", "label": "CAP deployment target", "step": 4, "types": ["CAPM"],
-      "anyOf": ["details.CAPM.deployTarget"], "question": "CAP deployment target." },
-    { "id": "targetSystem", "label": "RFC target system", "step": 4, "types": ["RFC"],
-      "anyOf": ["details.RFC.targetSystem"], "question": "RFC target system." }
+    { "id": "expectedOutput", "label": "Expected output", "step": 2, "types": ["REPORT", "RFC", "CDS", "ODATA", "FORM", "IDOC"],
+      "anyOf": ["requirement.expectedOutput", "object:Report.columns", "object:Report.outputType", "object:RFC.exporting", "object:Function Module.exporting", "object:CDS.elements"],
+      "question": "Expected output." },
+    { "id": "businessRules", "label": "Key business rules", "step": 2, "types": "*", "anyOf": ["rules"] },
+    { "id": "testScenarios", "label": "A few test scenarios", "step": 4, "types": "*", "anyOf": ["quality.testScenarios"] },
+    { "id": "dataVolume", "label": "Expected data volume", "step": 4, "types": ["REPORT", "CDS", "ODATA"],
+      "anyOf": ["quality.dataVolume", "quality.performanceReq"], "question": "Expected maximum data volume." }
   ]
 }

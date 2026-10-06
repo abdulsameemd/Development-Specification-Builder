@@ -6,8 +6,11 @@
   /* true when a value carries real content (strings, arrays of strings/objects, objects). */
   function isFilled(v) {
     if (v == null) return false;
+    if (typeof v === 'boolean') return v;
+    if (typeof v === 'number') return true;
     if (typeof v === 'string') return v.trim() !== '';
-    if (Array.isArray(v)) return v.some(function (x) { return typeof x === 'object' ? Object.keys(x).some(function (k) { return k !== 'id' && isFilled(x[k]); }) : isFilled(x); });
+    if (Array.isArray(v)) return v.some(isFilled);
+    if (typeof v === 'object') return Object.keys(v).some(function (k) { return k !== 'id' && isFilled(v[k]); });
     return true;
   }
 

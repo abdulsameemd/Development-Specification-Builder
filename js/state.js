@@ -3,7 +3,7 @@
 (function (APB) {
   'use strict';
 
-  const SCHEMA_VERSION = 1;
+  const SCHEMA_VERSION = 2;
 
   function uid() {
     return 'x' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-3);
@@ -40,8 +40,7 @@
       rules: [],
       acceptance: [],
       assumptions: '',
-      details: {},
-      quality: { authorization: '', authObject: '', dataVolume: '', performanceReq: '', testTypes: ['Unit', 'Functional', 'Integration'], testScenarios: '', cleanCore: '', cleanCoreNote: '' },
+      quality: { authorization: '', authChecks: [], dataVolume: '', performanceReq: '', testTypes: ['Unit', 'Functional', 'Integration'], testScenarios: '', cleanCore: '', cleanCoreNote: '' },
       advanced: {},
       dod: defaultDod(),
       meta: { created: now, updated: now }
@@ -53,24 +52,28 @@
     const base = blank();
     if (!input || typeof input !== 'object') return base;
     const s = base;
-    const known = APB.config.definitions.types;
+    const known = APB.config.definitions.devTypes;
     s.id = typeof input.id === 'string' && input.id ? input.id : s.id;
     s.project.name = str(getPath(input, 'project.name'));
     s.types = Array.isArray(input.types) ? input.types.filter(function (t) { return known[t]; }) : [];
     ['text', 'objective', 'users', 'expectedOutput'].forEach(function (k) { s.requirement[k] = str(getPath(input, 'requirement.' + k)); });
     s.objects = arr(input.objects).map(function (o) {
-      return { id: str(o.id) || uid(), type: str(o.type) || 'Other', name: str(o.name), status: ['existing', 'new', 'tbc'].indexOf(o.status) >= 0 ? o.status : 'tbc', purpose: str(o.purpose), parent: str(o.parent) };
+      return {
+        id: str(o.id) || uid(), type: str(o.type) || 'Other', name: str(o.name),
+        status: ['existing', 'change', 'new', 'tbc'].indexOf(o.status) >= 0 ? o.status : 'tbc',
+        purpose: str(o.purpose), parent: str(o.parent),
+        detail: o.detail && typeof o.detail === 'object' ? clone(o.detail) : {}
+      };
     });
     s.rules = arr(input.rules).map(function (r) { return { id: str(r.id) || uid(), condition: str(r.condition), behavior: str(r.behavior) }; });
     s.acceptance = arr(input.acceptance).map(function (a) { return { id: str(a.id) || uid(), text: str(a.text) }; });
     s.assumptions = str(input.assumptions);
-    s.details = {};
-    Object.keys(known).forEach(function (t) {
-      const d = input.details && input.details[t];
-      if (d && typeof d === 'object') s.details[t] = JSON.parse(JSON.stringify(d));
-    });
-    if (input.quality && typeof input.quality === 'object') Object.assign(s.quality, JSON.parse(JSON.stringify(input.quality)));
-    if (input.advanced && typeof input.advanced === 'object') s.advanced = JSON.parse(JSON.stringify(input.advanced));
+    if (input.quality && typeof input.quality === 'object') Object.assign(s.quality, clone(input.quality));
+    // schema 1 kept a single authorization object text
+    if (s.quality.authObject && !s.quality.authChecks.length) s.quality.authChecks = [{ object: s.quality.authObject }];
+    delete s.quality.authObject;
+    if (!Array.isArray(s.quality.authChecks)) s.quality.authChecks = [];
+    if (input.advanced && typeof input.advanced === 'object') s.advanced = clone(input.advanced);
     if (Array.isArray(input.dod)) s.dod = input.dod.map(function (d) { return { id: str(d.id) || uid(), text: str(d.text), on: d.on !== false }; });
     if (input.meta && typeof input.meta === 'object') {
       s.meta.created = Number(input.meta.created) || s.meta.created;
@@ -79,6 +82,7 @@
     return s;
   }
 
+  function clone(v) { return JSON.parse(JSON.stringify(v)); }
   function str(v) { return typeof v === 'string' ? v : (v == null ? '' : String(v)); }
   function arr(v) { return Array.isArray(v) ? v.filter(function (x) { return x && typeof x === 'object'; }) : []; }
 

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ABAP Copilot Prompt Builder</title>
-  <meta name="description" content="Turn SAP business requirements into structured GitHub Copilot development specifications. Runs entirely in your browser.">
+  <meta name="description" content="Turn SAP business requirements into structured GitHub Copilot development specifications for ABAP, RAP, CDS and CAP. Runs entirely in your browser.">
   <meta name="color-scheme" content="light">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232e3235'/%3E%3Cpath d='M12 6q-7 10 0 20M20 6q7 10 0 20' fill='none' stroke='%2384bd00' stroke-width='3.5' stroke-linecap='round'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/styles.css">
@@ -21,7 +21,7 @@
       <nav class="main-nav" aria-label="Main">
         <button type="button" class="nav-link" data-action="new"><span>New Requirement</span></button>
         <button type="button" class="nav-link" data-action="drafts"><span>Saved Drafts</span></button>
-        <button type="button" class="nav-link" data-action="example"><span>Try Example</span></button>
+        <button type="button" class="nav-link" data-action="examples"><span>Try Example</span></button>
         <button type="button" class="nav-link" data-action="import"><span>Import</span></button>
         <button type="button" class="nav-link" data-action="export"><span>Export</span></button>
       </nav>
@@ -93,6 +93,16 @@
     <p class="muted small">Drafts are saved automatically in this browser only. Use <strong>Export</strong> to share a project as a file.</p>
   </dialog>
 
+  <dialog id="examples-dialog" aria-labelledby="examples-title">
+    <form method="dialog" class="dialog-head">
+      <h2 id="examples-title">Worked examples</h2>
+      <button class="icon-btn icon-btn-light" aria-label="Close">✕</button>
+    </form>
+    <p class="muted small">Each example opens as a new draft so you can see a complete specification. Your current work stays in Saved Drafts.</p>
+    <div id="examples-list"></div>
+  </dialog>
+
+  <div id="datalists" hidden></div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <input type="file" id="import-file" accept=".json,application/json" hidden>
 

@@ -4,14 +4,7 @@
   APB.config = window.APB_CONFIG;
 
   const defs = APB.config.definitions;
-
-  function typeKeys() { return Object.keys(defs.types); }
-
-  /* Visible fields for an object type. Advanced fields are returned separately. */
-  function typeFields(type) {
-    const all = (defs.types[type] && defs.types[type].fields) || [];
-    return { essential: all.filter(function (f) { return !f.advanced; }), advanced: all.filter(function (f) { return f.advanced; }) };
-  }
+  const EMPTY = { group: 'Other', tcode: '', abapNaming: false, usedHint: '', fields: [] };
 
   /* showIf: { field, in:[...] } | { field, includes:value } evaluated against a values bag. */
   function isVisible(field, values) {
@@ -27,22 +20,26 @@
     return o ? o.label : value;
   }
 
-  function performanceRelevant(types) {
-    return types.some(function (t) { return defs.types[t] && defs.types[t].performance; });
-  }
+  function objectDef(type) { return defs.objectTypes[type] || EMPTY; }
+
+  /* New and changed objects get the full builder; reused / unconfirmed ones only "what you need from it". */
+  function hasBuilder(o) { return (o.status === 'new' || o.status === 'change') && objectDef(o.type).fields.length > 0; }
 
   APB.defs = {
-    types: defs.types,
-    typeKeys: typeKeys,
-    typeFields: typeFields,
+    types: defs.devTypes,
+    typeKeys: function () { return Object.keys(defs.devTypes); },
     isVisible: isVisible,
     optionLabel: optionLabel,
-    performanceRelevant: performanceRelevant,
-    objectTypes: defs.sapObjectTypes,
+    performanceRelevant: function (types) { return types.some(function (t) { return defs.devTypes[t] && defs.devTypes[t].performance; }); },
+    objectTypes: Object.keys(defs.objectTypes),
+    objectGroups: defs.objectGroups,
+    objectDef: objectDef,
+    hasBuilder: hasBuilder,
     statuses: defs.objectStatuses,
     quality: defs.common.quality,
     advanced: defs.common.advanced,
     suggestions: defs.suggestions,
+    datalists: defs.datalists,
     statusLabel: function (v) { const s = defs.objectStatuses.filter(function (x) { return x.value === v; })[0]; return s ? s.label : v; }
   };
 })(window.APB = window.APB || {});
