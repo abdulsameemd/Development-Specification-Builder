@@ -1,7 +1,8 @@
 /* Download / copy / project JSON / share link. All client-side. */
 (function (APB) {
   'use strict';
-  const FORMAT = 'abap-copilot-prompt-builder';
+  const FORMAT = 'sap-development-specification-builder';
+  const LEGACY_FORMATS = ['abap-copilot-prompt-builder'];
 
   function download(name, text, mime) {
     const blob = new Blob([text], { type: (mime || 'text/plain') + ';charset=utf-8' });
@@ -42,7 +43,7 @@
   function parseProject(text) {
     let data;
     try { data = JSON.parse(text); } catch (e) { throw new Error('This file is not valid JSON.'); }
-    const payload = data && data.format === FORMAT ? data.state : data;
+    const payload = data && (data.format === FORMAT || LEGACY_FORMATS.indexOf(data.format) >= 0) ? data.state : data;
     if (!payload || typeof payload !== 'object' || !('requirement' in payload || 'types' in payload)) throw new Error('This does not look like a project exported from this tool.');
     const s = APB.state.migrate(payload);
     s.id = APB.state.uid(); // imports never overwrite an existing draft

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Builds dist/ABAP-Copilot-Prompt-Builder.html: one self-contained file (CSS, JS and logo inlined)
+// Builds dist/SAP-Development-Specification-Builder.html: one self-contained file (CSS, JS and logo inlined)
 // that can be e-mailed or dropped on a share. Run: node scripts/build-single.js
 const fs = require('fs');
 const path = require('path');
@@ -16,6 +16,6 @@ html = html.replace(/<script src="(js\/[^"]+)"><\/script>/g, function (_, src) {
   return '<script>\n' + read(src).replace(/<\/script/gi, '<\\/script') + '\n</script>';
 });
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
-const out = path.join(root, 'dist', 'ABAP-Copilot-Prompt-Builder.html');
+const out = path.join(root, 'dist', 'SAP-Development-Specification-Builder.html');
 fs.writeFileSync(out, html);
 console.log('wrote ' + path.relative(root, out) + ' (' + Math.round(html.length / 1024) + ' KB)');

@@ -1,4 +1,4 @@
-# ABAP Copilot Prompt Builder
+# SAP Development Specification Builder
 
 > Turn SAP business requirements into structured GitHub Copilot development specifications.
 
