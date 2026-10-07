@@ -152,8 +152,10 @@ kbd { border: 1px solid var(--line-strong); border-bottom-width: 2px; border-rad
 @keyframes twinkle { 50% { transform: scale(1.35) rotate(20deg); opacity: .6; } }
 .hero h1 { font-size: clamp(2rem, 4.4vw, 3.4rem); font-weight: 800; letter-spacing: -.035em; line-height: 1.05; }
 .hero h1 .grad { display: inline-block; }
-.hero-sub { font-size: 1.12rem; margin: 14px 0 18px; color: var(--muted); max-width: 60ch; }
-.rotator { color: var(--ink); font-weight: 700; font-family: var(--mono); font-size: .98em; white-space: nowrap; }
+.hero-copy { flex: 1 1 auto; min-width: 0; }
+.hero-sub { font-size: 1.12rem; margin: 14px 0 18px; color: var(--muted); white-space: nowrap; }
+/* fixed slot sized for the longest word, so the sentence never re-flows while typing */
+.rotator { display: inline-block; min-width: 21ch; color: var(--ink); font-weight: 700; font-family: var(--mono); font-size: .98em; white-space: nowrap; text-align: left; vertical-align: bottom; }
 .caret { display: inline-block; width: 9px; height: 1.1em; margin-left: 2px; vertical-align: -3px; background: var(--lime); animation: blink 1s steps(1) infinite; border-radius: 1px; }
 @keyframes blink { 50% { opacity: 0; } }
 .hero-chips { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 0; }
@@ -495,6 +497,8 @@ dialog::backdrop { background: rgba(5, 8, 10, .6); backdrop-filter: blur(4px); }
   .header-tools { margin-left: auto; }
   .cmdk kbd { display: none; }
   .hero { padding: 26px 22px; }
+  .hero-sub { white-space: normal; }
+  .rotator { display: block; min-width: 0; margin-top: 4px; }
   .kbd-hints { display: none; }
 }
 @media (max-width: 640px) {
