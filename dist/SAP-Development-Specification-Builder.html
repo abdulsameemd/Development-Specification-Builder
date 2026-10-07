@@ -6472,90 +6472,6 @@ window.APB_CONFIG = {
      },
      "placeholder": "e.g. I_SupplierOpenItems? (to be checked), BAPI_GOODSMVT_CREATE"
     }
-   ],
-   "advanced": [
-    {
-     "id": "architecture",
-     "label": "Architecture",
-     "kind": "textarea",
-     "section": "technical",
-     "placeholder": "Layering, main components, patterns"
-    },
-    {
-     "id": "dataModel",
-     "label": "Detailed data model",
-     "kind": "textarea",
-     "section": "technical",
-     "placeholder": "Tables, key fields, relationships"
-    },
-    {
-     "id": "integration",
-     "label": "Integration",
-     "kind": "textarea",
-     "section": "technical",
-     "placeholder": "Interfaces, APIs, systems, protocols"
-    },
-    {
-     "id": "securityDetail",
-     "label": "Security details",
-     "kind": "textarea",
-     "section": "security",
-     "placeholder": "Roles, data privacy, field-level restrictions"
-    },
-    {
-     "id": "errorHandling",
-     "label": "Error handling",
-     "kind": "textarea",
-     "section": "errors",
-     "placeholder": "Messages (message class), application log (SLG1 object / sub-object), rollback"
-    },
-    {
-     "id": "workflow",
-     "label": "Workflow",
-     "kind": "textarea",
-     "section": "technical"
-    },
-    {
-     "id": "deployment",
-     "label": "Deployment",
-     "kind": "textarea",
-     "section": "technical",
-     "placeholder": "Transport / landscape / release notes"
-    },
-    {
-     "id": "detailedTesting",
-     "label": "Detailed testing notes",
-     "kind": "textarea",
-     "section": "testing",
-     "placeholder": "Test data, ATC checks, performance tests"
-    },
-    {
-     "id": "technicalConstraints",
-     "label": "Technical constraints",
-     "kind": "textarea",
-     "section": "technical"
-    },
-    {
-     "id": "packageName",
-     "label": "Package",
-     "kind": "text",
-     "section": "technical",
-     "placeholder": "e.g. ZFI_AP_REPORTS"
-    },
-    {
-     "id": "namingConvention",
-     "label": "Naming conventions",
-     "kind": "text",
-     "section": "technical",
-     "placeholder": "e.g. Z<module>_<object>, ZCL_FI_*, ZI_/ZC_ for CDS"
-    },
-    {
-     "id": "sapRelease",
-     "label": "SAP release / ABAP language version",
-     "kind": "text",
-     "section": "technical",
-     "placeholder": "e.g. S/4HANA 2023 on-premise, ABAP Cloud / classic ABAP, ECC 6.0 EhP8"
-    }
    ]
   },
   "suggestions": [
@@ -7873,7 +7789,6 @@ window.APB_CONFIG = {
     hasBuilder: hasBuilder,
     statuses: defs.objectStatuses,
     quality: defs.common.quality,
-    advanced: defs.common.advanced,
     suggestions: defs.suggestions,
     datalists: defs.datalists,
     statusLabel: function (v) { const s = defs.objectStatuses.filter(function (x) { return x.value === v; })[0]; return s ? s.label : v; }
@@ -7925,7 +7840,6 @@ window.APB_CONFIG = {
       acceptance: [],
       assumptions: '',
       quality: { authorization: '', authChecks: [], dataVolume: '', performanceReq: '', testTypes: ['Unit', 'Functional', 'Integration'], testScenarios: '', cleanCore: '', cleanCoreNote: '' },
-      advanced: {},
       dod: defaultDod(),
       meta: { created: now, updated: now }
     };
@@ -7957,7 +7871,6 @@ window.APB_CONFIG = {
     if (s.quality.authObject && !s.quality.authChecks.length) s.quality.authChecks = [{ object: s.quality.authObject }];
     delete s.quality.authObject;
     if (!Array.isArray(s.quality.authChecks)) s.quality.authChecks = [];
-    if (input.advanced && typeof input.advanced === 'object') s.advanced = clone(input.advanced);
     if (Array.isArray(input.dod)) s.dod = input.dod.map(function (d) { return { id: str(d.id) || uid(), text: str(d.text), on: d.on !== false }; });
     if (input.meta && typeof input.meta === 'object') {
       s.meta.created = Number(input.meta.created) || s.meta.created;
@@ -8284,7 +8197,7 @@ window.APB_CONFIG = {
           'Anything unknown is marked ' + TBC + ': inspect the repository/system where possible, otherwise ask for clarification instead of inventing an implementation.',
           built.length && 'Implement names, signatures, typing, keys and exceptions exactly as given in Technical Design; report any deviation.',
           has(DDIC) && 'Create dictionary objects in dependency order (domain → data element → structure / table type → table) and activate them before use.',
-          (any(ABAP) || (s.advanced.namingConvention || '').trim()) && 'Use the customer namespace (Z/Y or registered /NAMESPACE/) and the specified naming conventions; follow the Clean ABAP style guide.',
+          any(ABAP) && 'Use the customer namespace (Z/Y or registered /NAMESPACE/) and the specified naming conventions; follow the Clean ABAP style guide.',
           qa.cleanCore !== 'no' && 'Follow SAP Clean Core principles: prefer released APIs, CDS views, BAPIs and extension points over modifications.',
           any(ABAP) && 'Use modern ABAP syntax (inline declarations, constructor expressions, ABAP SQL with host variables) where the release allows.',
           has(['RAP']) && 'Follow the RAP model: behavior definition and behavior pool as specified; change BO data only through EML.',
@@ -8392,8 +8305,7 @@ window.APB_CONFIG = {
   }
 
   function commonSection(s, section) {
-    return [renderFields(D.quality.filter(function (f) { return f.section === section && f.id !== 'testScenarios'; }), s.quality, 4),
-      renderFields(D.advanced.filter(function (f) { return f.section === section; }), s.advanced, 4)].filter(Boolean).join('\n\n');
+    return renderFields(D.quality.filter(function (f) { return f.section === section && f.id !== 'testScenarios'; }), s.quality, 4);
   }
 
   function objectRows(list, withUsed) {
@@ -8476,14 +8388,12 @@ window.APB_CONFIG = {
     }
 
     add('Technical Design', technicalDesign(s));
-    add('Technical Details', commonSection(s, 'technical'));
 
     const rules = s.rules.filter(function (r) { return r.condition.trim() || r.behavior.trim(); });
     add('Business Rules', rules.length ? table(['ID', 'Condition', 'Expected behavior'], rules.map(function (r, i) { return ['BR-' + (i + 1), cell(r.condition), cell(r.behavior)]; })) : '');
 
     add('Output', s.requirement.expectedOutput.trim() ? '- **Expected output**: ' + clean(s.requirement.expectedOutput).replace(/\\\|/g, '|') : '');
     add('Authorization', commonSection(s, 'security'));
-    add('Error Handling', commonSection(s, 'errors'));
     add('Performance', commonSection(s, 'performance'));
 
     const tests = commonSection(s, 'testing');
@@ -9099,9 +9009,6 @@ window.APB_CONFIG = {
       }).join(' ') + '</div>' : '') +
       (s.objects.length ? s.objects.map(artifactCard).join('') : '<p class="empty">No objects yet. Add them in <button type="button" class="link" data-action="goto" data-step="3">step 3</button>.</p>') +
       '<section class="card" aria-labelledby="h-q"><h3 id="h-q">Authorization, testing &amp; clean core</h3>' + fieldsBlock(quality, s.quality, 'quality', { noAdvanced: true }) + '</section>' +
-      (adv
-        ? '<section class="card" aria-labelledby="h-adv"><h3 id="h-adv">Architecture &amp; technical constraints</h3>' + '<div class="form-grid">' + D.advanced.map(function (f) { return fieldHtml(f, s.advanced, 'advanced', D.advanced); }).join('') + '</div></section>'
-        : '<p class="muted small">Need package, naming conventions, release, architecture or deployment notes? Switch to <button type="button" class="link" data-action="mode" data-mode="advanced">Advanced mode</button>.</p>') +
       nav(true, 'Continue');
   }
 
@@ -9330,7 +9237,7 @@ window.APB_CONFIG = {
     const parts = path.split('.');
     let fields, i;
     if (parts[0] === 'objects') { fields = D.objectDef(s.objects[Number(parts[1])].type).fields; i = 3; }
-    else { fields = parts[0] === 'quality' ? D.quality : D.advanced; i = 1; }
+    else { fields = D.quality; i = 1; }
     let f = null;
     for (; i < parts.length; i++) {
       if (/^\d+$/.test(parts[i])) continue;

@@ -32,7 +32,7 @@
           'Anything unknown is marked ' + TBC + ': inspect the repository/system where possible, otherwise ask for clarification instead of inventing an implementation.',
           built.length && 'Implement names, signatures, typing, keys and exceptions exactly as given in Technical Design; report any deviation.',
           has(DDIC) && 'Create dictionary objects in dependency order (domain → data element → structure / table type → table) and activate them before use.',
-          (any(ABAP) || (s.advanced.namingConvention || '').trim()) && 'Use the customer namespace (Z/Y or registered /NAMESPACE/) and the specified naming conventions; follow the Clean ABAP style guide.',
+          any(ABAP) && 'Use the customer namespace (Z/Y or registered /NAMESPACE/) and the specified naming conventions; follow the Clean ABAP style guide.',
           qa.cleanCore !== 'no' && 'Follow SAP Clean Core principles: prefer released APIs, CDS views, BAPIs and extension points over modifications.',
           any(ABAP) && 'Use modern ABAP syntax (inline declarations, constructor expressions, ABAP SQL with host variables) where the release allows.',
           has(['RAP']) && 'Follow the RAP model: behavior definition and behavior pool as specified; change BO data only through EML.',
@@ -140,8 +140,7 @@
   }
 
   function commonSection(s, section) {
-    return [renderFields(D.quality.filter(function (f) { return f.section === section && f.id !== 'testScenarios'; }), s.quality, 4),
-      renderFields(D.advanced.filter(function (f) { return f.section === section; }), s.advanced, 4)].filter(Boolean).join('\n\n');
+    return renderFields(D.quality.filter(function (f) { return f.section === section && f.id !== 'testScenarios'; }), s.quality, 4);
   }
 
   function objectRows(list, withUsed) {
@@ -224,14 +223,12 @@
     }
 
     add('Technical Design', technicalDesign(s));
-    add('Technical Details', commonSection(s, 'technical'));
 
     const rules = s.rules.filter(function (r) { return r.condition.trim() || r.behavior.trim(); });
     add('Business Rules', rules.length ? table(['ID', 'Condition', 'Expected behavior'], rules.map(function (r, i) { return ['BR-' + (i + 1), cell(r.condition), cell(r.behavior)]; })) : '');
 
     add('Output', s.requirement.expectedOutput.trim() ? '- **Expected output**: ' + clean(s.requirement.expectedOutput).replace(/\\\|/g, '|') : '');
     add('Authorization', commonSection(s, 'security'));
-    add('Error Handling', commonSection(s, 'errors'));
     add('Performance', commonSection(s, 'performance'));
 
     const tests = commonSection(s, 'testing');

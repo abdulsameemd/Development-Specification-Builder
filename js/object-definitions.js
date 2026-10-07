@@ -37,7 +37,6 @@
     hasBuilder: hasBuilder,
     statuses: defs.objectStatuses,
     quality: defs.common.quality,
-    advanced: defs.common.advanced,
     suggestions: defs.suggestions,
     datalists: defs.datalists,
     statusLabel: function (v) { const s = defs.objectStatuses.filter(function (x) { return x.value === v; })[0]; return s ? s.label : v; }

@@ -55,7 +55,7 @@ A live Markdown preview sits next to the form (an Edit/Preview tab on small scre
 ## Quick Mode and Advanced Mode
 
 - **Quick** (default): essential questions only; optional fields hide behind *Advanced details ▼*.
-- **Advanced**: opens those fields and adds architecture, detailed data model, integration, security, error handling, workflow, deployment, detailed testing, technical constraints, package, naming conventions and release.
+- **Advanced**: opens every object's *Advanced details* by default (e.g. table technical settings, class attributes, RAP mapping and side effects, CAP multitenancy).
 
 ## Generated Markdown
 

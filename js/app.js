@@ -320,9 +320,6 @@
       }).join(' ') + '</div>' : '') +
       (s.objects.length ? s.objects.map(artifactCard).join('') : '<p class="empty">No objects yet. Add them in <button type="button" class="link" data-action="goto" data-step="3">step 3</button>.</p>') +
       '<section class="card" aria-labelledby="h-q"><h3 id="h-q">Authorization, testing &amp; clean core</h3>' + fieldsBlock(quality, s.quality, 'quality', { noAdvanced: true }) + '</section>' +
-      (adv
-        ? '<section class="card" aria-labelledby="h-adv"><h3 id="h-adv">Architecture &amp; technical constraints</h3>' + '<div class="form-grid">' + D.advanced.map(function (f) { return fieldHtml(f, s.advanced, 'advanced', D.advanced); }).join('') + '</div></section>'
-        : '<p class="muted small">Need package, naming conventions, release, architecture or deployment notes? Switch to <button type="button" class="link" data-action="mode" data-mode="advanced">Advanced mode</button>.</p>') +
       nav(true, 'Continue');
   }
 
@@ -551,7 +548,7 @@
     const parts = path.split('.');
     let fields, i;
     if (parts[0] === 'objects') { fields = D.objectDef(s.objects[Number(parts[1])].type).fields; i = 3; }
-    else { fields = parts[0] === 'quality' ? D.quality : D.advanced; i = 1; }
+    else { fields = D.quality; i = 1; }
     let f = null;
     for (; i < parts.length; i++) {
       if (/^\d+$/.test(parts[i])) continue;

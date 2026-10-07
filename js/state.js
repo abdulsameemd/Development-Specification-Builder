@@ -41,7 +41,6 @@
       acceptance: [],
       assumptions: '',
       quality: { authorization: '', authChecks: [], dataVolume: '', performanceReq: '', testTypes: ['Unit', 'Functional', 'Integration'], testScenarios: '', cleanCore: '', cleanCoreNote: '' },
-      advanced: {},
       dod: defaultDod(),
       meta: { created: now, updated: now }
     };
@@ -73,7 +72,6 @@
     if (s.quality.authObject && !s.quality.authChecks.length) s.quality.authChecks = [{ object: s.quality.authObject }];
     delete s.quality.authObject;
     if (!Array.isArray(s.quality.authChecks)) s.quality.authChecks = [];
-    if (input.advanced && typeof input.advanced === 'object') s.advanced = clone(input.advanced);
     if (Array.isArray(input.dod)) s.dod = input.dod.map(function (d) { return { id: str(d.id) || uid(), text: str(d.text), on: d.on !== false }; });
     if (input.meta && typeof input.meta === 'object') {
       s.meta.created = Number(input.meta.created) || s.meta.created;
