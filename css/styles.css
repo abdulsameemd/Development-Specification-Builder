@@ -118,9 +118,6 @@ kbd { border: 1px solid var(--line-strong); border-bottom-width: 2px; border-rad
 .cmdk { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 8px 0 12px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, .12); background: rgba(255, 255, 255, .04); color: #aeb9be; font: inherit; font-size: .85rem; cursor: pointer; }
 .cmdk:hover { border-color: rgba(163, 230, 53, .5); color: #fff; }
 .cmdk kbd { color: #c9d3d7; background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .16); }
-.mode-toggle { display: inline-flex; background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .08); border-radius: 999px; padding: 3px; }
-.mode-toggle button { border: 0; background: none; color: #c9d3d7; font: inherit; font-size: .82rem; font-weight: 700; padding: 6px 13px; border-radius: 999px; cursor: pointer; }
-.mode-toggle button[aria-pressed="true"] { background: var(--grad-btn); color: #0a0e11; box-shadow: 0 0 18px -4px rgba(163, 230, 53, .7); }
 .icon-btn { width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--panel-2); color: var(--ink); display: inline-grid; place-items: center; cursor: pointer; font: inherit; transition: border-color .15s, transform .15s; }
 .icon-btn:hover:not(:disabled) { border-color: var(--lime); }
 .icon-btn:disabled { opacity: .35; cursor: default; }
@@ -496,8 +493,7 @@ dialog::backdrop { background: rgba(5, 8, 10, .6); backdrop-filter: blur(4px); }
   .step-l { display: none; }
   .stepper .is-current .step-l { display: inline; }
   .gen-doc { padding: 16px; }
-  .mode-toggle button { padding: 6px 10px; }
-}
+  }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }

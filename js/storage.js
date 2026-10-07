@@ -3,7 +3,6 @@
   'use strict';
   const KEY_DRAFTS = 'apb.drafts.v1';
   const KEY_CURRENT = 'apb.current.v1';
-  const KEY_MODE = 'apb.mode.v1';
   const memory = {};
 
   function read(key) {
@@ -51,8 +50,6 @@
     setCurrent: function (id) { write(KEY_CURRENT, id); },
     getTheme: function () { return read('apb.theme.v1') === 'light' ? 'light' : 'dark'; },
     setTheme: function (t) { write('apb.theme.v1', t); },
-    getMode: function () { return read(KEY_MODE) === 'advanced' ? 'advanced' : 'quick'; },
-    setMode: function (m) { write(KEY_MODE, m); },
     isEmpty: isEmpty
   };
 

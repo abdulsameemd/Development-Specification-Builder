@@ -52,10 +52,9 @@ Grids accept **Paste from Excel** (tab-separated, same column order) and **Enter
 
 A live Markdown preview sits next to the form (an Edit/Preview tab on small screens).
 
-## Quick Mode and Advanced Mode
+## Essential vs. advanced fields
 
-- **Quick** (default): essential questions only; optional fields hide behind *Advanced details ▼*.
-- **Advanced**: opens every object's *Advanced details* by default (e.g. table technical settings, class attributes, RAP mapping and side effects, CAP multitenancy).
+Each object shows its essential questions first; optional ones (e.g. table technical settings, class attributes, RAP mapping and side effects, CAP multitenancy) sit behind *Advanced details ▸* on that object. Performance questions appear only for development types where they matter (Report, RFC, RAP, CDS, CAPM, OData, IDoc).
 
 ## Generated Markdown
 

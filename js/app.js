@@ -29,7 +29,7 @@
   };
   function icon(k) { return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[k] || ICONS.REPORT) + '</svg>'; }
 
-  const ui = { step: 1, mode: ST.getMode(), generated: false, raw: false, tab: 'edit', showErrors: false, open: {} };
+  const ui = { step: 1, generated: false, raw: false, tab: 'edit', showErrors: false, open: {} };
 
   const $ = function (sel, root) { return (root || document).querySelector(sel); };
   const $$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
@@ -176,7 +176,7 @@
     const adv = fields.filter(function (f) { return f.advanced; });
     let html = '<div class="form-grid">' + ess.map(function (f) { return fieldHtml(f, values, basePath, fields); }).join('') + '</div>';
     if (adv.length && !(opts && opts.noAdvanced)) {
-      html += '<details class="more"' + detailsAttrs(basePath + '#adv', ui.mode === 'advanced') + '><summary>Advanced details</summary><div class="form-grid">' +
+      html += '<details class="more"' + detailsAttrs(basePath + '#adv', false) + '><summary>Advanced details</summary><div class="form-grid">' +
         adv.map(function (f) { return fieldHtml(f, values, basePath, fields); }).join('') + '</div></details>';
     }
     return html;
@@ -304,10 +304,10 @@
   }
 
   function step4(s) {
-    const adv = ui.mode === 'advanced';
     const refs = C.unlistedReferences(s);
     const perfRelevant = D.performanceRelevant(s.types);
-    const quality = D.quality.filter(function (f) { return !f.perfOnly || perfRelevant || adv; });
+    // performance questions only where they matter (or when already answered)
+    const quality = D.quality.filter(function (f) { return !f.perfOnly || perfRelevant || V.isFilled(s.quality[f.id]); });
     const index = s.objects.length ? '<nav class="obj-index" aria-label="Objects">' + s.objects.map(function (o) {
       const done = D.hasBuilder(o) ? C.detailFilled(o) : true;
       return '<a href="#obj-' + o.id + '" data-action="jump" data-id="' + o.id + '" class="' + (done ? 'ok' : 'todo') + '">' + esc(o.name || o.type) + '</a>';
@@ -430,7 +430,6 @@
     document.body.classList.toggle('is-generated', ui.generated);
     document.body.classList.toggle('is-wide', !ui.generated && (ui.step === 3 || ui.step === 4));
     $('#hero').hidden = ui.generated || ui.step !== 1;
-    $$('.mode-toggle button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.mode === ui.mode)); });
     renderPreview();
   }
 
@@ -657,7 +656,6 @@
         return X.copy(url).then(function (ok) { toast(ok ? 'Share link copied (' + Math.ceil(url.length / 1024) + ' KB). Anyone with it can open this spec.' : 'Could not copy the link'); });
       }, function () { toast('Could not create a share link – use Export instead'); });
     },
-    mode: function (el) { ui.mode = el.dataset.mode; ST.setMode(ui.mode); ui.open = {}; renderMain(); },
     tab: function (el) { setTab(el.dataset.tab); },
     'add-object': function () { addObject('Table', 'existing'); },
     'add-chip': function (el) { addObject(el.dataset.type, el.dataset.status); },
@@ -853,8 +851,7 @@
       { g: 'Share', i: '⇩', t: 'Import project (.json)', run: actions.import },
       { g: 'Share', i: '🔗', t: 'Copy share link', run: actions.share },
       { g: 'Drafts', i: '☰', t: 'Saved drafts', run: openDrafts },
-      { g: 'View', i: '◐', t: 'Toggle light / dark theme', run: actions.theme },
-      { g: 'View', i: '⚙', t: ui.mode === 'advanced' ? 'Switch to Quick mode' : 'Switch to Advanced mode', run: function () { actions.mode({ dataset: { mode: ui.mode === 'advanced' ? 'quick' : 'advanced' } }); } }
+      { g: 'View', i: '◐', t: 'Toggle light / dark theme', run: actions.theme }
     ];
     T.examples().forEach(function (e) { list.push({ g: 'Example', i: e.module, t: e.label, run: function () { loadState(T.example(e.id), 'Example loaded'); } }); });
     D.typeKeys().forEach(function (k) {
