@@ -48,6 +48,8 @@
     },
     currentId: function () { return read(KEY_CURRENT) || ''; },
     setCurrent: function (id) { write(KEY_CURRENT, id); },
+    getVscodeFolder: function () { return read('apb.vscode.folder.v1') || ''; },
+    setVscodeFolder: function (f) { write('apb.vscode.folder.v1', f); },
     getTheme: function () { return read('apb.theme.v1') === 'light' ? 'light' : 'dark'; },
     setTheme: function (t) { write('apb.theme.v1', t); },
     isEmpty: isEmpty

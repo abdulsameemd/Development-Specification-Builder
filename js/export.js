@@ -84,5 +84,19 @@
     return s;
   }
 
-  APB.exporter = { download: download, copy: copy, projectJson: projectJson, parseProject: parseProject, shareLink: shareLink, readShareLink: readShareLink };
+  /* vscode://file/<absolute path> opens a file or folder in VS Code (Windows paths become D:/folder). */
+  function vscodeUrl(folder) {
+    const p = folder.replace(/\\/g, '/').replace(/\/+$/, '');
+    return 'vscode://file' + (p.charAt(0) === '/' ? '' : '/') + encodeURI(p).replace(/#/g, '%23').replace(/\?/g, '%3F');
+  }
+
+  function openVscode(folder) {
+    const a = document.createElement('a');
+    a.href = vscodeUrl(folder);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  APB.exporter = { vscodeUrl: vscodeUrl, openVscode: openVscode, download: download, copy: copy, projectJson: projectJson, parseProject: parseProject, shareLink: shareLink, readShareLink: readShareLink };
 })(window.APB = window.APB || {});

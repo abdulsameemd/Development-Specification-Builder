@@ -15,7 +15,6 @@
     copilot: {
       id: 'copilot',
       label: 'GitHub Copilot',
-      filenameSuffix: 'COPILOT_REQUIREMENT',
       instructionsTitle: 'Copilot Development Instructions',
       instructions: function (s) {
         const qa = s.quality;
@@ -258,11 +257,19 @@
 
   function slug(v) { return String(v || '').trim().replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, ''); }
 
-  function filename(s, profileId) {
-    const profile = profiles[profileId || 'copilot'];
+  /* The downloaded specification always has the same, predictable name. */
+  function filename() { return 'Business_Requirement.md'; }
+
+  /* Project exports (.json) keep the project name so several projects don't overwrite each other. */
+  function projectFilename(s) {
     const firstNew = s.objects.filter(function (o) { return o.status === 'new' && o.name.trim(); })[0];
-    const base = slug(s.project.name) || (firstNew && slug(firstNew.name)) || slug(s.types.join('_')) || 'SAP';
-    return base + '_' + profile.filenameSuffix + '.md';
+    return (slug(s.project.name) || (firstNew && slug(firstNew.name)) || 'Business_Requirement') + '_project.json';
+  }
+
+  /* What gets pasted into Copilot Chat: a one-line instruction followed by the full specification. */
+  function chatPrompt(s) {
+    return 'Implement the SAP development specification below. Follow its "Copilot Development Instructions" section, ' +
+      'reuse the listed existing objects, and ask me before guessing anything marked ' + TBC + '.\n\n' + build(s);
   }
 
   /* ---------- lightweight Markdown → HTML for the preview ---------- */
@@ -330,5 +337,5 @@
     return html.join('\n');
   }
 
-  APB.markdown = { build: build, filename: filename, toHtml: toHtml, profiles: profiles };
+  APB.markdown = { build: build, filename: filename, projectFilename: projectFilename, chatPrompt: chatPrompt, toHtml: toHtml, profiles: profiles };
 })(window.APB = window.APB || {});

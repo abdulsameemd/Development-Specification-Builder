@@ -375,8 +375,9 @@
   function generatedView(s) {
     const md = M.build(s);
     return '<div class="gen-head"><h2 class="step-title">Your specification is ready</h2>' +
-      '<p class="muted"><code>' + esc(M.filename(s)) + '</code> · put it in your project and reference it in Copilot Chat (<code>#file</code> in VS Code, or attach it in Eclipse ADT).</p></div>' +
-      '<div class="gen-actions"><button type="button" class="btn btn-primary btn-lg" data-action="download">Download file</button>' +
+      '<p class="muted">Use <strong>Open in VS Code</strong> to copy the prompt and jump straight into your project, or download <code>' + esc(M.filename(s)) + '</code> and reference it in Copilot Chat (<code>#file</code> in VS Code, or attach it in Eclipse ADT).</p></div>' +
+      '<div class="gen-actions"><button type="button" class="btn btn-primary btn-lg" data-action="vscode"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3 8 12l9 9 4-2V5z"/><path d="M8 12 3 8m5 4-5 4"/></svg> Open in VS Code</button>' +
+      '<button type="button" class="btn btn-ghost btn-lg" data-action="download">Download file</button>' +
       '<button type="button" class="btn btn-ghost" data-action="copy">Copy Markdown</button>' +
       '<button type="button" class="btn btn-ghost" data-action="export">Export project (.json)</button>' +
       '<button type="button" class="btn btn-ghost" data-action="share">Copy share link</button>' +
@@ -647,7 +648,7 @@
     import: function () { $('#import-file').click(); },
     export: function () {
       const s = S.get();
-      X.download(M.filename(s).replace(/\.md$/, '.json'), X.projectJson(s), 'application/json');
+      X.download(M.projectFilename(s), X.projectJson(s), 'application/json');
       toast('Project exported');
     },
     share: function () {
@@ -756,6 +757,31 @@
       toast('Downloaded ' + M.filename(s));
     },
     copy: copyMarkdown,
+    vscode: function () {
+      if (V.checkMandatory(S.get()).length) { toast('Add a requirement and a development object first'); return; }
+      closeDialogs();
+      $('#vscode-folder').value = ST.getVscodeFolder();
+      openDialog('#vscode-dialog');
+      $('#vscode-folder').focus();
+    },
+    'vscode-copy': function () {
+      Promise.resolve(X.copy(M.chatPrompt(S.get()))).then(function (ok) {
+        closeDialogs();
+        toast(ok ? 'Prompt copied — paste it into Copilot Chat (Ctrl+Alt+I)' : 'Copy failed – use Copy Markdown instead');
+      });
+    },
+    'vscode-go': function () {
+      const folder = $('#vscode-folder').value.trim().replace(/^"|"$/g, '');
+      ST.setVscodeFolder(folder);
+      // copy first (needs the click's user gesture), then hand over to VS Code via its vscode:// URL
+      Promise.resolve(X.copy(M.chatPrompt(S.get()))).then(function (ok) {
+        closeDialogs();
+        if (!ok) { toast('Copy failed – use Copy Markdown instead'); return; }
+        if (!folder) { toast('Prompt copied — open VS Code, press Ctrl+Alt+I and paste'); return; }
+        X.openVscode(folder);
+        toast('Prompt copied — in VS Code press Ctrl+Alt+I, then Ctrl+V');
+      });
+    },
     'view-raw': function () { ui.raw = true; renderPreview(); },
     'view-rendered': function () { ui.raw = false; renderPreview(); }
   };
@@ -846,6 +872,7 @@
       { g: 'Create', i: '+', t: 'New requirement', run: actions.new },
       { g: 'Create', i: '⬇', t: 'Download file', run: actions.download },
       { g: 'Create', i: '⧉', t: 'Copy Markdown', run: actions.copy },
+      { g: 'Create', i: '›', t: 'Open in VS Code (copy prompt for Copilot Chat)', run: actions.vscode },
       { g: 'Share', i: '⇪', t: 'Export project (.json)', run: actions.export },
       { g: 'Share', i: '⇩', t: 'Import project (.json)', run: actions.import },
       { g: 'Share', i: '🔗', t: 'Copy share link', run: actions.share },

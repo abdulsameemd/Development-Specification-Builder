@@ -338,6 +338,7 @@ details.more > summary { cursor: pointer; font-weight: 700; padding: 4px 0; colo
 .preview-panel .status { margin: 12px 0 4px; padding: 10px 12px; }
 .pv-body { flex: 1; overflow: auto; min-height: 200px; background: var(--input); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin: 8px 14px 12px; }
 .pv-actions { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 14px; }
+.pv-actions .btn { padding: 9px 12px; font-size: .86rem; }
 #save-note { margin: 10px 14px 0; min-height: 1.2em; }
 #save-note::before { content: '● '; color: var(--lime); }
 #save-note:empty::before { content: ''; }
@@ -476,6 +477,11 @@ dialog::backdrop { background: rgba(5, 8, 10, .6); backdrop-filter: blur(4px); }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); background: var(--panel-solid); color: var(--ink); border: 1px solid rgba(163, 230, 53, .45); box-shadow: 0 0 30px -10px rgba(163, 230, 53, .7), var(--shadow); padding: 11px 18px; border-radius: 12px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 80; max-width: calc(100vw - 32px); font-weight: 600; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+/* VS Code dialog */
+.vs-steps { margin: 0 0 16px; padding-left: 1.2rem; display: grid; gap: 8px; font-size: .92rem; }
+.vs-steps li::marker { color: var(--accent-text); font-weight: 800; }
+#vscode-folder { font-family: var(--mono); }
+
 /* confetti */
 #fx { position: fixed; inset: 0; pointer-events: none; z-index: 90; overflow: hidden; }
 #fx i { position: absolute; top: -12px; width: 8px; height: 14px; border-radius: 2px; opacity: .95; animation: fall var(--d, 1.6s) cubic-bezier(.25, .6, .4, 1) forwards; }
@@ -601,6 +607,7 @@ dialog::backdrop { background: rgba(5, 8, 10, .6); backdrop-filter: blur(4px); }
         <div id="pv-body" class="pv-body md" tabindex="0" aria-label="Specification preview"></div>
         <div class="pv-actions">
           <button type="button" class="btn btn-primary" data-action="download">Download file</button>
+          <button type="button" class="btn btn-ghost" data-action="vscode"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3 8 12l9 9 4-2V5z"/><path d="M8 12 3 8m5 4-5 4"/></svg> Open in VS Code</button>
           <button type="button" class="btn btn-ghost" data-action="copy">Copy</button>
         </div>
         <p id="save-note" class="muted small"></p>
@@ -632,6 +639,28 @@ dialog::backdrop { background: rgba(5, 8, 10, .6); backdrop-filter: blur(4px); }
     </form>
     <p class="muted small">Each example opens as a new draft so you can see a complete specification. Your current work stays in Drafts.</p>
     <div id="examples-list"></div>
+  </dialog>
+
+  <dialog id="vscode-dialog" aria-labelledby="vscode-title">
+    <form method="dialog" class="dialog-head">
+      <h2 id="vscode-title">Open in VS Code</h2>
+      <button class="icon-btn" aria-label="Close">✕</button>
+    </form>
+    <ol class="vs-steps">
+      <li>The prompt (instruction + full specification) is <strong>copied to your clipboard</strong>.</li>
+      <li>VS Code opens your project folder. Your browser may ask “Open Visual Studio Code?” — allow it.</li>
+      <li>In VS Code press <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>I</kbd> (Mac: <kbd>⌃</kbd> + <kbd>⌘</kbd> + <kbd>I</kbd>) to open Copilot Chat, choose <strong>Agent</strong> mode, then <kbd>Ctrl</kbd> + <kbd>V</kbd> and <kbd>Enter</kbd>.</li>
+    </ol>
+    <div class="field">
+      <label for="vscode-folder">Project folder on this computer <span class="hint">remembered in this browser</span></label>
+      <input id="vscode-folder" type="text" placeholder="e.g. D:\DEWA-SAP-BACKEND-KIT" spellcheck="false">
+      <p class="field-hint">Leave empty to only copy the prompt and open VS Code yourself.</p>
+    </div>
+    <div class="nav-row">
+      <span class="spacer"></span>
+      <button type="button" class="btn btn-ghost" data-action="vscode-copy">Copy prompt only</button>
+      <button type="button" class="btn btn-primary" data-action="vscode-go"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3 8 12l9 9 4-2V5z"/><path d="M8 12 3 8m5 4-5 4"/></svg> Copy &amp; open VS Code</button>
+    </div>
   </dialog>
 
   <dialog id="palette" class="palette" aria-label="Command palette">
@@ -8176,7 +8205,6 @@ window.APB_CONFIG = {
     copilot: {
       id: 'copilot',
       label: 'GitHub Copilot',
-      filenameSuffix: 'COPILOT_REQUIREMENT',
       instructionsTitle: 'Copilot Development Instructions',
       instructions: function (s) {
         const qa = s.quality;
@@ -8419,11 +8447,19 @@ window.APB_CONFIG = {
 
   function slug(v) { return String(v || '').trim().replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, ''); }
 
-  function filename(s, profileId) {
-    const profile = profiles[profileId || 'copilot'];
+  /* The downloaded specification always has the same, predictable name. */
+  function filename() { return 'Business_Requirement.md'; }
+
+  /* Project exports (.json) keep the project name so several projects don't overwrite each other. */
+  function projectFilename(s) {
     const firstNew = s.objects.filter(function (o) { return o.status === 'new' && o.name.trim(); })[0];
-    const base = slug(s.project.name) || (firstNew && slug(firstNew.name)) || slug(s.types.join('_')) || 'SAP';
-    return base + '_' + profile.filenameSuffix + '.md';
+    return (slug(s.project.name) || (firstNew && slug(firstNew.name)) || 'Business_Requirement') + '_project.json';
+  }
+
+  /* What gets pasted into Copilot Chat: a one-line instruction followed by the full specification. */
+  function chatPrompt(s) {
+    return 'Implement the SAP development specification below. Follow its "Copilot Development Instructions" section, ' +
+      'reuse the listed existing objects, and ask me before guessing anything marked ' + TBC + '.\n\n' + build(s);
   }
 
   /* ---------- lightweight Markdown → HTML for the preview ---------- */
@@ -8491,7 +8527,7 @@ window.APB_CONFIG = {
     return html.join('\n');
   }
 
-  APB.markdown = { build: build, filename: filename, toHtml: toHtml, profiles: profiles };
+  APB.markdown = { build: build, filename: filename, projectFilename: projectFilename, chatPrompt: chatPrompt, toHtml: toHtml, profiles: profiles };
 })(window.APB = window.APB || {});
 
 </script>
@@ -8579,6 +8615,8 @@ window.APB_CONFIG = {
     },
     currentId: function () { return read(KEY_CURRENT) || ''; },
     setCurrent: function (id) { write(KEY_CURRENT, id); },
+    getVscodeFolder: function () { return read('apb.vscode.folder.v1') || ''; },
+    setVscodeFolder: function (f) { write('apb.vscode.folder.v1', f); },
     getTheme: function () { return read('apb.theme.v1') === 'light' ? 'light' : 'dark'; },
     setTheme: function (t) { write('apb.theme.v1', t); },
     isEmpty: isEmpty
@@ -8675,7 +8713,21 @@ window.APB_CONFIG = {
     return s;
   }
 
-  APB.exporter = { download: download, copy: copy, projectJson: projectJson, parseProject: parseProject, shareLink: shareLink, readShareLink: readShareLink };
+  /* vscode://file/<absolute path> opens a file or folder in VS Code (Windows paths become D:/folder). */
+  function vscodeUrl(folder) {
+    const p = folder.replace(/\\/g, '/').replace(/\/+$/, '');
+    return 'vscode://file' + (p.charAt(0) === '/' ? '' : '/') + encodeURI(p).replace(/#/g, '%23').replace(/\?/g, '%3F');
+  }
+
+  function openVscode(folder) {
+    const a = document.createElement('a');
+    a.href = vscodeUrl(folder);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  APB.exporter = { vscodeUrl: vscodeUrl, openVscode: openVscode, download: download, copy: copy, projectJson: projectJson, parseProject: parseProject, shareLink: shareLink, readShareLink: readShareLink };
 })(window.APB = window.APB || {});
 
 </script>
@@ -9057,8 +9109,9 @@ window.APB_CONFIG = {
   function generatedView(s) {
     const md = M.build(s);
     return '<div class="gen-head"><h2 class="step-title">Your specification is ready</h2>' +
-      '<p class="muted"><code>' + esc(M.filename(s)) + '</code> · put it in your project and reference it in Copilot Chat (<code>#file</code> in VS Code, or attach it in Eclipse ADT).</p></div>' +
-      '<div class="gen-actions"><button type="button" class="btn btn-primary btn-lg" data-action="download">Download file</button>' +
+      '<p class="muted">Use <strong>Open in VS Code</strong> to copy the prompt and jump straight into your project, or download <code>' + esc(M.filename(s)) + '</code> and reference it in Copilot Chat (<code>#file</code> in VS Code, or attach it in Eclipse ADT).</p></div>' +
+      '<div class="gen-actions"><button type="button" class="btn btn-primary btn-lg" data-action="vscode"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3 8 12l9 9 4-2V5z"/><path d="M8 12 3 8m5 4-5 4"/></svg> Open in VS Code</button>' +
+      '<button type="button" class="btn btn-ghost btn-lg" data-action="download">Download file</button>' +
       '<button type="button" class="btn btn-ghost" data-action="copy">Copy Markdown</button>' +
       '<button type="button" class="btn btn-ghost" data-action="export">Export project (.json)</button>' +
       '<button type="button" class="btn btn-ghost" data-action="share">Copy share link</button>' +
@@ -9329,7 +9382,7 @@ window.APB_CONFIG = {
     import: function () { $('#import-file').click(); },
     export: function () {
       const s = S.get();
-      X.download(M.filename(s).replace(/\.md$/, '.json'), X.projectJson(s), 'application/json');
+      X.download(M.projectFilename(s), X.projectJson(s), 'application/json');
       toast('Project exported');
     },
     share: function () {
@@ -9438,6 +9491,31 @@ window.APB_CONFIG = {
       toast('Downloaded ' + M.filename(s));
     },
     copy: copyMarkdown,
+    vscode: function () {
+      if (V.checkMandatory(S.get()).length) { toast('Add a requirement and a development object first'); return; }
+      closeDialogs();
+      $('#vscode-folder').value = ST.getVscodeFolder();
+      openDialog('#vscode-dialog');
+      $('#vscode-folder').focus();
+    },
+    'vscode-copy': function () {
+      Promise.resolve(X.copy(M.chatPrompt(S.get()))).then(function (ok) {
+        closeDialogs();
+        toast(ok ? 'Prompt copied — paste it into Copilot Chat (Ctrl+Alt+I)' : 'Copy failed – use Copy Markdown instead');
+      });
+    },
+    'vscode-go': function () {
+      const folder = $('#vscode-folder').value.trim().replace(/^"|"$/g, '');
+      ST.setVscodeFolder(folder);
+      // copy first (needs the click's user gesture), then hand over to VS Code via its vscode:// URL
+      Promise.resolve(X.copy(M.chatPrompt(S.get()))).then(function (ok) {
+        closeDialogs();
+        if (!ok) { toast('Copy failed – use Copy Markdown instead'); return; }
+        if (!folder) { toast('Prompt copied — open VS Code, press Ctrl+Alt+I and paste'); return; }
+        X.openVscode(folder);
+        toast('Prompt copied — in VS Code press Ctrl+Alt+I, then Ctrl+V');
+      });
+    },
     'view-raw': function () { ui.raw = true; renderPreview(); },
     'view-rendered': function () { ui.raw = false; renderPreview(); }
   };
@@ -9528,6 +9606,7 @@ window.APB_CONFIG = {
       { g: 'Create', i: '+', t: 'New requirement', run: actions.new },
       { g: 'Create', i: '⬇', t: 'Download file', run: actions.download },
       { g: 'Create', i: '⧉', t: 'Copy Markdown', run: actions.copy },
+      { g: 'Create', i: '›', t: 'Open in VS Code (copy prompt for Copilot Chat)', run: actions.vscode },
       { g: 'Share', i: '⇪', t: 'Export project (.json)', run: actions.export },
       { g: 'Share', i: '⇩', t: 'Import project (.json)', run: actions.import },
       { g: 'Share', i: '🔗', t: 'Copy share link', run: actions.share },

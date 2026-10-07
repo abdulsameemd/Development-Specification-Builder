@@ -2,7 +2,7 @@
 
 > Turn SAP business requirements into structured GitHub Copilot development specifications.
 
-A small, static web app that helps an SAP developer give GitHub Copilot the right context **before** coding starts. Fill in a requirement in 5–10 minutes, download a `*_COPILOT_REQUIREMENT.md`, and hand it to Copilot (VS Code or Eclipse ADT).
+A small, static web app that helps an SAP developer give GitHub Copilot the right context **before** coding starts. Fill in a requirement in 5–10 minutes, download `Business_Requirement.md` (or send it straight to VS Code), and hand it to Copilot (VS Code or Eclipse ADT).
 
 - **No backend, no database, no login, no AI API.** Open `index.html` — that's it.
 - **Private by design.** Requirements never leave your browser. Drafts are kept in the browser's local storage only.
@@ -58,7 +58,7 @@ Each object shows its essential questions first; optional ones (e.g. table techn
 
 ## Generated Markdown
 
-`<Project>_COPILOT_REQUIREMENT.md` with only the relevant sections, numbered automatically:
+`Business_Requirement.md` with only the relevant sections, numbered automatically:
 Requirement · Development Object · Business Objective · Existing / New Objects · Dependencies · Functional Requirements · Technical Details · Business Rules · Input · Output · Authorization · Error Handling · Performance · Testing · Acceptance Criteria (Given/When/Then) · Clean Core · Assumptions · Open Questions · Definition of Done · Copilot Development Instructions.
 
 Rules baked in: nothing is invented, unknown values become `[TO BE CONFIRMED]`, no empty sections, and tables/lists are preferred to prose to keep tokens low.
@@ -67,7 +67,8 @@ Rules baked in: nothing is invented, unknown values become `[TO BE CONFIRMED]`, 
 
 | Option | What it is |
 |---|---|
-| **Download file** / **Copy Markdown** | The specification for Copilot. |
+| **Open in VS Code** | Copies a ready prompt (one-line instruction + the full specification) to the clipboard and opens your project folder in VS Code (`vscode://file/<folder>`; folder remembered). Then press **Ctrl+Alt+I** for Copilot Chat, **Ctrl+V**, **Enter**. A browser cannot type into VS Code itself, so the paste is yours. |
+| **Download file** / **Copy Markdown** | `Business_Requirement.md` – the specification for Copilot. |
 | **Export / Import** (`.json`) | The whole project, to continue later or hand to a colleague. |
 | **Copy share link** (🔗 in the header) | The project is encoded in the URL fragment (`#s=…`). Whoever opens it gets a copy as a new local draft. The fragment is not sent to any server, but anyone you send the link to can read the requirement, so treat it like the file itself. |
 
