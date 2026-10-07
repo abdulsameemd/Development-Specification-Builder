@@ -1,8 +1,6 @@
-/* Download / copy / project JSON / share link. All client-side. */
+/* Download / copy / share link / VS Code hand-off. All client-side. */
 (function (APB) {
   'use strict';
-  const FORMAT = 'sap-development-specification-builder';
-  const LEGACY_FORMATS = ['abap-copilot-prompt-builder'];
 
   function download(name, text, mime) {
     const blob = new Blob([text], { type: (mime || 'text/plain') + ';charset=utf-8' });
@@ -34,20 +32,6 @@
     try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
     ta.remove();
     return ok;
-  }
-
-  function projectJson(state) {
-    return JSON.stringify({ format: FORMAT, version: state.schema, exportedAt: new Date().toISOString(), state: state }, null, 2);
-  }
-
-  function parseProject(text) {
-    let data;
-    try { data = JSON.parse(text); } catch (e) { throw new Error('This file is not valid JSON.'); }
-    const payload = data && (data.format === FORMAT || LEGACY_FORMATS.indexOf(data.format) >= 0) ? data.state : data;
-    if (!payload || typeof payload !== 'object' || !('requirement' in payload || 'types' in payload)) throw new Error('This does not look like a project exported from this tool.');
-    const s = APB.state.migrate(payload);
-    s.id = APB.state.uid(); // imports never overwrite an existing draft
-    return s;
   }
 
   /* ---- share link: the whole spec travels inside the URL fragment (never sent to any server) ---- */
@@ -95,5 +79,5 @@
      Browsers only allow this directly inside a click, never after an await. */
   function launchVscode() { window.location.href = 'vscode://'; }
 
-  APB.exporter = { copyNow: copyNow, launchVscode: launchVscode, download: download, copy: copy, projectJson: projectJson, parseProject: parseProject, shareLink: shareLink, readShareLink: readShareLink };
+  APB.exporter = { copyNow: copyNow, launchVscode: launchVscode, download: download, copy: copy, shareLink: shareLink, readShareLink: readShareLink };
 })(window.APB = window.APB || {});

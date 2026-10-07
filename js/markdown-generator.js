@@ -260,12 +260,6 @@
   /* The downloaded specification always has the same, predictable name. */
   function filename() { return 'Business_Requirement.md'; }
 
-  /* Project exports (.json) keep the project name so several projects don't overwrite each other. */
-  function projectFilename(s) {
-    const firstNew = s.objects.filter(function (o) { return o.status === 'new' && o.name.trim(); })[0];
-    return (slug(s.project.name) || (firstNew && slug(firstNew.name)) || 'Business_Requirement') + '_project.json';
-  }
-
   /* What gets pasted into Copilot Chat: a one-line instruction followed by the full specification. */
   function chatPrompt(s) {
     return 'Implement the SAP development specification below. Follow its "Copilot Development Instructions" section, ' +
@@ -337,5 +331,5 @@
     return html.join('\n');
   }
 
-  APB.markdown = { build: build, filename: filename, projectFilename: projectFilename, chatPrompt: chatPrompt, toHtml: toHtml, profiles: profiles };
+  APB.markdown = { build: build, filename: filename, chatPrompt: chatPrompt, toHtml: toHtml, profiles: profiles };
 })(window.APB = window.APB || {});

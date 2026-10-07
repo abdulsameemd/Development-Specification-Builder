@@ -6,7 +6,7 @@ A small, static web app that helps an SAP developer give GitHub Copilot the righ
 
 - **No backend, no database, no login, no AI API.** Open `index.html` — that's it.
 - **Private by design.** Requirements never leave your browser. Drafts are kept in the browser's local storage only.
-- **Easy to share.** Send the `.md`, an exported project `.json`, or a share link. Or host the folder on any static host.
+- **Easy to share.** Send the `.md` or a share link. Or host the folder on any static host.
 - "AI studio" look in the MoroHub colours (lime on charcoal): dark by default with a light theme, glass panels, animated aurora, a readiness ring, a streaming reveal + confetti when the spec is generated (all motion is switched off when the OS asks for reduced motion).
 - Keyboard first: **Ctrl/⌘ K** command palette (steps, examples, add objects, download, share, theme…), **Alt + ← / →** between steps, **Enter** for the next grid row.
 
@@ -69,12 +69,11 @@ Rules baked in: nothing is invented, unknown values become `[TO BE CONFIRMED]`, 
 |---|---|
 | **Open in VS Code** | One click copies a ready prompt (one-line instruction + the full specification) to the clipboard and launches VS Code. In VS Code press **Ctrl+Alt+I** (Copilot Chat), **Ctrl+V**, **Enter**. The browser asks once for permission to open VS Code; it cannot type into VS Code itself. |
 | **Download file** / **Copy Markdown** | `Business_Requirement.md` – the specification for Copilot. |
-| **Export / Import** (`.json`) | The whole project, to continue later or hand to a colleague. |
 | **Copy share link** (🔗 in the header) | The project is encoded in the URL fragment (`#s=…`). Whoever opens it gets a copy as a new local draft. The fragment is not sent to any server, but anyone you send the link to can read the requirement, so treat it like the file itself. |
 
 ## Local storage
 
-Everything auto-saves in this browser (`localStorage`): save, resume and delete from **Saved Drafts**. Clearing site data removes them — export what you want to keep. Nothing is uploaded.
+Everything auto-saves in this browser (`localStorage`): save, resume and delete from **Saved Drafts**. Clearing site data removes them — download what you want to keep. Nothing is uploaded.
 
 ## Supported object types
 
@@ -98,7 +97,7 @@ js/
   markdown-generator.js Markdown builder + output profiles (GitHub Copilot) + preview renderer
   templates.js          templates and demo
   storage.js            localStorage drafts
-  export.js             download, copy, JSON import/export, share link
+  export.js             download, copy, share link, VS Code hand-off
   app.js                UI
 scripts/build-config.js
 assets/morohub-logo.png

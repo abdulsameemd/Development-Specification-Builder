@@ -379,7 +379,6 @@
       '<div class="gen-actions"><button type="button" class="btn btn-primary btn-lg" data-action="vscode"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3 8 12l9 9 4-2V5z"/><path d="M8 12 3 8m5 4-5 4"/></svg> Open in VS Code</button>' +
       '<button type="button" class="btn btn-ghost btn-lg" data-action="download">Download file</button>' +
       '<button type="button" class="btn btn-ghost" data-action="copy">Copy Markdown</button>' +
-      '<button type="button" class="btn btn-ghost" data-action="export">Export project (.json)</button>' +
       '<button type="button" class="btn btn-ghost" data-action="share">Copy share link</button>' +
       '<button type="button" class="btn btn-ghost" data-action="edit">Review Details</button></div>' +
       '<div class="seg gen-seg" role="group" aria-label="Format"><button type="button" data-action="view-rendered" aria-pressed="' + !ui.raw + '">Preview</button><button type="button" data-action="view-raw" aria-pressed="' + ui.raw + '">Markdown</button></div>' +
@@ -645,16 +644,10 @@
       openDrafts();
       toast('Draft deleted');
     },
-    import: function () { $('#import-file').click(); },
-    export: function () {
-      const s = S.get();
-      X.download(M.projectFilename(s), X.projectJson(s), 'application/json');
-      toast('Project exported');
-    },
     share: function () {
       X.shareLink(S.get()).then(function (url) {
         return X.copy(url).then(function (ok) { toast(ok ? 'Share link copied (' + Math.ceil(url.length / 1024) + ' KB). Anyone with it can open this spec.' : 'Could not copy the link'); });
-      }, function () { toast('Could not create a share link – use Export instead'); });
+      }, function () { toast('Could not create a share link – use Copy Markdown instead'); });
     },
     tab: function (el) { setTab(el.dataset.tab); },
     'add-object': function () { addObject('Table', 'existing'); },
@@ -855,8 +848,6 @@
       { g: 'Create', i: '⬇', t: 'Download file', run: actions.download },
       { g: 'Create', i: '⧉', t: 'Copy Markdown', run: actions.copy },
       { g: 'Create', i: '›', t: 'Open in VS Code (copy prompt for Copilot Chat)', run: actions.vscode },
-      { g: 'Share', i: '⇪', t: 'Export project (.json)', run: actions.export },
-      { g: 'Share', i: '⇩', t: 'Import project (.json)', run: actions.import },
       { g: 'Share', i: '🔗', t: 'Copy share link', run: actions.share },
       { g: 'Drafts', i: '☰', t: 'Saved drafts', run: openDrafts },
       { g: 'View', i: '◐', t: 'Toggle light / dark theme', run: actions.theme }
@@ -961,12 +952,6 @@
     } else if (t.dataset.check) {
       S.set(t.dataset.check, t.checked);
       if (t.hasAttribute('data-rerender')) renderMain();
-    } else if (t.id === 'import-file' && t.files && t.files[0]) {
-      const file = t.files[0];
-      file.text().then(function (text) {
-        try { loadState(X.parseProject(text), 'Imported ' + file.name); } catch (err) { toast(err.message); }
-      });
-      t.value = '';
     }
   });
 
