@@ -587,7 +587,7 @@ dialog::backdrop { background: rgba(5, 8, 10, .6); backdrop-filter: blur(4px); }
       <aside id="preview" class="panel preview-panel" aria-label="Live preview">
         <div class="pv-head">
           <div class="term-dots" aria-hidden="true"><i></i><i></i><i></i></div>
-          <h2 class="pv-title"><span class="sr-only">Live preview: </span><span id="pv-file">SPEC_COPILOT_REQUIREMENT.md</span></h2>
+          <h2 class="pv-title"><span class="sr-only">Live preview: </span><span id="pv-file">Business requirement</span></h2>
           <div class="seg" role="group" aria-label="Preview format">
             <button type="button" data-action="view-rendered" aria-pressed="true">Preview</button>
             <button type="button" data-action="view-raw" aria-pressed="false">MD</button>
@@ -596,7 +596,7 @@ dialog::backdrop { background: rgba(5, 8, 10, .6); backdrop-filter: blur(4px); }
         <div id="pv-status" role="status"></div>
         <div id="pv-body" class="pv-body md" tabindex="0" aria-label="Specification preview"></div>
         <div class="pv-actions">
-          <button type="button" class="btn btn-primary" data-action="download">Download .md</button>
+          <button type="button" class="btn btn-primary" data-action="download">Download file</button>
           <button type="button" class="btn btn-ghost" data-action="copy">Copy</button>
         </div>
         <p id="save-note" class="muted small"></p>
@@ -9054,7 +9054,7 @@ window.APB_CONFIG = {
     const md = M.build(s);
     return '<div class="gen-head"><h2 class="step-title">Your specification is ready</h2>' +
       '<p class="muted"><code>' + esc(M.filename(s)) + '</code> · put it in your project and reference it in Copilot Chat (<code>#file</code> in VS Code, or attach it in Eclipse ADT).</p></div>' +
-      '<div class="gen-actions"><button type="button" class="btn btn-primary btn-lg" data-action="download">Download .md</button>' +
+      '<div class="gen-actions"><button type="button" class="btn btn-primary btn-lg" data-action="download">Download file</button>' +
       '<button type="button" class="btn btn-ghost" data-action="copy">Copy Markdown</button>' +
       '<button type="button" class="btn btn-ghost" data-action="export">Export project (.json)</button>' +
       '<button type="button" class="btn btn-ghost" data-action="share">Copy share link</button>' +
@@ -9120,7 +9120,6 @@ window.APB_CONFIG = {
       const s = S.get();
       const md = M.build(s);
       $('#pv-status').innerHTML = statusHtml(C.evaluate(s), false);
-      $('#pv-file').textContent = M.filename(s);
       const blank = !s.requirement.text.trim() && !s.types.length && !s.objects.length;
       $('#pv-body').innerHTML = blank ? '<p class="muted">Your specification builds here as you fill in the form.</p>' : ui.raw ? '<pre>' + esc(md) + '</pre>' : M.toHtml(md);
       $$('[data-action="view-rendered"]').forEach(function (b) { b.setAttribute('aria-pressed', String(!ui.raw)); });
@@ -9523,7 +9522,7 @@ window.APB_CONFIG = {
       { g: 'Navigate', i: '5', t: 'Step 5 · Review & generate', run: function () { setStep(5); } },
       { g: 'Create', i: '✦', t: 'Generate specification', run: function () { setStep(5); actions.generate(); } },
       { g: 'Create', i: '+', t: 'New requirement', run: actions.new },
-      { g: 'Create', i: '⬇', t: 'Download .md', run: actions.download },
+      { g: 'Create', i: '⬇', t: 'Download file', run: actions.download },
       { g: 'Create', i: '⧉', t: 'Copy Markdown', run: actions.copy },
       { g: 'Share', i: '⇪', t: 'Export project (.json)', run: actions.export },
       { g: 'Share', i: '⇩', t: 'Import project (.json)', run: actions.import },

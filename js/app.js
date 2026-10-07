@@ -376,7 +376,7 @@
     const md = M.build(s);
     return '<div class="gen-head"><h2 class="step-title">Your specification is ready</h2>' +
       '<p class="muted"><code>' + esc(M.filename(s)) + '</code> · put it in your project and reference it in Copilot Chat (<code>#file</code> in VS Code, or attach it in Eclipse ADT).</p></div>' +
-      '<div class="gen-actions"><button type="button" class="btn btn-primary btn-lg" data-action="download">Download .md</button>' +
+      '<div class="gen-actions"><button type="button" class="btn btn-primary btn-lg" data-action="download">Download file</button>' +
       '<button type="button" class="btn btn-ghost" data-action="copy">Copy Markdown</button>' +
       '<button type="button" class="btn btn-ghost" data-action="export">Export project (.json)</button>' +
       '<button type="button" class="btn btn-ghost" data-action="share">Copy share link</button>' +
@@ -442,7 +442,6 @@
       const s = S.get();
       const md = M.build(s);
       $('#pv-status').innerHTML = statusHtml(C.evaluate(s), false);
-      $('#pv-file').textContent = M.filename(s);
       const blank = !s.requirement.text.trim() && !s.types.length && !s.objects.length;
       $('#pv-body').innerHTML = blank ? '<p class="muted">Your specification builds here as you fill in the form.</p>' : ui.raw ? '<pre>' + esc(md) + '</pre>' : M.toHtml(md);
       $$('[data-action="view-rendered"]').forEach(function (b) { b.setAttribute('aria-pressed', String(!ui.raw)); });
@@ -845,7 +844,7 @@
       { g: 'Navigate', i: '5', t: 'Step 5 · Review & generate', run: function () { setStep(5); } },
       { g: 'Create', i: '✦', t: 'Generate specification', run: function () { setStep(5); actions.generate(); } },
       { g: 'Create', i: '+', t: 'New requirement', run: actions.new },
-      { g: 'Create', i: '⬇', t: 'Download .md', run: actions.download },
+      { g: 'Create', i: '⬇', t: 'Download file', run: actions.download },
       { g: 'Create', i: '⧉', t: 'Copy Markdown', run: actions.copy },
       { g: 'Share', i: '⇪', t: 'Export project (.json)', run: actions.export },
       { g: 'Share', i: '⇩', t: 'Import project (.json)', run: actions.import },

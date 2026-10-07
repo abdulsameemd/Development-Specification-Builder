@@ -67,7 +67,7 @@ Rules baked in: nothing is invented, unknown values become `[TO BE CONFIRMED]`, 
 
 | Option | What it is |
 |---|---|
-| **Download .md** / **Copy Markdown** | The specification for Copilot. |
+| **Download file** / **Copy Markdown** | The specification for Copilot. |
 | **Export / Import** (`.json`) | The whole project, to continue later or hand to a colleague. |
 | **Copy share link** (🔗 in the header) | The project is encoded in the URL fragment (`#s=…`). Whoever opens it gets a copy as a new local draft. The fragment is not sent to any server, but anyone you send the link to can read the requirement, so treat it like the file itself. |
 
