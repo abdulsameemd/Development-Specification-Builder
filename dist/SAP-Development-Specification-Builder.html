@@ -477,11 +477,6 @@ dialog::backdrop { background: rgba(5, 8, 10, .6); backdrop-filter: blur(4px); }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); background: var(--panel-solid); color: var(--ink); border: 1px solid rgba(163, 230, 53, .45); box-shadow: 0 0 30px -10px rgba(163, 230, 53, .7), var(--shadow); padding: 11px 18px; border-radius: 12px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 80; max-width: calc(100vw - 32px); font-weight: 600; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
-/* VS Code dialog */
-.vs-steps { margin: 0 0 16px; padding-left: 1.2rem; display: grid; gap: 8px; font-size: .92rem; }
-.vs-steps li::marker { color: var(--accent-text); font-weight: 800; }
-#vscode-folder { font-family: var(--mono); }
-
 /* confetti */
 #fx { position: fixed; inset: 0; pointer-events: none; z-index: 90; overflow: hidden; }
 #fx i { position: absolute; top: -12px; width: 8px; height: 14px; border-radius: 2px; opacity: .95; animation: fall var(--d, 1.6s) cubic-bezier(.25, .6, .4, 1) forwards; }
@@ -639,28 +634,6 @@ dialog::backdrop { background: rgba(5, 8, 10, .6); backdrop-filter: blur(4px); }
     </form>
     <p class="muted small">Each example opens as a new draft so you can see a complete specification. Your current work stays in Drafts.</p>
     <div id="examples-list"></div>
-  </dialog>
-
-  <dialog id="vscode-dialog" aria-labelledby="vscode-title">
-    <form method="dialog" class="dialog-head">
-      <h2 id="vscode-title">Open in VS Code</h2>
-      <button class="icon-btn" aria-label="Close">✕</button>
-    </form>
-    <ol class="vs-steps">
-      <li>The prompt (instruction + full specification) is <strong>copied to your clipboard</strong>.</li>
-      <li>VS Code opens your project folder. Your browser may ask “Open Visual Studio Code?” — allow it.</li>
-      <li>In VS Code press <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>I</kbd> (Mac: <kbd>⌃</kbd> + <kbd>⌘</kbd> + <kbd>I</kbd>) to open Copilot Chat, choose <strong>Agent</strong> mode, then <kbd>Ctrl</kbd> + <kbd>V</kbd> and <kbd>Enter</kbd>.</li>
-    </ol>
-    <div class="field">
-      <label for="vscode-folder">Project folder on this computer <span class="hint">remembered in this browser</span></label>
-      <input id="vscode-folder" type="text" placeholder="e.g. D:\DEWA-SAP-BACKEND-KIT" spellcheck="false">
-      <p class="field-hint">Leave empty to only copy the prompt and open VS Code yourself.</p>
-    </div>
-    <div class="nav-row">
-      <span class="spacer"></span>
-      <button type="button" class="btn btn-ghost" data-action="vscode-copy">Copy prompt only</button>
-      <button type="button" class="btn btn-primary" data-action="vscode-go"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3 8 12l9 9 4-2V5z"/><path d="M8 12 3 8m5 4-5 4"/></svg> Copy &amp; open VS Code</button>
-    </div>
   </dialog>
 
   <dialog id="palette" class="palette" aria-label="Command palette">
@@ -8615,8 +8588,6 @@ window.APB_CONFIG = {
     },
     currentId: function () { return read(KEY_CURRENT) || ''; },
     setCurrent: function (id) { write(KEY_CURRENT, id); },
-    getVscodeFolder: function () { return read('apb.vscode.folder.v1') || ''; },
-    setVscodeFolder: function (f) { write('apb.vscode.folder.v1', f); },
     getTheme: function () { return read('apb.theme.v1') === 'light' ? 'light' : 'dark'; },
     setTheme: function (t) { write('apb.theme.v1', t); },
     isEmpty: isEmpty
@@ -8713,21 +8684,18 @@ window.APB_CONFIG = {
     return s;
   }
 
-  /* vscode://file/<absolute path> opens a file or folder in VS Code (Windows paths become D:/folder). */
-  function vscodeUrl(folder) {
-    const p = folder.replace(/\\/g, '/').replace(/\/+$/, '');
-    return 'vscode://file' + (p.charAt(0) === '/' ? '' : '/') + encodeURI(p).replace(/#/g, '%23').replace(/\?/g, '%3F');
+  /* Copy synchronously inside the click, so the same click can still launch VS Code afterwards. */
+  function copyNow(text) {
+    if (fallbackCopy(text)) return true;
+    if (navigator.clipboard) { navigator.clipboard.writeText(text).catch(function () {}); return true; }
+    return false;
   }
 
-  function openVscode(folder) {
-    const a = document.createElement('a');
-    a.href = vscodeUrl(folder);
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  }
+  /* Hand over to VS Code through its registered vscode:// protocol (the browser may ask for permission once).
+     Browsers only allow this directly inside a click, never after an await. */
+  function launchVscode() { window.location.href = 'vscode://'; }
 
-  APB.exporter = { vscodeUrl: vscodeUrl, openVscode: openVscode, download: download, copy: copy, projectJson: projectJson, parseProject: parseProject, shareLink: shareLink, readShareLink: readShareLink };
+  APB.exporter = { copyNow: copyNow, launchVscode: launchVscode, download: download, copy: copy, projectJson: projectJson, parseProject: parseProject, shareLink: shareLink, readShareLink: readShareLink };
 })(window.APB = window.APB || {});
 
 </script>
@@ -8772,12 +8740,12 @@ window.APB_CONFIG = {
 
   /* ------------------------------------------------------------------ toast */
   let toastTimer;
-  function toast(msg) {
+  function toast(msg, ms) {
     const el = $('#toast');
     el.textContent = msg;
     el.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2800);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, ms || 2800);
   }
 
   /* ------------------------------------------------------ focus-preserving render */
@@ -9492,29 +9460,11 @@ window.APB_CONFIG = {
     },
     copy: copyMarkdown,
     vscode: function () {
-      if (V.checkMandatory(S.get()).length) { toast('Add a requirement and a development object first'); return; }
-      closeDialogs();
-      $('#vscode-folder').value = ST.getVscodeFolder();
-      openDialog('#vscode-dialog');
-      $('#vscode-folder').focus();
-    },
-    'vscode-copy': function () {
-      Promise.resolve(X.copy(M.chatPrompt(S.get()))).then(function (ok) {
-        closeDialogs();
-        toast(ok ? 'Prompt copied — paste it into Copilot Chat (Ctrl+Alt+I)' : 'Copy failed – use Copy Markdown instead');
-      });
-    },
-    'vscode-go': function () {
-      const folder = $('#vscode-folder').value.trim().replace(/^"|"$/g, '');
-      ST.setVscodeFolder(folder);
-      // copy first (needs the click's user gesture), then hand over to VS Code via its vscode:// URL
-      Promise.resolve(X.copy(M.chatPrompt(S.get()))).then(function (ok) {
-        closeDialogs();
-        if (!ok) { toast('Copy failed – use Copy Markdown instead'); return; }
-        if (!folder) { toast('Prompt copied — open VS Code, press Ctrl+Alt+I and paste'); return; }
-        X.openVscode(folder);
-        toast('Prompt copied — in VS Code press Ctrl+Alt+I, then Ctrl+V');
-      });
+      const s = S.get();
+      if (V.checkMandatory(s).length) { toast('Add a requirement and a development object first'); return; }
+      const copied = X.copyNow(M.chatPrompt(s));
+      X.launchVscode();
+      toast(copied ? 'Prompt copied ✓ VS Code is opening — press Ctrl+Alt+I for Copilot Chat, then Ctrl+V' : 'VS Code is opening — copying failed, use Copy Markdown', 7000);
     },
     'view-raw': function () { ui.raw = true; renderPreview(); },
     'view-rendered': function () { ui.raw = false; renderPreview(); }

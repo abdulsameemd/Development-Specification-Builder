@@ -67,7 +67,7 @@ Rules baked in: nothing is invented, unknown values become `[TO BE CONFIRMED]`, 
 
 | Option | What it is |
 |---|---|
-| **Open in VS Code** | Copies a ready prompt (one-line instruction + the full specification) to the clipboard and opens your project folder in VS Code (`vscode://file/<folder>`; folder remembered). Then press **Ctrl+Alt+I** for Copilot Chat, **Ctrl+V**, **Enter**. A browser cannot type into VS Code itself, so the paste is yours. |
+| **Open in VS Code** | One click copies a ready prompt (one-line instruction + the full specification) to the clipboard and launches VS Code. In VS Code press **Ctrl+Alt+I** (Copilot Chat), **Ctrl+V**, **Enter**. The browser asks once for permission to open VS Code; it cannot type into VS Code itself. |
 | **Download file** / **Copy Markdown** | `Business_Requirement.md` – the specification for Copilot. |
 | **Export / Import** (`.json`) | The whole project, to continue later or hand to a colleague. |
 | **Copy share link** (🔗 in the header) | The project is encoded in the URL fragment (`#s=…`). Whoever opens it gets a copy as a new local draft. The fragment is not sent to any server, but anyone you send the link to can read the requirement, so treat it like the file itself. |

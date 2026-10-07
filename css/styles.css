@@ -462,11 +462,6 @@ dialog::backdrop { background: rgba(5, 8, 10, .6); backdrop-filter: blur(4px); }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); background: var(--panel-solid); color: var(--ink); border: 1px solid rgba(163, 230, 53, .45); box-shadow: 0 0 30px -10px rgba(163, 230, 53, .7), var(--shadow); padding: 11px 18px; border-radius: 12px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 80; max-width: calc(100vw - 32px); font-weight: 600; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
-/* VS Code dialog */
-.vs-steps { margin: 0 0 16px; padding-left: 1.2rem; display: grid; gap: 8px; font-size: .92rem; }
-.vs-steps li::marker { color: var(--accent-text); font-weight: 800; }
-#vscode-folder { font-family: var(--mono); }
-
 /* confetti */
 #fx { position: fixed; inset: 0; pointer-events: none; z-index: 90; overflow: hidden; }
 #fx i { position: absolute; top: -12px; width: 8px; height: 14px; border-radius: 2px; opacity: .95; animation: fall var(--d, 1.6s) cubic-bezier(.25, .6, .4, 1) forwards; }

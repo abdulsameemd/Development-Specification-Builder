@@ -124,28 +124,6 @@
     <div id="examples-list"></div>
   </dialog>
 
-  <dialog id="vscode-dialog" aria-labelledby="vscode-title">
-    <form method="dialog" class="dialog-head">
-      <h2 id="vscode-title">Open in VS Code</h2>
-      <button class="icon-btn" aria-label="Close">✕</button>
-    </form>
-    <ol class="vs-steps">
-      <li>The prompt (instruction + full specification) is <strong>copied to your clipboard</strong>.</li>
-      <li>VS Code opens your project folder. Your browser may ask “Open Visual Studio Code?” — allow it.</li>
-      <li>In VS Code press <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>I</kbd> (Mac: <kbd>⌃</kbd> + <kbd>⌘</kbd> + <kbd>I</kbd>) to open Copilot Chat, choose <strong>Agent</strong> mode, then <kbd>Ctrl</kbd> + <kbd>V</kbd> and <kbd>Enter</kbd>.</li>
-    </ol>
-    <div class="field">
-      <label for="vscode-folder">Project folder on this computer <span class="hint">remembered in this browser</span></label>
-      <input id="vscode-folder" type="text" placeholder="e.g. D:\DEWA-SAP-BACKEND-KIT" spellcheck="false">
-      <p class="field-hint">Leave empty to only copy the prompt and open VS Code yourself.</p>
-    </div>
-    <div class="nav-row">
-      <span class="spacer"></span>
-      <button type="button" class="btn btn-ghost" data-action="vscode-copy">Copy prompt only</button>
-      <button type="button" class="btn btn-primary" data-action="vscode-go"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3 8 12l9 9 4-2V5z"/><path d="M8 12 3 8m5 4-5 4"/></svg> Copy &amp; open VS Code</button>
-    </div>
-  </dialog>
-
   <dialog id="palette" class="palette" aria-label="Command palette">
     <div class="palette-search">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>

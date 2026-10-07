@@ -38,12 +38,12 @@
 
   /* ------------------------------------------------------------------ toast */
   let toastTimer;
-  function toast(msg) {
+  function toast(msg, ms) {
     const el = $('#toast');
     el.textContent = msg;
     el.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2800);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, ms || 2800);
   }
 
   /* ------------------------------------------------------ focus-preserving render */
@@ -758,29 +758,11 @@
     },
     copy: copyMarkdown,
     vscode: function () {
-      if (V.checkMandatory(S.get()).length) { toast('Add a requirement and a development object first'); return; }
-      closeDialogs();
-      $('#vscode-folder').value = ST.getVscodeFolder();
-      openDialog('#vscode-dialog');
-      $('#vscode-folder').focus();
-    },
-    'vscode-copy': function () {
-      Promise.resolve(X.copy(M.chatPrompt(S.get()))).then(function (ok) {
-        closeDialogs();
-        toast(ok ? 'Prompt copied — paste it into Copilot Chat (Ctrl+Alt+I)' : 'Copy failed – use Copy Markdown instead');
-      });
-    },
-    'vscode-go': function () {
-      const folder = $('#vscode-folder').value.trim().replace(/^"|"$/g, '');
-      ST.setVscodeFolder(folder);
-      // copy first (needs the click's user gesture), then hand over to VS Code via its vscode:// URL
-      Promise.resolve(X.copy(M.chatPrompt(S.get()))).then(function (ok) {
-        closeDialogs();
-        if (!ok) { toast('Copy failed – use Copy Markdown instead'); return; }
-        if (!folder) { toast('Prompt copied — open VS Code, press Ctrl+Alt+I and paste'); return; }
-        X.openVscode(folder);
-        toast('Prompt copied — in VS Code press Ctrl+Alt+I, then Ctrl+V');
-      });
+      const s = S.get();
+      if (V.checkMandatory(s).length) { toast('Add a requirement and a development object first'); return; }
+      const copied = X.copyNow(M.chatPrompt(s));
+      X.launchVscode();
+      toast(copied ? 'Prompt copied ✓ VS Code is opening — press Ctrl+Alt+I for Copilot Chat, then Ctrl+V' : 'VS Code is opening — copying failed, use Copy Markdown', 7000);
     },
     'view-raw': function () { ui.raw = true; renderPreview(); },
     'view-rendered': function () { ui.raw = false; renderPreview(); }

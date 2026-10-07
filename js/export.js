@@ -84,19 +84,16 @@
     return s;
   }
 
-  /* vscode://file/<absolute path> opens a file or folder in VS Code (Windows paths become D:/folder). */
-  function vscodeUrl(folder) {
-    const p = folder.replace(/\\/g, '/').replace(/\/+$/, '');
-    return 'vscode://file' + (p.charAt(0) === '/' ? '' : '/') + encodeURI(p).replace(/#/g, '%23').replace(/\?/g, '%3F');
+  /* Copy synchronously inside the click, so the same click can still launch VS Code afterwards. */
+  function copyNow(text) {
+    if (fallbackCopy(text)) return true;
+    if (navigator.clipboard) { navigator.clipboard.writeText(text).catch(function () {}); return true; }
+    return false;
   }
 
-  function openVscode(folder) {
-    const a = document.createElement('a');
-    a.href = vscodeUrl(folder);
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  }
+  /* Hand over to VS Code through its registered vscode:// protocol (the browser may ask for permission once).
+     Browsers only allow this directly inside a click, never after an await. */
+  function launchVscode() { window.location.href = 'vscode://'; }
 
-  APB.exporter = { vscodeUrl: vscodeUrl, openVscode: openVscode, download: download, copy: copy, projectJson: projectJson, parseProject: parseProject, shareLink: shareLink, readShareLink: readShareLink };
+  APB.exporter = { copyNow: copyNow, launchVscode: launchVscode, download: download, copy: copy, projectJson: projectJson, parseProject: parseProject, shareLink: shareLink, readShareLink: readShareLink };
 })(window.APB = window.APB || {});
