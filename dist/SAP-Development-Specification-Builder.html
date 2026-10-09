@@ -477,6 +477,61 @@ dialog::backdrop { background: rgba(5, 8, 10, .6); backdrop-filter: blur(4px); }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); background: var(--panel-solid); color: var(--ink); border: 1px solid rgba(163, 230, 53, .45); box-shadow: 0 0 30px -10px rgba(163, 230, 53, .7), var(--shadow); padding: 11px 18px; border-radius: 12px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 80; max-width: calc(100vw - 32px); font-weight: 600; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+/* ---------- Agents info page ---------- */
+body.is-info .layout { grid-template-columns: minmax(0, 1fr); max-width: 1080px; margin-inline: auto; }
+body.is-info .preview-panel, body.is-info .view-tabs, body.is-info .stepper { display: none; }
+.ag-head { margin-bottom: 14px; }
+.ag-toc { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 6px; }
+.ag-toc a { font-size: .78rem; font-weight: 700; text-decoration: none; color: var(--ink); background: var(--panel-2); border: 1px solid var(--line-strong); border-radius: 999px; padding: 4px 12px; }
+.ag-toc a:hover { border-color: var(--lime); color: var(--accent-text); }
+.ag-sec { margin-top: 30px; scroll-margin-top: 90px; outline: none; }
+.ag-sec > h3 { font-size: 1.25rem; margin: 0 0 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ag-sec h4 { font-size: .8rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-family: var(--mono); margin: 20px 0 10px; }
+.ag-agent { background: var(--panel-2); border: 1px solid var(--line); border-radius: 16px; padding: 20px 22px; position: relative; overflow: hidden; }
+.ag-agent::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--grad); }
+.agent-name { font-family: var(--mono); font-weight: 800; color: var(--accent-text); background: var(--ok-bg); border: 1px solid rgba(163, 230, 53, .35); padding: 2px 8px; border-radius: 7px; }
+.kw { font-family: var(--mono); font-weight: 800; font-size: .82em; color: #0a0e11; background: var(--grad-btn); padding: 1px 7px; border-radius: 6px; white-space: nowrap; }
+.ag-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
+.ag-card { background: var(--panel-2); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; transition: border-color .2s, transform .2s; }
+.ag-card:hover { border-color: rgba(163, 230, 53, .45); transform: translateY(-2px); }
+.ag-card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
+.ag-tag { font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); border: 1px solid var(--line-strong); border-radius: 999px; padding: 2px 9px; }
+.ag-card dl { margin: 0; }
+.ag-card dt { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; color: var(--muted); margin-top: 10px; font-family: var(--mono); }
+.ag-card dd { margin: 3px 0 0; font-size: .9rem; }
+.ag-callout { background: var(--ok-bg); border: 1px solid rgba(163, 230, 53, .3); border-left: 3px solid var(--lime); border-radius: 10px; padding: 10px 14px; font-size: .9rem; margin: 14px 0 0; }
+.ag-steps { margin: 0; padding: 0; list-style: none; counter-reset: s; display: grid; gap: 8px; }
+.ag-steps li { counter-increment: s; position: relative; padding: 9px 12px 9px 46px; background: var(--input); border: 1px solid var(--line); border-radius: 10px; font-size: .92rem; }
+.ag-steps li::before { content: counter(s); position: absolute; left: 10px; top: 8px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font: 800 .75rem var(--mono); color: #0a0e11; background: var(--grad-btn); }
+.ag-list { margin: 0; padding-left: 1.2rem; display: grid; gap: 6px; font-size: .92rem; }
+.ag-list li::marker { color: var(--accent-text); }
+.pipe { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px 26px; }
+.pipe li { position: relative; display: flex; align-items: center; gap: 8px; background: var(--input); border: 1px solid var(--line-strong); border-radius: 10px; padding: 8px 12px; font-size: .86rem; font-weight: 600; max-width: 260px; }
+.pipe li:not(:last-child)::after { content: '→'; position: absolute; right: -20px; top: 50%; transform: translateY(-50%); color: var(--accent-text); font-weight: 900; }
+.pipe-n { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font: 800 .7rem var(--mono); color: var(--accent-text); border: 1px solid rgba(163, 230, 53, .5); }
+.ag-cats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.ag-cat { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--input); display: flex; flex-direction: column; gap: 4px; font-size: .88rem; border-top: 3px solid var(--lime); }
+.ag-cat-warn { border-top-color: var(--amber); }
+.ag-cat-sec { border-top-color: var(--danger); }
+.ag-cat-perf { border-top-color: var(--teal); }
+.ag-table { border-collapse: collapse; width: 100%; font-size: .88rem; }
+.ag-table th, .ag-table td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.ag-table thead th { background: var(--panel-solid); }
+.ag-table tbody th { color: var(--muted); font-weight: 700; white-space: nowrap; }
+.fc-wrap { overflow-x: auto; background: var(--input); border: 1px solid var(--line); border-radius: 16px; padding: 14px; margin-bottom: 12px; }
+.fc { display: block; width: 100%; min-width: 640px; height: auto; color: var(--accent-text); }
+.fc text { font: 600 15px var(--font); fill: var(--ink); text-anchor: middle; dominant-baseline: central; }
+.fc g rect, .fc g polygon { fill: var(--panel-2); stroke: var(--line-strong); stroke-width: 1.5; }
+.fc .fc-start rect { fill: var(--panel-solid); }
+.fc .fc-q polygon { fill: var(--amber-bg); stroke: var(--amber); }
+.fc .fc-agent rect { fill: var(--ok-bg); stroke: var(--lime); stroke-width: 2; }
+.fc .fc-agent text { font: 800 16px var(--mono); fill: var(--accent-text); }
+.fc .fc-note rect { stroke-dasharray: 5 4; }
+.fc .fc-note text { font-size: 13px; fill: var(--muted); }
+.fc .fc-edge { fill: none; stroke: var(--accent-text); stroke-width: 2; }
+.fc marker path { fill: var(--accent-text); }
+.fc .fc-label { font: 800 12px var(--mono); fill: var(--accent-text); }
+
 /* confetti */
 #fx { position: fixed; inset: 0; pointer-events: none; z-index: 90; overflow: hidden; }
 #fx i { position: absolute; top: -12px; width: 8px; height: 14px; border-radius: 2px; opacity: .95; animation: fall var(--d, 1.6s) cubic-bezier(.25, .6, .4, 1) forwards; }
@@ -540,6 +595,7 @@ dialog::backdrop { background: rgba(5, 8, 10, .6); backdrop-filter: blur(4px); }
         <button type="button" class="nav-link" data-action="new">New</button>
         <button type="button" class="nav-link" data-action="drafts">Drafts</button>
         <button type="button" class="nav-link" data-action="examples">Examples</button>
+        <button type="button" class="nav-link" data-action="agents">Agents</button>
       </nav>
       <div class="header-tools">
         <button type="button" class="cmdk" data-action="palette" aria-label="Open command palette (Ctrl+K)">
@@ -8675,6 +8731,186 @@ window.APB_CONFIG = {
 
 </script>
   <script>
+/* "Agents" info page: how the DEWA backend agents work in VS Code.
+   Content mirrors docs/AGENT_WORKFLOWS.md; the Mermaid charts there are redrawn as inline SVG / HTML so the
+   page works offline. The agent files under agents/ and AGENTS.md remain the source of truth. */
+(function (APB) {
+  'use strict';
+
+  function kw(t) { return '<span class="kw">' + t + '</span>'; }
+  function agent(t) { return '<code class="agent-name">' + t + '</code>'; }
+  function flow(steps) {
+    return '<ol class="pipe">' + steps.map(function (s, i) { return '<li><span class="pipe-n">' + (i + 1) + '</span>' + s + '</li>'; }).join('') + '</ol>';
+  }
+  function steps(list) { return '<ol class="ag-steps">' + list.map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ol>'; }
+  function bullets(list) { return '<ul class="ag-list">' + list.map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ul>'; }
+
+  /* "How to choose" decision chart (redrawn from the Mermaid flowchart). */
+  function chooser() {
+    function box(x, y, w, h, lines, cls) {
+      const cy = y + h / 2 - (lines.length - 1) * 9;
+      return '<g class="' + cls + '"><rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="12"/>' +
+        lines.map(function (l, i) { return '<text x="' + (x + w / 2) + '" y="' + (cy + i * 18) + '">' + l + '</text>'; }).join('') + '</g>';
+    }
+    function diamond(cx, cy, w, h, label) {
+      return '<g class="fc-q"><polygon points="' + cx + ',' + (cy - h / 2) + ' ' + (cx + w / 2) + ',' + cy + ' ' + cx + ',' + (cy + h / 2) + ' ' + (cx - w / 2) + ',' + cy + '"/>' +
+        '<text x="' + cx + '" y="' + cy + '">' + label + '</text></g>';
+    }
+    function arrow(d) { return '<path class="fc-edge" d="' + d + '" marker-end="url(#fcArrow)"/>'; }
+    function label(x, y, t) { return '<text class="fc-label" x="' + x + '" y="' + y + '">' + t + '</text>'; }
+    return '<div class="fc-wrap"><svg class="fc" viewBox="0 0 960 470" role="img" aria-labelledby="fc-title fc-desc">' +
+      '<title id="fc-title">Which agent should I use?</title>' +
+      '<desc id="fc-desc">Adobe Form, SFP or ADS work: use dewa-adobeagent, graphical layout is done in Adobe LiveCycle Designer. Otherwise, if the code does not exist yet, use dewa-abap, one artifact at a time. If the code already exists, use dewa-codereview: review first, fixes require the defined confirmation flow.</desc>' +
+      '<defs><marker id="fcArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z"/></marker></defs>' +
+      box(330, 10, 300, 46, ['What are you working on?'], 'fc-start') +
+      arrow('M480 56 V82') +
+      diamond(480, 122, 320, 74, 'Adobe Form / SFP / ADS?') +
+      arrow('M320 122 H180 V196') + label(250, 110, 'Yes') +
+      arrow('M640 122 H700 V191') + label(672, 110, 'No') +
+      box(40, 200, 280, 56, ['dewa-adobeagent'], 'fc-agent') +
+      arrow('M180 256 V296') +
+      box(40, 300, 280, 60, ['Graphical layout work is done', 'in Adobe LiveCycle Designer'], 'fc-note') +
+      diamond(700, 232, 340, 74, 'Is the code already present?') +
+      arrow('M700 269 V292 H590 V326') + label(612, 278, 'No · create new') +
+      arrow('M700 292 H830 V326') + label(812, 278, 'Yes · inspect / fix') +
+      box(490, 330, 200, 52, ['dewa-abap'], 'fc-agent') +
+      box(730, 330, 200, 52, ['dewa-codereview'], 'fc-agent') +
+      arrow('M590 382 V402') + arrow('M830 382 V402') +
+      box(490, 405, 200, 52, ['One artifact at a time'], 'fc-note') +
+      box(730, 405, 200, 52, ['Review first; fixes need', 'the confirmation flow'], 'fc-note') +
+      '</svg></div>';
+  }
+
+  function html() {
+    return '<div class="ag">' +
+      '<div class="ag-head"><button type="button" class="btn btn-ghost btn-sm" data-action="close-info">← Back to the builder</button></div>' +
+      '<p class="step-count">Info</p><h2 class="step-title">DEWA Agent Workflows</h2>' +
+      '<p class="muted">A practical guide to choosing and working with the DEWA backend agents in VS Code. The source of truth for exact rules remains each agent file under <code>agents/</code> and the shared router in <code>AGENTS.md</code>.</p>' +
+
+      '<nav class="ag-toc" aria-label="On this page">' + [['ag-glance', 'At a glance'], ['ag-choose', 'How to choose'], ['ag-session', 'Session pattern'], ['ag-abap', 'dewa-abap'], ['ag-review', 'dewa-codereview'], ['ag-adobe', 'dewa-adobeagent'], ['ag-vsix', 'VS Code extension'], ['ag-compare', 'Comparison'], ['ag-files', 'Source files']]
+        .map(function (l) { return '<a href="#' + l[0] + '" data-action="info-jump" data-id="' + l[0] + '">' + l[1] + '</a>'; }).join('') + '</nav>' +
+
+      '<section id="ag-glance" class="ag-sec"><h3>At a glance</h3><div class="ag-cards">' +
+      card('dewa-abap', 'Build', 'Building new ABAP, CDS, RAP or CAP backend artifacts', 'One new/changed artifact at a time, with tests and validation status', 'Type ' + kw('CONFIRM ARTEFACT') + ' before the next artifact') +
+      card('dewa-codereview', 'Review', 'Reviewing or safely improving existing ABAP, CDS, RAP or CAP code', 'Full review report, findings, safe fixes and optionally an as-built technical specification', 'Answer Y/N for flagged changes; type ' + kw('CONFIRM REVIEW') + ' before handoff') +
+      card('dewa-adobeagent', 'Forms', 'Building or maintaining SAP Adobe Forms and their ABAP integration', 'Form interface, form object/context, data provider or driver, and validation evidence', 'One artifact at a time; no named confirmation keyword in this agent') +
+      '</div><p class="ag-callout">All three agents are backend-focused and use the <strong>ADT MCP server</strong> for SAP repository operations where available. They do <strong>not</strong> replace target-system authorization, SAP activation, ATC, ABAP Unit, Basis/ADS checks, or required technical approvals.</p></section>' +
+
+      '<section id="ag-choose" class="ag-sec"><h3>How to choose</h3>' + chooser() +
+      '<p class="muted">The agents are separate entry points, not a dependency chain. A typical handoff is optional: build with ' + agent('dewa-abap') + ', then review the result with ' + agent('dewa-codereview') + '; for an Adobe Form, use ' + agent('dewa-adobeagent') + ' for ABAP/form-contract work and LiveCycle Designer for graphical layout.</p></section>' +
+
+      '<section id="ag-session" class="ag-sec"><h3>Shared session pattern</h3>' +
+      '<p>Before SAP backend changes, establish the target and inspect the local context. The exact checklist depends on the agent, but commonly includes the target system/release, package/software component, ABAP language version, existing objects, test coverage, transport context and the functional requirement. Do not guess system facts or claim checks that were not run.</p>' +
+      flow(['Select the matching agent', 'Read the relevant project requirement and existing objects', 'Confirm target, package, language version and scope', 'Make the smallest in-scope change', 'Run available activation, tests and static checks', 'Report evidence and unresolved prerequisites', 'Stop at that agent\'s approval boundary']) +
+      '<p class="ag-callout">In the ADT virtual workspace, repository files may be virtual. Follow the agent\'s directory-first navigation instructions and use the ADT MCP server for SAP operations. A file edit alone does not prove that an SAP object activated or passed tests/ATC.</p></section>' +
+
+      '<section id="ag-abap" class="ag-sec ag-agent"><h3>' + agent('dewa-abap') + ' — build new backend work</h3>' +
+      '<p>Use for new backend implementation: ABAP classes, CDS, RAP, CAP and related service artifacts. The agent treats <code>BUSINESS_REQUIREMENTS.md</code> as the requirement source when present and follows the project\'s target and package rules.</p>' +
+      '<h4>Build flow</h4>' + steps([
+        'Confirm target/release, tier, backend model, OData version, draft requirement, entity structure, package, language version and existing repository context. Use applicable DEWA defaults rather than repeatedly asking for already-confirmed defaults.',
+        'For approved cloud-ready development, check the assigned <code>ZS4DEWA_CLOUD</code> software component and approved <code>ZCLOUD_ROOT</code>/module package. Otherwise follow the project package convention. Never assume package assignment without target context.',
+        'Choose the implementation path: <strong>RAP</strong> for new transactional OData V4 business objects · <strong>CAP</strong> for BTP side-by-side applications · <strong>standalone OO ABAP</strong> only for suitable non-RAP business logic.',
+        'For RAP, follow the declared dependency order (below).',
+        'Create one artifact, validate it, and present its result before proceeding. Do not batch the generation order.',
+        'Add the required unit-test stub with each handler/service. Run unit tests after source changes using the ADT MCP server where available. Activate changed development objects as part of the authorized development workflow; report failures or unavailable checks.',
+        'Run the applicable target-mandated ATC/Clean Core checks in ADT. Report the actual variant and result; do not claim a pass without tool evidence.',
+        'Present the artifact, changes, activation/test/ATC evidence and open items. Stop until the developer types the exact keyword ' + kw('CONFIRM ARTEFACT') + ' before creating the next artifact.'
+      ]) +
+      '<h4>RAP dependency order</h4>' +
+      flow(['Persistence table', 'Draft table <em>(only when explicitly required)</em>', 'Interface / root / projection CDS', 'Metadata extension &amp; access control', 'Interface / projection behavior definitions', 'Behavior implementation &amp; tests', 'Service definition', 'Service binding']) +
+      '<h4>Important boundaries</h4>' + bullets([
+        'No unrequested RAP draft behavior.',
+        'Do not use <code>COMMIT WORK</code> for RAP; use RAP transaction handling and EML as required.',
+        'Use released APIs for ABAP Cloud. If release status is unknown, stop before depending on the object from Cloud code.',
+        'Do not directly change production, release transports, or import transports without required explicit approval.',
+        'Review for Clean Core and security evidence through the target system/ATC, not code appearance alone.'
+      ]) + '</section>' +
+
+      '<section id="ag-review" class="ag-sec ag-agent"><h3>' + agent('dewa-codereview') + ' — review existing code</h3>' +
+      '<p>Use for code that already exists when the task is to inspect quality, refactor safely, modernize or optimize. It is not the primary agent for creating a new application from scratch.</p>' +
+      '<h4>Review and fix flow</h4>' + steps([
+        'Select one object. Read its source and tests. Review the full object before presenting findings; do not stream partial results.',
+        'Analyze the object across performance (<code>PERF</code>), style (<code>STY</code>), security (<code>SEC</code>), modernization/Clean Core and performance optimization checks.',
+        'Present the complete review report before changing anything. Review is read-only until the developer confirms fixes.',
+        'Safe, behavior-preserving fixes may be applied according to the agent rules. Present flagged or behavior-affecting suggestions and obtain a clear <strong>Y/N</strong> decision before applying them.',
+        '<strong>Never auto-fix security findings.</strong> Report them for remediation. Critical security findings block handoff; escalate the specified critical authorization concern to the security owner.',
+        'After fixes, activate the object, rerun ABAP Unit tests and run ATC when available. Confirm no new violations; report anything not run.',
+        'Always show the complete review report in chat; this is the guaranteed delivery path for developers working in an ADT virtual workspace.',
+        'Offer an optional Desktop copy with a <code>cmd.exe</code> command, e.g. <code>notepad "%USERPROFILE%\\Desktop\\review_report_zcl_fi_invoice_processor.md"</code>. The developer runs it, copies the report from chat into Notepad and saves. Never claim the file was saved unless the developer confirms it.',
+        'Stop at the review gate. The developer must type ' + kw('CONFIRM REVIEW') + ' before handoff and generation of the as-built technical specification.',
+        'After confirmation, generate the technical specification from actual changes and validation evidence, show it in chat and offer a similar Desktop-save command. Do not invent test, ATC, activation or performance results.'
+      ]) +
+      '<p class="ag-callout">The agent must not attempt to create report files inside the ADT virtual workspace; it has no local file storage.</p>' +
+      '<h4>Review output categories</h4><div class="ag-cats">' +
+      cat('Auto-fixed', 'ok', 'Safe behavior-preserving changes made, with locations and rationale.') +
+      cat('Flagged', 'warn', 'Changes that need a developer decision, including behavior risk.') +
+      cat('Security', 'sec', 'Findings are report-only and never auto-fixed.') +
+      cat('Performance', 'perf', 'Recommendations; measure uncertain/high-impact changes with approved runtime or SQL analysis rather than guessing.') +
+      '</div></section>' +
+
+      '<section id="ag-adobe" class="ag-sec ag-agent"><h3>' + agent('dewa-adobeagent') + ' — Adobe Forms and ABAP integration</h3>' +
+      '<p>Use for SFP/ADS form interfaces and objects, form context, ABAP data providers/drivers, output integration and PDF-render troubleshooting. It owns the ABAP side and form contract. Graphical XDP layout changes belong in Adobe LiveCycle Designer.</p>' +
+      '<h4>Form delivery flow</h4>' + steps([
+        'Confirm document type, trigger, data source and keys, output channel, language/country needs, existing reusable form objects and interface type. Dictionary-based is the default for ABAP callers; ask explicitly before choosing XML Schema-based.',
+        'Design the contract and objects separately: a form interface, a form object/context, a LiveCycle layout inside the form, and a caller implemented as a thin driver plus a testable data provider where applicable.',
+        'Generate in order, one artifact at a time (below). Do not collapse these contracts into one artifact.',
+        'Keep data selection and display formatting in the data provider. Keep the driver thin. Resolve the generated form function-module name at runtime; do not hardcode the generated name.',
+        'Run the applicable data-provider ABAP Unit tests, activation, ATC, SFP preview and end-to-end render checks where the environment permits. Confirm PDF output and ADS connectivity when required. Keep <code>FP_JOB_CLOSE</code> guaranteed on errors.',
+        'Report exactly which checks passed and which could not be run. Do not mark the task complete based only on ABAP activation if form binding, rendering or delivery is still unverified.',
+        'Clearly identify remaining work outside the agent, such as LiveCycle Designer layout updates, ADS/Basis prerequisites or print destination setup.'
+      ]) +
+      '<h4>Generation order</h4>' + flow(['Form interface → activate', 'Form / context → activate', 'Driver / data provider → activate']) +
+      '<h4>Form-specific boundaries</h4>' + bullets([
+        'Preserve transported interface parameters; add optional parameters rather than removing or retyping contract fields.',
+        'Do not put database reads or business logic in form code initialization.',
+        'Format amounts, dates, units, addresses and translated display text in ABAP before the form consumes it.',
+        'Treat customer, financial and tax data as sensitive. Do not use real production data in examples or committed fixtures.',
+        'Do not invent ADS destinations, printers, SAP object names or render results.'
+      ]) + '</section>' +
+
+      '<section id="ag-vsix" class="ag-sec"><h3>VS Code extension distribution</h3>' +
+      '<p>The VS Code extension is a delivery mechanism for the agent files; it does not create a runtime dependency between agents.</p>' +
+      flow(['Source agents in <code>agents/</code>', '<code>build-kit.js</code> copies <code>*.agent.md</code>', 'Generated <code>vscode-extension/kit/</code>', 'VSIX package', 'VS Code extension activates', 'Copies agent files to the user prompts folder', 'Developer selects an agent in Chat']) +
+      bullets([
+        'The extension bundles <code>agents/*.agent.md</code> into <code>vscode-extension/kit/</code> during packaging.',
+        'On startup, <code>extension.js</code> copies bundled agent files into <code>%APPDATA%\\Code\\User\\prompts</code> when <code>dewaAbapAgent.autoInstall</code> is enabled.',
+        'Agent copies refresh when the extension version changes. The reinstall command can copy them again manually.',
+        '<code>skills/</code> and the root <code>AGENTS.md</code> router belong to the repository-level kit workflow; the VS Code extension package bundles and installs agents only.',
+        'Installing files makes agents available; it does not auto-select an agent, connect to SAP by itself, or validate ABAP code.'
+      ]) + '</section>' +
+
+      '<section id="ag-compare" class="ag-sec"><h3>Quick comparison</h3><div class="table-scroll"><table class="ag-table"><thead><tr><th>Concern</th><th>' + agent('dewa-abap') + '</th><th>' + agent('dewa-codereview') + '</th><th>' + agent('dewa-adobeagent') + '</th></tr></thead><tbody>' +
+      row('Main task', 'Build new backend artifacts', 'Review/fix existing backend objects', 'Build/maintain Adobe Forms and ABAP integration') +
+      row('Primary focus', 'RAP/CAP/CDS/ABAP implementation', 'PERF/STY/SEC and safe refactoring', 'Form contract, data provider, driver, output/render') +
+      row('Work unit', 'One artifact at a time', 'One object at a time', 'One form artifact at a time') +
+      row('Human gate', kw('CONFIRM ARTEFACT') + ' between artifacts', 'Y/N for flagged fixes, then ' + kw('CONFIRM REVIEW'), 'Sequential artifact workflow; no named keyword in the agent file') +
+      row('Specialized manual work', 'SAP system activation/ATC/tests', 'Security owner sign-off for critical findings', 'Adobe LiveCycle Designer and possible Basis/ADS work') +
+      '</tbody></table></div></section>' +
+
+      '<section id="ag-files" class="ag-sec"><h3>Source files</h3>' + bullets([
+        '<code>AGENTS.md</code> — repository-level router and shared process rules.',
+        '<code>agents/dewa-abap.agent.md</code> — new backend development.',
+        '<code>agents/dewa-codereview.agent.md</code> — existing-code review/refactor/optimization.',
+        '<code>agents/dewa-adobeagent.agent.md</code> — Adobe Forms and ABAP-side delivery.',
+        '<code>vscode-extension/extension.js</code> — agent installation into the VS Code user profile.',
+        '<code>vscode-extension/scripts/build-kit.js</code> — packaging source agents into the extension bundle.'
+      ]) + '</section>' +
+      '<div class="nav-row"><button type="button" class="btn btn-primary" data-action="close-info">← Back to the builder</button></div>' +
+      '</div>';
+  }
+
+  function card(name, tag, choose, output, gate) {
+    return '<article class="ag-card"><div class="ag-card-head">' + agent(name) + '<span class="ag-tag">' + tag + '</span></div>' +
+      '<dl><dt>Choose it for</dt><dd>' + choose + '</dd><dt>Main output</dt><dd>' + output + '</dd><dt>User checkpoint</dt><dd>' + gate + '</dd></dl></article>';
+  }
+  function cat(title, cls, text) { return '<div class="ag-cat ag-cat-' + cls + '"><strong>' + title + '</strong><span>' + text + '</span></div>'; }
+  function row(h, a, b, c) { return '<tr><th scope="row">' + h + '</th><td>' + a + '</td><td>' + b + '</td><td>' + c + '</td></tr>'; }
+
+  APB.agentsGuide = { html: html };
+})(window.APB = window.APB || {});
+
+</script>
+  <script>
 /* UI: 5-step wizard, per-object builders, live preview, drafts. Plain DOM; state lives in state.js. */
 (function (APB) {
   'use strict';
@@ -8706,7 +8942,7 @@ window.APB_CONFIG = {
   };
   function icon(k) { return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[k] || ICONS.REPORT) + '</svg>'; }
 
-  const ui = { step: 1, generated: false, raw: false, tab: 'edit', showErrors: false, open: {} };
+  const ui = { step: 1, view: null, generated: false, raw: false, tab: 'edit', showErrors: false, open: {} };
 
   const $ = function (sel, root) { return (root || document).querySelector(sel); };
   const $$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
@@ -9052,6 +9288,7 @@ window.APB_CONFIG = {
   function generatedView(s) {
     const md = M.build(s);
     return '<div class="gen-head"><h2 class="step-title">Your specification is ready</h2>' +
+      '<p class="muted">Not sure which VS Code agent to use? See <button type="button" class="link" data-action="agents">Agent workflows</button>.</p>' +
       '<p class="muted">Use <strong>Open in VS Code</strong> to copy the prompt and jump straight into your project, or download <code>' + esc(M.filename(s)) + '</code> and reference it in Copilot Chat (<code>#file</code> in VS Code, or attach it in Eclipse ADT).</p></div>' +
       '<div class="gen-actions"><button type="button" class="btn btn-primary btn-lg" data-action="vscode"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3 8 12l9 9 4-2V5z"/><path d="M8 12 3 8m5 4-5 4"/></svg> Open in VS Code</button>' +
       '<button type="button" class="btn btn-ghost btn-lg" data-action="download">Download file</button>' +
@@ -9098,15 +9335,18 @@ window.APB_CONFIG = {
   function renderMain() {
     const s = S.get();
     if (stream) { clearInterval(stream.timer); stream = null; }
+    const info = ui.view === 'agents';
     keepFocus(function () {
+      if (info) { $('#main').innerHTML = APB.agentsGuide.html(); return; }
       const html = ui.generated ? generatedView(s) : [step1, step2, step3, step4, step5][ui.step - 1](s);
       $('#main').innerHTML = '<p class="step-count">' + (ui.generated ? 'Done' : 'Step ' + ui.step + ' of 5') + '</p>' + html;
     });
     renderStepper();
     renderMap();
-    document.body.classList.toggle('is-generated', ui.generated);
-    document.body.classList.toggle('is-wide', !ui.generated && (ui.step === 3 || ui.step === 4));
-    $('#hero').hidden = ui.generated || ui.step !== 1;
+    document.body.classList.toggle('is-info', info);
+    document.body.classList.toggle('is-generated', ui.generated && !info);
+    document.body.classList.toggle('is-wide', !info && !ui.generated && (ui.step === 3 || ui.step === 4));
+    $('#hero').hidden = info || ui.generated || ui.step !== 1;
     renderPreview();
   }
 
@@ -9131,6 +9371,7 @@ window.APB_CONFIG = {
   }
 
   function setStep(n) {
+    ui.view = null;
     ui.step = Math.max(1, Math.min(5, n));
     ui.generated = false;
     ui.showErrors = false;
@@ -9175,6 +9416,7 @@ window.APB_CONFIG = {
   function loadState(next, msg) {
     ST.save(S.get());
     S.replace(next);
+    ui.view = null;
     ui.step = 1;
     ui.generated = false;
     ui.showErrors = false;
@@ -9419,7 +9661,19 @@ window.APB_CONFIG = {
       toast(next === 'light' ? 'Light theme' : 'Dark theme');
     },
     palette: openPalette,
-    edit: function () { ui.generated = false; ui.step = 5; renderMain(); },
+    edit: function () { ui.view = null; ui.generated = false; ui.step = 5; renderMain(); },
+    agents: function () {
+      ui.view = 'agents';
+      renderMain();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      $('#main').focus({ preventScroll: true });
+    },
+    'close-info': function () { ui.view = null; renderMain(); window.scrollTo({ top: 0, behavior: 'smooth' }); },
+    'info-jump': function (el, e) {
+      e.preventDefault();
+      const t = document.getElementById(el.dataset.id);
+      if (t) { t.scrollIntoView({ behavior: 'smooth', block: 'start' }); t.setAttribute('tabindex', '-1'); t.focus({ preventScroll: true }); }
+    },
     download: function () {
       const s = S.get();
       if (V.checkMandatory(s).length) { toast('Add a requirement and a development object first'); return; }
@@ -9527,6 +9781,7 @@ window.APB_CONFIG = {
       { g: 'Create', i: '›', t: 'Open in VS Code (copy prompt for Copilot Chat)', run: actions.vscode },
       { g: 'Share', i: '🔗', t: 'Copy share link', run: actions.share },
       { g: 'Drafts', i: '☰', t: 'Saved drafts', run: openDrafts },
+      { g: 'Info', i: 'ℹ', t: 'Agent workflows (dewa-abap, dewa-codereview, dewa-adobeagent)', run: actions.agents },
       { g: 'View', i: '◐', t: 'Toggle light / dark theme', run: actions.theme }
     ];
     T.examples().forEach(function (e) { list.push({ g: 'Example', i: e.module, t: e.label, run: function () { loadState(T.example(e.id), 'Example loaded'); } }); });

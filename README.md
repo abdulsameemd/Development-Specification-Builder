@@ -98,6 +98,7 @@ js/
   templates.js          templates and demo
   storage.js            localStorage drafts
   export.js             download, copy, share link, VS Code hand-off
+  agents-guide.js       Agents info page (from docs/AGENT_WORKFLOWS.md)
   app.js                UI
 scripts/build-config.js
 assets/morohub-logo.png
@@ -112,6 +113,10 @@ The model in `state.js` does not depend on Copilot; Copilot is just an **output 
    - `objectTypes` – one entry per object with `group`, `tcode`, `usedHint` and `fields`. A field has `id`, `label`, `kind` (`text | textarea | lines | select | radio | multicheck | check | grid | records`), optional `advanced`, `showIf`, `ask` (open question when empty), `placeholder`. A `grid` has `columns` (`id`, `label`, `kind`, `w`, `ref` for "unlisted object" detection, `list` for type suggestions); `records` has `itemLabel`, `titleField` and nested `fields`.
 2. Run `node scripts/build-config.js` to regenerate `js/config-bundle.js` (`--check` verifies it is current).
 3. Reload. No UI code changes are needed; `section` decides where the value lands in the Markdown.
+
+## Agent workflows page
+
+The **Agents** button (header, or Ctrl K → "Agent workflows") opens an info page on the DEWA VS Code agents — `dewa-abap`, `dewa-codereview`, `dewa-adobeagent`: when to use which, their flows, confirmation keywords and boundaries, and how the VS Code extension installs them. Source: `docs/AGENT_WORKFLOWS.md` (content in `js/agents-guide.js`).
 
 ## Try it
 

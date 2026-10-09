@@ -29,7 +29,7 @@
   };
   function icon(k) { return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[k] || ICONS.REPORT) + '</svg>'; }
 
-  const ui = { step: 1, generated: false, raw: false, tab: 'edit', showErrors: false, open: {} };
+  const ui = { step: 1, view: null, generated: false, raw: false, tab: 'edit', showErrors: false, open: {} };
 
   const $ = function (sel, root) { return (root || document).querySelector(sel); };
   const $$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
@@ -375,6 +375,7 @@
   function generatedView(s) {
     const md = M.build(s);
     return '<div class="gen-head"><h2 class="step-title">Your specification is ready</h2>' +
+      '<p class="muted">Not sure which VS Code agent to use? See <button type="button" class="link" data-action="agents">Agent workflows</button>.</p>' +
       '<p class="muted">Use <strong>Open in VS Code</strong> to copy the prompt and jump straight into your project, or download <code>' + esc(M.filename(s)) + '</code> and reference it in Copilot Chat (<code>#file</code> in VS Code, or attach it in Eclipse ADT).</p></div>' +
       '<div class="gen-actions"><button type="button" class="btn btn-primary btn-lg" data-action="vscode"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3 8 12l9 9 4-2V5z"/><path d="M8 12 3 8m5 4-5 4"/></svg> Open in VS Code</button>' +
       '<button type="button" class="btn btn-ghost btn-lg" data-action="download">Download file</button>' +
@@ -421,15 +422,18 @@
   function renderMain() {
     const s = S.get();
     if (stream) { clearInterval(stream.timer); stream = null; }
+    const info = ui.view === 'agents';
     keepFocus(function () {
+      if (info) { $('#main').innerHTML = APB.agentsGuide.html(); return; }
       const html = ui.generated ? generatedView(s) : [step1, step2, step3, step4, step5][ui.step - 1](s);
       $('#main').innerHTML = '<p class="step-count">' + (ui.generated ? 'Done' : 'Step ' + ui.step + ' of 5') + '</p>' + html;
     });
     renderStepper();
     renderMap();
-    document.body.classList.toggle('is-generated', ui.generated);
-    document.body.classList.toggle('is-wide', !ui.generated && (ui.step === 3 || ui.step === 4));
-    $('#hero').hidden = ui.generated || ui.step !== 1;
+    document.body.classList.toggle('is-info', info);
+    document.body.classList.toggle('is-generated', ui.generated && !info);
+    document.body.classList.toggle('is-wide', !info && !ui.generated && (ui.step === 3 || ui.step === 4));
+    $('#hero').hidden = info || ui.generated || ui.step !== 1;
     renderPreview();
   }
 
@@ -454,6 +458,7 @@
   }
 
   function setStep(n) {
+    ui.view = null;
     ui.step = Math.max(1, Math.min(5, n));
     ui.generated = false;
     ui.showErrors = false;
@@ -498,6 +503,7 @@
   function loadState(next, msg) {
     ST.save(S.get());
     S.replace(next);
+    ui.view = null;
     ui.step = 1;
     ui.generated = false;
     ui.showErrors = false;
@@ -742,7 +748,19 @@
       toast(next === 'light' ? 'Light theme' : 'Dark theme');
     },
     palette: openPalette,
-    edit: function () { ui.generated = false; ui.step = 5; renderMain(); },
+    edit: function () { ui.view = null; ui.generated = false; ui.step = 5; renderMain(); },
+    agents: function () {
+      ui.view = 'agents';
+      renderMain();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      $('#main').focus({ preventScroll: true });
+    },
+    'close-info': function () { ui.view = null; renderMain(); window.scrollTo({ top: 0, behavior: 'smooth' }); },
+    'info-jump': function (el, e) {
+      e.preventDefault();
+      const t = document.getElementById(el.dataset.id);
+      if (t) { t.scrollIntoView({ behavior: 'smooth', block: 'start' }); t.setAttribute('tabindex', '-1'); t.focus({ preventScroll: true }); }
+    },
     download: function () {
       const s = S.get();
       if (V.checkMandatory(s).length) { toast('Add a requirement and a development object first'); return; }
@@ -850,6 +868,7 @@
       { g: 'Create', i: '›', t: 'Open in VS Code (copy prompt for Copilot Chat)', run: actions.vscode },
       { g: 'Share', i: '🔗', t: 'Copy share link', run: actions.share },
       { g: 'Drafts', i: '☰', t: 'Saved drafts', run: openDrafts },
+      { g: 'Info', i: 'ℹ', t: 'Agent workflows (dewa-abap, dewa-codereview, dewa-adobeagent)', run: actions.agents },
       { g: 'View', i: '◐', t: 'Toggle light / dark theme', run: actions.theme }
     ];
     T.examples().forEach(function (e) { list.push({ g: 'Example', i: e.module, t: e.label, run: function () { loadState(T.example(e.id), 'Example loaded'); } }); });
