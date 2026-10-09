@@ -258,7 +258,7 @@
   function slug(v) { return String(v || '').trim().replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, ''); }
 
   /* The downloaded specification always has the same, predictable name. */
-  function filename() { return 'Business_Requirement.md'; }
+  function filename() { return 'BUSINESS_REQUIREMENTS.md'; } // the name dewa-abap reads as its requirement source
 
   /* What gets pasted into Copilot Chat: a one-line instruction followed by the full specification. */
   function chatPrompt(s) {

@@ -2,12 +2,12 @@
 
 > Turn SAP business requirements into structured GitHub Copilot development specifications.
 
-A small, static web app that helps an SAP developer give GitHub Copilot the right context **before** coding starts. Fill in a requirement in 5–10 minutes, download `Business_Requirement.md` (or send it straight to VS Code), and hand it to Copilot (VS Code or Eclipse ADT).
+A small, static web app that helps an SAP developer give GitHub Copilot the right context **before** coding starts. Fill in a requirement in 5–10 minutes, download `BUSINESS_REQUIREMENTS.md` (or send it straight to VS Code), and hand it to Copilot (VS Code or Eclipse ADT).
 
 - **No backend, no database, no login, no AI API.** Open `index.html` — that's it.
 - **Private by design.** Requirements never leave your browser. Drafts are kept in the browser's local storage only.
 - **Easy to share.** Send the `.md` or a share link. Or host the folder on any static host.
-- "AI studio" look in the MoroHub colours (lime on charcoal): dark by default with a light theme, glass panels, animated aurora, a readiness ring, a streaming reveal + confetti when the spec is generated (all motion is switched off when the OS asks for reduced motion).
+- "AI studio" look in the MoroHub colours (lime on charcoal): light by default with a dark theme (☾ in the header), glass panels, animated aurora, a readiness ring, a streaming reveal + confetti when the spec is generated (all motion is switched off when the OS asks for reduced motion).
 - Keyboard first: **Ctrl/⌘ K** command palette (steps, examples, add objects, download, share, theme…), **Alt + ← / →** between steps, **Enter** for the next grid row.
 
 ## How to run
@@ -58,7 +58,7 @@ Each object shows its essential questions first; optional ones (e.g. table techn
 
 ## Generated Markdown
 
-`Business_Requirement.md` with only the relevant sections, numbered automatically:
+`BUSINESS_REQUIREMENTS.md` with only the relevant sections, numbered automatically:
 Requirement · Development Object · Business Objective · Existing / New Objects · Dependencies · Functional Requirements · Technical Details · Business Rules · Input · Output · Authorization · Error Handling · Performance · Testing · Acceptance Criteria (Given/When/Then) · Clean Core · Assumptions · Open Questions · Definition of Done · Copilot Development Instructions.
 
 Rules baked in: nothing is invented, unknown values become `[TO BE CONFIRMED]`, no empty sections, and tables/lists are preferred to prose to keep tokens low.
@@ -68,7 +68,7 @@ Rules baked in: nothing is invented, unknown values become `[TO BE CONFIRMED]`, 
 | Option | What it is |
 |---|---|
 | **Open in VS Code** | One click copies a ready prompt (one-line instruction + the full specification) to the clipboard and launches VS Code. In VS Code press **Ctrl+Alt+I** (Copilot Chat), **Ctrl+V**, **Enter**. The browser asks once for permission to open VS Code; it cannot type into VS Code itself. |
-| **Download file** / **Copy Markdown** | `Business_Requirement.md` – the specification for Copilot. |
+| **Download file** / **Copy Markdown** | `BUSINESS_REQUIREMENTS.md` – the specification for Copilot. |
 | **Copy share link** (🔗 in the header) | The project is encoded in the URL fragment (`#s=…`). Whoever opens it gets a copy as a new local draft. The fragment is not sent to any server, but anyone you send the link to can read the requirement, so treat it like the file itself. |
 
 ## Local storage

@@ -376,7 +376,7 @@
     const md = M.build(s);
     return '<div class="gen-head"><h2 class="step-title">Your specification is ready</h2>' +
       '<p class="muted">Not sure which VS Code agent to use? See <button type="button" class="link" data-action="agents">Agent workflows</button>.</p>' +
-      '<p class="muted">Use <strong>Open in VS Code</strong> to copy the prompt and jump straight into your project, or download <code>' + esc(M.filename(s)) + '</code> and reference it in Copilot Chat (<code>#file</code> in VS Code, or attach it in Eclipse ADT).</p></div>' +
+      '<p class="muted">Use <strong>Open in VS Code</strong> to copy the prompt and jump straight into your project, or download <code>' + esc(M.filename(s)) + '</code> into your project folder — <code>dewa-abap</code> reads it as its requirement source — and reference it in Copilot Chat (<code>#file</code> in VS Code, or attach it in Eclipse ADT).</p></div>' +
       '<div class="gen-actions"><button type="button" class="btn btn-primary btn-lg" data-action="vscode"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3 8 12l9 9 4-2V5z"/><path d="M8 12 3 8m5 4-5 4"/></svg> Open in VS Code</button>' +
       '<button type="button" class="btn btn-ghost btn-lg" data-action="download">Download file</button>' +
       '<button type="button" class="btn btn-ghost" data-action="copy">Copy Markdown</button>' +

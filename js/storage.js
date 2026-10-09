@@ -48,7 +48,7 @@
     },
     currentId: function () { return read(KEY_CURRENT) || ''; },
     setCurrent: function (id) { write(KEY_CURRENT, id); },
-    getTheme: function () { return read('apb.theme.v1') === 'light' ? 'light' : 'dark'; },
+    getTheme: function () { return read('apb.theme.v1') === 'dark' ? 'dark' : 'light'; },
     setTheme: function (t) { write('apb.theme.v1', t); },
     isEmpty: isEmpty
   };
