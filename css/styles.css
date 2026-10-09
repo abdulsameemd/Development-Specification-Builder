@@ -466,6 +466,10 @@ dialog::backdrop { background: rgba(5, 8, 10, .6); backdrop-filter: blur(4px); }
 body.is-info .layout { grid-template-columns: minmax(0, 1fr); max-width: 1080px; margin-inline: auto; }
 body.is-info .preview-panel, body.is-info .view-tabs, body.is-info .stepper { display: none; }
 .ag-head { margin-bottom: 14px; }
+.ag code { overflow-wrap: anywhere; }
+.ag .agent-name, .ag .kw { overflow-wrap: normal; white-space: nowrap; }
+.pipe + p, .pipe + .ag-list { margin-top: 14px; }
+.ag-steps li, .pipe li { min-width: 0; overflow-wrap: anywhere; }
 .ag-toc { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 6px; }
 .ag-toc a { font-size: .78rem; font-weight: 700; text-decoration: none; color: var(--ink); background: var(--panel-2); border: 1px solid var(--line-strong); border-radius: 999px; padding: 4px 12px; }
 .ag-toc a:hover { border-color: var(--lime); color: var(--accent-text); }
@@ -494,6 +498,12 @@ body.is-info .preview-panel, body.is-info .view-tabs, body.is-info .stepper { di
 .pipe li { position: relative; display: flex; align-items: center; gap: 8px; background: var(--input); border: 1px solid var(--line-strong); border-radius: 10px; padding: 8px 12px; font-size: .86rem; font-weight: 600; max-width: 260px; }
 .pipe li:not(:last-child)::after { content: '→'; position: absolute; right: -20px; top: 50%; transform: translateY(-50%); color: var(--accent-text); font-weight: 900; }
 .pipe-n { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font: 800 .7rem var(--mono); color: var(--accent-text); border: 1px solid rgba(163, 230, 53, .5); }
+.pipe-t { min-width: 0; }
+@media (max-width: 640px) {
+  .pipe { gap: 22px; flex-direction: column; }
+  .pipe li { max-width: none; }
+  .pipe li:not(:last-child)::after { content: '↓'; right: auto; left: 18px; top: auto; bottom: -21px; transform: none; }
+}
 .ag-cats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
 .ag-cat { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--input); display: flex; flex-direction: column; gap: 4px; font-size: .88rem; border-top: 3px solid var(--lime); }
 .ag-cat-warn { border-top-color: var(--amber); }
@@ -514,6 +524,7 @@ body.is-info .preview-panel, body.is-info .view-tabs, body.is-info .stepper { di
 .fc .fc-note rect { stroke-dasharray: 5 4; }
 .fc .fc-note text { font-size: 13px; fill: var(--muted); }
 .fc .fc-edge { fill: none; stroke: var(--accent-text); stroke-width: 2; }
+.fc .fc-dash { stroke-dasharray: 6 5; opacity: .75; }
 .fc marker path { fill: var(--accent-text); }
 .fc .fc-label { font: 800 12px var(--mono); fill: var(--accent-text); }
 

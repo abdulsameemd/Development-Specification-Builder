@@ -116,7 +116,7 @@ The model in `state.js` does not depend on Copilot; Copilot is just an **output 
 
 ## Agent workflows page
 
-The **Agents** button (header, or Ctrl K → "Agent workflows") opens an info page on the DEWA VS Code agents — `dewa-abap`, `dewa-codereview`, `dewa-adobeagent`: when to use which, their flows, confirmation keywords and boundaries, and how the VS Code extension installs them. Source: `docs/AGENT_WORKFLOWS.md` (content in `js/agents-guide.js`).
+The **Agents** button (header, or Ctrl K → "Agent workflows") opens an info page on the DEWA VS Code agents — `dewa-abap` and `dewa-codereview`: when to use which, their flows, confirmation keywords and boundaries, and how the VS Code extension installs them. Source: `docs/AGENT_WORKFLOWS.md` (content in `js/agents-guide.js`).
 
 ## Try it
 
