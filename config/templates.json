@@ -1,0 +1,1063 @@
+{
+ "version": 2,
+ "templates": [
+  {
+   "id": "simple-report",
+   "label": "Simple Report",
+   "description": "Executable program with selection screen and ALV",
+   "types": [
+    "REPORT"
+   ],
+   "objects": [
+    {
+     "type": "Report",
+     "name": "",
+     "status": "new",
+     "purpose": "Main report",
+     "detail": {
+      "programType": "Executable program (type 1)",
+      "outputType": [
+       "ALV (CL_SALV_TABLE)"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "abap-class",
+   "label": "ABAP Class",
+   "description": "Global class with methods",
+   "types": [
+    "CLASS"
+   ],
+   "objects": [
+    {
+     "type": "Class",
+     "name": "",
+     "status": "new",
+     "purpose": "Main class",
+     "detail": {
+      "methods": [
+       {}
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "rfc",
+   "label": "RFC / BAPI-style FM",
+   "description": "Remote-enabled function module with RETURN table",
+   "types": [
+    "RFC"
+   ],
+   "objects": [
+    {
+     "type": "RFC",
+     "name": "",
+     "status": "new",
+     "purpose": "Remote-enabled function module",
+     "detail": {
+      "processing": "Remote-enabled module",
+      "bapiReturn": true
+     }
+    }
+   ]
+  },
+  {
+   "id": "ddic",
+   "label": "DDIC: Domain → Data Element → Table",
+   "description": "Custom table with its own data element and domain",
+   "types": [
+    "DDIC"
+   ],
+   "objects": [
+    {
+     "type": "Domain",
+     "name": "",
+     "status": "new",
+     "purpose": "Value range"
+    },
+    {
+     "type": "Data Element",
+     "name": "",
+     "status": "new",
+     "purpose": "Field semantics"
+    },
+    {
+     "type": "Table",
+     "name": "",
+     "status": "new",
+     "purpose": "Custom table",
+     "detail": {
+      "deliveryClass": "A",
+      "clientDependent": "yes"
+     }
+    }
+   ]
+  },
+  {
+   "id": "rap-app",
+   "label": "RAP Application",
+   "description": "Table + CDS + RAP BO + Fiori elements",
+   "types": [
+    "RAP"
+   ],
+   "objects": [
+    {
+     "type": "Table",
+     "name": "",
+     "status": "new",
+     "purpose": "Persistent table"
+    },
+    {
+     "type": "CDS",
+     "name": "",
+     "status": "new",
+     "purpose": "Root view entity",
+     "detail": {
+      "entityKind": "define root view entity"
+     }
+    },
+    {
+     "type": "RAP",
+     "name": "",
+     "status": "new",
+     "purpose": "Business object",
+     "detail": {
+      "implementation": "managed",
+      "options": [
+       "strict ( 2 )",
+       "with draft"
+      ],
+      "entities": [
+       {
+        "role": "root"
+       }
+      ]
+     }
+    },
+    {
+     "type": "Fiori/UI5",
+     "name": "",
+     "status": "new",
+     "purpose": "UI",
+     "detail": {
+      "appType": "Fiori elements – List Report & Object Page"
+     }
+    }
+   ]
+  },
+  {
+   "id": "cds-rap",
+   "label": "CDS + RAP",
+   "description": "CDS data model with a RAP behavior on top",
+   "types": [
+    "CDS",
+    "RAP"
+   ],
+   "objects": [
+    {
+     "type": "CDS",
+     "name": "",
+     "status": "new",
+     "purpose": "Data model"
+    },
+    {
+     "type": "RAP",
+     "name": "",
+     "status": "new",
+     "purpose": "Behavior definition / implementation",
+     "detail": {
+      "entities": [
+       {
+        "role": "root"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "capm-app",
+   "label": "CAPM Application",
+   "description": "CAP service on SAP BTP",
+   "types": [
+    "CAPM"
+   ],
+   "objects": [
+    {
+     "type": "CAPM",
+     "name": "",
+     "status": "new",
+     "purpose": "CAP application",
+     "detail": {
+      "entities": [
+       {}
+      ],
+      "services": [
+       {}
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "enhancement",
+   "label": "BAdI / Enhancement",
+   "description": "Implement a BAdI or exit",
+   "types": [
+    "ENH"
+   ],
+   "objects": [
+    {
+     "type": "BAdI / Enhancement",
+     "name": "",
+     "status": "new",
+     "purpose": "Enhancement implementation"
+    },
+    {
+     "type": "Class",
+     "name": "",
+     "status": "new",
+     "purpose": "Implementing class"
+    }
+   ]
+  },
+  {
+   "id": "full-sap-app",
+   "label": "Full SAP Application",
+   "description": "Table + CDS + RAP + Class + Fiori + authorization",
+   "types": [
+    "RAP",
+    "CDS",
+    "CLASS"
+   ],
+   "objects": [
+    {
+     "type": "Table",
+     "name": "",
+     "status": "new",
+     "purpose": "Persistent table"
+    },
+    {
+     "type": "CDS",
+     "name": "",
+     "status": "new",
+     "purpose": "Data model"
+    },
+    {
+     "type": "RAP",
+     "name": "",
+     "status": "new",
+     "purpose": "Business object",
+     "detail": {
+      "entities": [
+       {
+        "role": "root"
+       }
+      ]
+     }
+    },
+    {
+     "type": "Class",
+     "name": "",
+     "status": "tbc",
+     "purpose": "Business logic"
+    },
+    {
+     "type": "Fiori/UI5",
+     "name": "",
+     "status": "new",
+     "purpose": "User interface"
+    },
+    {
+     "type": "Authorization Object",
+     "name": "",
+     "status": "tbc",
+     "purpose": "Access control"
+    }
+   ]
+  }
+ ],
+ "examples": [
+  {
+   "id": "fi-ap-ageing",
+   "module": "FI",
+   "label": "FI-AP: Vendor open items ageing report",
+   "state": {
+    "project": {
+     "name": "FI AP Vendor Ageing"
+    },
+    "types": [
+     "REPORT",
+     "CLASS"
+    ],
+    "requirement": {
+     "text": "Create a report for AP accountants that lists open vendor items for a company code and key date and groups the amounts per vendor into ageing buckets (0-30, 31-60, 61-90, >90 days past net due date).",
+     "objective": "Month-end review of overdue payables per vendor.",
+     "users": "AP accountants (FI-AP)",
+     "expectedOutput": "ALV per vendor with one amount column per ageing bucket in company code currency."
+    },
+    "objects": [
+     {
+      "type": "Table",
+      "name": "BSIK",
+      "status": "existing",
+      "purpose": "Vendor open items (compatibility view in S/4HANA)",
+      "detail": {
+       "used": "BUKRS, LIFNR, BELNR, GJAHR, BUZEI, BUDAT, ZFBDT, ZBD1T, DMBTR, SHKZG"
+      }
+     },
+     {
+      "type": "Table",
+      "name": "LFA1",
+      "status": "existing",
+      "purpose": "Vendor master (name)",
+      "detail": {
+       "used": "LIFNR, NAME1"
+      }
+     },
+     {
+      "type": "Report",
+      "name": "ZFI_AP_AGEING",
+      "status": "new",
+      "purpose": "Main report",
+      "detail": {
+       "programType": "Executable program (type 1)",
+       "tcode": "ZFI_AGEING",
+       "selection": [
+        {
+         "name": "S_BUKRS",
+         "kind": "SELECT-OPTIONS",
+         "type": "BSIK-BUKRS",
+         "label": "Company code",
+         "obligatory": true
+        },
+        {
+         "name": "S_LIFNR",
+         "kind": "SELECT-OPTIONS",
+         "type": "BSIK-LIFNR",
+         "label": "Vendor"
+        },
+        {
+         "name": "P_KEYDT",
+         "kind": "PARAMETERS",
+         "type": "SY-DATUM",
+         "label": "Key date",
+         "obligatory": true,
+         "default": "SY-DATUM"
+        }
+       ],
+       "logic": "1. AUTHORITY-CHECK F_BKPF_BUK per company code\n2. Call ZCL_FI_AP_AGEING=>GET_AGEING\n3. Display ALV",
+       "outputType": [
+        "ALV (CL_SALV_TABLE)"
+       ],
+       "columns": [
+        {
+         "field": "LIFNR",
+         "header": "Vendor",
+         "source": "BSIK-LIFNR",
+         "props": "key, hotspot → FK03"
+        },
+        {
+         "field": "NAME1",
+         "header": "Name",
+         "source": "LFA1-NAME1"
+        },
+        {
+         "field": "BUCKET_030",
+         "header": "0-30 days",
+         "source": "calculated",
+         "props": "sum"
+        },
+        {
+         "field": "BUCKET_060",
+         "header": "31-60 days",
+         "source": "calculated",
+         "props": "sum"
+        },
+        {
+         "field": "BUCKET_090",
+         "header": "61-90 days",
+         "source": "calculated",
+         "props": "sum"
+        },
+        {
+         "field": "BUCKET_999",
+         "header": "> 90 days",
+         "source": "calculated",
+         "props": "sum"
+        }
+       ]
+      }
+     },
+     {
+      "type": "Class",
+      "name": "ZCL_FI_AP_AGEING",
+      "status": "new",
+      "purpose": "Ageing calculation",
+      "detail": {
+       "description": "Reads open items and calculates ageing buckets",
+       "modifiers": [
+        "FINAL"
+       ],
+       "methods": [
+        {
+         "name": "GET_AGEING",
+         "description": "Return ageing lines per vendor",
+         "visibility": "PUBLIC",
+         "level": "static",
+         "kind": "functional",
+         "params": [
+          {
+           "kind": "IMPORTING",
+           "name": "IT_BUKRS_RANGE",
+           "typing": "TYPE RANGE OF",
+           "type": "BUKRS"
+          },
+          {
+           "kind": "IMPORTING",
+           "name": "IV_KEY_DATE",
+           "typing": "TYPE",
+           "type": "DATS"
+          },
+          {
+           "kind": "RETURNING",
+           "name": "RT_AGEING",
+           "typing": "TYPE",
+           "type": "ZFI_TT_AP_AGEING",
+           "byValue": true
+          }
+         ],
+         "exceptions": [
+          {
+           "name": "ZCX_FI_AP_AGEING",
+           "kind": "class",
+           "when": "No company code authorized"
+          }
+         ],
+         "logic": "1. SELECT open items from BSIK for the company codes\n2. Net due date = ZFBDT + ZBD1T\n3. Days overdue = key date − net due date → bucket\n4. Aggregate per vendor"
+        }
+       ]
+      }
+     },
+     {
+      "type": "Structure",
+      "name": "ZFI_S_AP_AGEING",
+      "status": "new",
+      "purpose": "Ageing result line",
+      "detail": {
+       "description": "Vendor ageing line",
+       "fields": [
+        {
+         "name": "BUKRS",
+         "dataElement": "BUKRS",
+         "description": "Company code"
+        },
+        {
+         "name": "LIFNR",
+         "dataElement": "LIFNR",
+         "description": "Vendor"
+        },
+        {
+         "name": "WAERS",
+         "dataElement": "WAERS",
+         "description": "Currency"
+        },
+        {
+         "name": "BUCKET_030",
+         "dataElement": "DMBTR",
+         "description": "0-30 days",
+         "refField": "WAERS"
+        },
+        {
+         "name": "BUCKET_999",
+         "dataElement": "DMBTR",
+         "description": "> 90 days",
+         "refField": "WAERS"
+        }
+       ]
+      }
+     },
+     {
+      "type": "Table Type",
+      "name": "ZFI_TT_AP_AGEING",
+      "status": "new",
+      "purpose": "Result table",
+      "detail": {
+       "lineType": "ZFI_S_AP_AGEING",
+       "access": "Standard table",
+       "keyDefinition": "Standard key"
+      }
+     }
+    ],
+    "rules": [
+     {
+      "condition": "Item is a debit (SHKZG = S) such as a down payment",
+      "behavior": "Include with negative sign"
+     },
+     {
+      "condition": "Net due date is after the key date",
+      "behavior": "Put the item in the 0-30 bucket"
+     }
+    ],
+    "acceptance": [
+     {
+      "text": "When the user enters company code 1000 and a key date, the report lists one line per vendor with the open amount split into the four buckets."
+     }
+    ],
+    "quality": {
+     "authorization": "yes",
+     "authChecks": [
+      {
+       "object": "F_BKPF_BUK",
+       "fields": "BUKRS = company code, ACTVT = 03",
+       "where": "AT SELECTION-SCREEN"
+      }
+     ],
+     "dataVolume": "large",
+     "performanceReq": "< 60 s for one company code",
+     "testTypes": [
+      "Unit",
+      "Functional"
+     ],
+     "testScenarios": "Company code with overdue items => amounts per bucket\nVendor without open items => not listed\nCompany code without authorization => message, no data",
+     "cleanCore": "yes",
+     "cleanCoreNote": ""
+    }
+   }
+  },
+  {
+   "id": "mm-gr-rfc",
+   "module": "MM",
+   "label": "MM: Goods receipt RFC for an external WMS",
+   "state": {
+    "project": {
+     "name": "MM Goods Receipt RFC"
+    },
+    "types": [
+     "RFC"
+    ],
+    "requirement": {
+     "text": "An external warehouse system calls SAP to post a goods receipt (movement type 101) for a purchase order. Return the material document number or the error messages.",
+     "objective": "Remove manual MIGO postings for the external warehouse.",
+     "users": "Technical RFC user of the WMS",
+     "expectedOutput": "Material document number + year, or BAPIRET2 messages."
+    },
+    "objects": [
+     {
+      "type": "Function Module",
+      "name": "BAPI_GOODSMVT_CREATE",
+      "status": "existing",
+      "purpose": "Standard goods movement BAPI",
+      "detail": {
+       "used": "GOODSMVT_HEADER, GOODSMVT_CODE = 01, GOODSMVT_ITEM → MATERIALDOCUMENT, RETURN"
+      }
+     },
+     {
+      "type": "RFC",
+      "name": "Z_MM_WMS_GOODS_RECEIPT",
+      "status": "new",
+      "purpose": "Remote-enabled wrapper",
+      "detail": {
+       "functionGroup": "ZMM_WMS",
+       "description": "Post GR for a PO from WMS",
+       "processing": "Remote-enabled module",
+       "importing": [
+        {
+         "name": "IV_EBELN",
+         "typing": "TYPE",
+         "type": "EBELN",
+         "byValue": true,
+         "description": "Purchase order"
+        },
+        {
+         "name": "IV_BUDAT",
+         "typing": "TYPE",
+         "type": "BUDAT",
+         "optional": true,
+         "default": "SY-DATUM",
+         "byValue": true,
+         "description": "Posting date"
+        }
+       ],
+       "exporting": [
+        {
+         "name": "EV_MBLNR",
+         "typing": "TYPE",
+         "type": "MBLNR",
+         "byValue": true,
+         "description": "Material document"
+        },
+        {
+         "name": "EV_MJAHR",
+         "typing": "TYPE",
+         "type": "MJAHR",
+         "byValue": true,
+         "description": "Material document year"
+        }
+       ],
+       "tables": [
+        {
+         "name": "IT_ITEMS",
+         "typing": "LIKE",
+         "type": "ZMM_S_WMS_GR_ITEM",
+         "description": "PO item, quantity, unit, storage location"
+        },
+        {
+         "name": "ET_RETURN",
+         "typing": "LIKE",
+         "type": "BAPIRET2",
+         "description": "Messages"
+        }
+       ],
+       "exceptions": [
+        {
+         "name": "PO_NOT_FOUND",
+         "kind": "classic",
+         "when": "EBELN does not exist"
+        }
+       ],
+       "bapiReturn": true,
+       "commit": "inside",
+       "destination": "Called by WMS middleware via RFC user",
+       "rfcType": "sRFC (synchronous)",
+       "logic": "1. Validate PO (EKKO/EKPO)\n2. Map IT_ITEMS to GOODSMVT_ITEM (MOVE_TYPE 101, MVT_IND B)\n3. Call BAPI_GOODSMVT_CREATE\n4. BAPI_TRANSACTION_COMMIT on success, ROLLBACK on error"
+      }
+     }
+    ],
+    "quality": {
+     "authorization": "yes",
+     "authChecks": [
+      {
+       "object": "S_RFC",
+       "fields": "RFC_NAME = ZMM_WMS, ACTVT = 16",
+       "where": "RFC user role"
+      },
+      {
+       "object": "M_MSEG_BWE",
+       "fields": "BWART = 101",
+       "where": "by BAPI"
+      }
+     ],
+     "testTypes": [
+      "Unit",
+      "Integration"
+     ],
+     "testScenarios": "Valid PO with 2 items => material document returned\nPO already fully received => error in ET_RETURN\nUnknown PO => exception PO_NOT_FOUND",
+     "cleanCore": "yes",
+     "cleanCoreNote": "BAPI_GOODSMVT_CREATE"
+    }
+   }
+  },
+  {
+   "id": "sd-block-rap",
+   "module": "SD",
+   "label": "SD: Billing block rules maintenance app (RAP)",
+   "state": {
+    "project": {
+     "name": "SD Billing Block Rules"
+    },
+    "types": [
+     "RAP",
+     "DDIC",
+     "FIORI"
+    ],
+    "requirement": {
+     "text": "Business wants to maintain rules that set a billing block per sales organization and customer group. Build a draft-enabled RAP app with a Fiori elements UI and a \"Deactivate\" action.",
+     "users": "SD billing team",
+     "expectedOutput": "Fiori List Report / Object Page to maintain rules."
+    },
+    "objects": [
+     {
+      "type": "Table",
+      "name": "ZSD_BILL_BLOCK",
+      "status": "new",
+      "purpose": "Rules table",
+      "detail": {
+       "description": "Billing block rules",
+       "deliveryClass": "A",
+       "clientDependent": "yes",
+       "fields": [
+        {
+         "name": "CLIENT",
+         "key": true,
+         "dataElement": "MANDT"
+        },
+        {
+         "name": "RULE_UUID",
+         "key": true,
+         "dataElement": "SYSUUID_X16"
+        },
+        {
+         "name": "VKORG",
+         "dataElement": "VKORG",
+         "description": "Sales organization",
+         "checkTable": "TVKO"
+        },
+        {
+         "name": "KDGRP",
+         "dataElement": "KDGRP",
+         "description": "Customer group"
+        },
+        {
+         "name": "FAKSK",
+         "dataElement": "FAKSK",
+         "description": "Billing block"
+        },
+        {
+         "name": "ACTIVE",
+         "dataElement": "ABAP_BOOLEAN"
+        },
+        {
+         "name": "LOCAL_LAST_CHANGED_AT",
+         "dataElement": "ABP_LOCINST_LASTCHANGE_TSTMPL"
+        }
+       ]
+      }
+     },
+     {
+      "type": "Table",
+      "name": "ZSD_BILL_BLOCK_D",
+      "status": "new",
+      "purpose": "Draft table"
+     },
+     {
+      "type": "CDS",
+      "name": "ZR_SD_BillBlock",
+      "status": "new",
+      "purpose": "Root view entity",
+      "detail": {
+       "entityKind": "define root view entity",
+       "vdm": "Restricted / transactional (R_ / ZR_)",
+       "source": "zsd_bill_block",
+       "elements": [
+        {
+         "expression": "rule_uuid",
+         "alias": "RuleUUID",
+         "key": true
+        },
+        {
+         "expression": "vkorg",
+         "alias": "SalesOrganization"
+        },
+        {
+         "expression": "kdgrp",
+         "alias": "CustomerGroup"
+        },
+        {
+         "expression": "faksk",
+         "alias": "BillingBlock"
+        },
+        {
+         "expression": "active",
+         "alias": "IsActive"
+        }
+       ],
+       "accessControl": "#CHECK"
+      }
+     },
+     {
+      "type": "RAP",
+      "name": "ZR_SD_BillBlock",
+      "status": "new",
+      "purpose": "Business object",
+      "detail": {
+       "implementation": "managed",
+       "options": [
+        "strict ( 2 )",
+        "with draft"
+       ],
+       "implClass": "ZBP_R_SD_BILLBLOCK",
+       "entities": [
+        {
+         "name": "ZR_SD_BillBlock",
+         "alias": "BillBlock",
+         "role": "root",
+         "table": "ZSD_BILL_BLOCK",
+         "draftTable": "ZSD_BILL_BLOCK_D",
+         "operations": [
+          "create",
+          "update",
+          "delete"
+         ],
+         "masters": [
+          "lock master",
+          "authorization master (instance)",
+          "etag master"
+         ],
+         "etag": "LocalLastChangedAt",
+         "validations": [
+          {
+           "name": "validateSalesOrg",
+           "trigger": "{ create; field SalesOrganization; }",
+           "description": "Sales org must exist in TVKO"
+          }
+         ],
+         "actions": [
+          {
+           "name": "deactivate",
+           "kind": "action",
+           "result": "[1] $self",
+           "featureControl": true,
+           "description": "Set IsActive = false"
+          }
+         ]
+        }
+       ],
+       "serviceDefinition": "ZUI_SD_BILLBLOCK",
+       "binding": "OData V4 – UI",
+       "ui": "Fiori elements – List Report / Object Page"
+      }
+     },
+     {
+      "type": "Fiori/UI5",
+      "name": "",
+      "status": "new",
+      "purpose": "Maintenance app",
+      "detail": {
+       "appType": "Fiori elements – List Report & Object Page",
+       "service": "ZUI_SD_BILLBLOCK_O4 / BillBlock"
+      }
+     }
+    ],
+    "quality": {
+     "authorization": "yes",
+     "authChecks": [
+      {
+       "object": "V_VBAK_VKO",
+       "fields": "VKORG = rule sales org, ACTVT = 02",
+       "where": "RAP instance authorization"
+      }
+     ],
+     "testTypes": [
+      "Unit",
+      "Functional"
+     ],
+     "testScenarios": "Create rule for valid sales org => saved\nUnknown sales org => validation message\nDeactivate => IsActive false, action disabled",
+     "cleanCore": "yes"
+    }
+   }
+  },
+  {
+   "id": "isu-mr-cds",
+   "module": "IS-U",
+   "label": "IS-U: Meter reading results CDS view",
+   "state": {
+    "project": {
+     "name": "ISU Meter Reading Analytics"
+    },
+    "types": [
+     "CDS"
+    ],
+    "requirement": {
+     "text": "Provide a CDS view entity with meter reading results per installation and reading date, including the meter reading reason, for analytics and a Fiori list. Readings flagged as implausible must be excluded.",
+     "users": "IS-U billing analysts",
+     "expectedOutput": "One row per meter reading result with installation, register, reading date, reading value and reason."
+    },
+    "objects": [
+     {
+      "type": "Table",
+      "name": "EABL",
+      "status": "existing",
+      "purpose": "Meter reading documents",
+      "detail": {
+       "used": "ABLBELNR, ADAT, V_ZWSTAND, ABLESGR, ABLSTAT"
+      }
+     },
+     {
+      "type": "Table",
+      "name": "EABLG",
+      "status": "existing",
+      "purpose": "Meter reading reasons / installation link",
+      "detail": {
+       "used": "ABLBELNR, ANLAGE, ABLESGR"
+      }
+     },
+     {
+      "type": "CDS",
+      "name": "ZI_ISU_MeterReading",
+      "status": "new",
+      "purpose": "Basic view entity",
+      "detail": {
+       "entityKind": "define view entity",
+       "vdm": "Basic / interface (I_ / ZI_)",
+       "label": "Meter reading results",
+       "source": "eabl",
+       "joins": [
+        {
+         "kind": "inner join",
+         "source": "eablg",
+         "on": "eabl.ablbelnr = eablg.ablbelnr"
+        }
+       ],
+       "elements": [
+        {
+         "expression": "eabl.ablbelnr",
+         "alias": "MeterReadingDocument",
+         "key": true
+        },
+        {
+         "expression": "eablg.anlage",
+         "alias": "Installation"
+        },
+        {
+         "expression": "eabl.adat",
+         "alias": "MeterReadingDate"
+        },
+        {
+         "expression": "eabl.v_zwstand",
+         "alias": "MeterReadingValue"
+        },
+        {
+         "expression": "eablg.ablesgr",
+         "alias": "MeterReadingReason"
+        }
+       ],
+       "where": "Implausible readings excluded – status field to be confirmed",
+       "accessControl": "#CHECK"
+      }
+     }
+    ],
+    "quality": {
+     "authorization": "tbc",
+     "dataVolume": "large",
+     "testTypes": [
+      "Functional"
+     ],
+     "testScenarios": "Installation with 3 readings => 3 rows\nImplausible reading => excluded",
+     "cleanCore": "yes"
+    }
+   }
+  },
+  {
+   "id": "crm-cap",
+   "module": "CRM",
+   "label": "CRM: Customer interaction log (CAP on BTP)",
+   "state": {
+    "project": {
+     "name": "CRM Interaction Log"
+    },
+    "types": [
+     "CAPM"
+    ],
+    "requirement": {
+     "text": "Build a CAP service on SAP BTP where service agents log customer interactions (call, e-mail, visit) against S/4HANA business partners. Partner data is read live from API_BUSINESS_PARTNER.",
+     "users": "Customer service agents",
+     "expectedOutput": "OData V4 service + Fiori elements app listing interactions per business partner."
+    },
+    "objects": [
+     {
+      "type": "API",
+      "name": "API_BUSINESS_PARTNER",
+      "status": "existing",
+      "purpose": "S/4HANA business partner API",
+      "detail": {
+       "used": "A_BusinessPartner: BusinessPartner, BusinessPartnerFullName (GET)"
+      }
+     },
+     {
+      "type": "CAPM",
+      "name": "crm-interactions",
+      "status": "new",
+      "purpose": "CAP application",
+      "detail": {
+       "runtime": "Node.js",
+       "namespace": "crm.interactions",
+       "database": "SAP HANA Cloud",
+       "entities": [
+        {
+         "name": "Interactions",
+         "aspects": [
+          "cuid",
+          "managed"
+         ],
+         "elements": [
+          {
+           "name": "partner",
+           "type": "String(10)",
+           "mandatory": true,
+           "notes": "BusinessPartner from S/4"
+          },
+          {
+           "name": "channel",
+           "type": "String(10)",
+           "notes": "CALL / EMAIL / VISIT"
+          },
+          {
+           "name": "subject",
+           "type": "String(120)",
+           "mandatory": true
+          },
+          {
+           "name": "notes",
+           "type": "LargeString"
+          }
+         ]
+        }
+       ],
+       "services": [
+        {
+         "name": "InteractionService",
+         "path": "/interactions",
+         "requires": "authenticated-user",
+         "projections": [
+          {
+           "name": "Interactions",
+           "on": "crm.interactions.Interactions",
+           "access": "Full CRUD",
+           "draft": true
+          }
+         ]
+        }
+       ],
+       "handlers": [
+        {
+         "phase": "before",
+         "event": "CREATE",
+         "entity": "Interactions",
+         "logic": "Check partner exists via API_BUSINESS_PARTNER"
+        }
+       ],
+       "external": [
+        {
+         "name": "API_BUSINESS_PARTNER",
+         "kind": "OData V2",
+         "destination": "S4HANA_BP",
+         "usage": "Read partner name, validate partner"
+        }
+       ],
+       "auth": "XSUAA",
+       "roles": [
+        {
+         "name": "CRMAgent",
+         "description": "Create and read interactions"
+        }
+       ],
+       "ui": "Fiori elements (annotations)",
+       "deploy": "SAP BTP Cloud Foundry (MTA)"
+      }
+     }
+    ],
+    "quality": {
+     "authorization": "yes",
+     "authChecks": [
+      {
+       "object": "XSUAA role CRMAgent",
+       "fields": "@requires: CRMAgent",
+       "where": "service level"
+      }
+     ],
+     "testTypes": [
+      "Unit",
+      "Integration"
+     ],
+     "testScenarios": "Create interaction for existing partner => saved\nUnknown partner => 400 error",
+     "cleanCore": "yes",
+     "cleanCoreNote": "API_BUSINESS_PARTNER"
+    }
+   }
+  }
+ ]
+}
