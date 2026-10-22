@@ -114,6 +114,10 @@ The model in `state.js` does not depend on Copilot; Copilot is just an **output 
 2. Run `node scripts/build-config.js` to regenerate `js/config-bundle.js` (`--check` verifies it is current).
 3. Reload. No UI code changes are needed; `section` decides where the value lands in the Markdown.
 
+## Walkthrough video
+
+[`docs/media/SAP-Spec-Builder-Walkthrough.mp4`](docs/media/SAP-Spec-Builder-Walkthrough.mp4) (2:56, 1080p, voice-over): a single ABAP artifact from the builder to VS Code with the SAP ABAP ADT MCP server and the `dewa-abap` agent — specify the class, generate, Open in VS Code, confirm target, class + ABAP Unit test, evidence, `CONFIRM ARTEFACT`. The builder scenes are real; the VS Code / Copilot scenes are illustrations (marked in the video) and their evidence values are examples.
+
 ## Agent workflows page
 
 The **Agents** button (header, or Ctrl K → "Agent workflows") opens an info page on the DEWA VS Code agents — `dewa-abap` and `dewa-codereview`: when to use which, their flows, confirmation keywords and boundaries, and how the VS Code extension installs them. Source: `docs/AGENT_WORKFLOWS.md` (content in `js/agents-guide.js`).
