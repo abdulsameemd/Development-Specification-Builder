@@ -12,7 +12,7 @@
       "question": "Whether authority checks are required and which authorization object applies." },
     { "id": "objects", "label": "SAP objects to reuse or create", "step": 3, "important": true, "types": "*",
       "anyOf": ["objects"] },
-    { "id": "expectedOutput", "label": "Expected output", "step": 2, "types": ["REPORT", "RFC", "CDS", "ODATA", "FORM", "IDOC"],
+    { "id": "expectedOutput", "label": "Expected output", "step": 2, "types": ["REPORT", "RFC", "CDS", "ODATA", "FORM"],
       "anyOf": ["requirement.expectedOutput", "object:Report.columns", "object:Report.outputType", "object:RFC.exporting", "object:Function Module.exporting", "object:CDS.elements"],
       "question": "Expected output." },
     { "id": "businessRules", "label": "Key business rules", "step": 2, "types": "*", "anyOf": ["rules"] },

@@ -225,22 +225,6 @@
    ]
   },
   {
-   "id": "idoc",
-   "label": "IDoc interface",
-   "description": "Inbound / outbound IDoc with custom segment",
-   "types": [
-    "IDOC"
-   ],
-   "objects": [
-    {
-     "type": "IDoc",
-     "name": "",
-     "status": "new",
-     "purpose": "Interface"
-    }
-   ]
-  },
-  {
    "id": "full-sap-app",
    "label": "Full SAP Application",
    "description": "Table + CDS + RAP + Class + Fiori + authorization",

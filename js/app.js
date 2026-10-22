@@ -24,7 +24,6 @@
     ENH: '<path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/>',
     ODATA: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3z"/>',
     FIORI: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>',
-    IDOC: '<path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/>',
     FORM: '<path d="M6 9V3h12v6M6 18H4v-7h16v7h-2M7 14h10v7H7z"/>'
   };
   function icon(k) { return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[k] || ICONS.REPORT) + '</svg>'; }
@@ -1005,6 +1004,7 @@
 
   async function init() {
     renderDatalists();
+    $('#designer-count').textContent = D.objectTypes.filter(function (t) { return D.objectDef(t).fields.length; }).length;
     document.documentElement.dataset.theme = ST.getTheme();
     startRotator();
     let loaded = false;

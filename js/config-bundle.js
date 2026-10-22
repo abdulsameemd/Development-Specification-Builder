@@ -89,15 +89,6 @@ window.APB_CONFIG = {
     ],
     "performance": false
    },
-   "IDOC": {
-    "label": "IDoc / Interface",
-    "hint": "ALE / EDI inbound or outbound",
-    "mainObject": [
-     "IDoc",
-     "API"
-    ],
-    "performance": true
-   },
    "FORM": {
     "label": "Form",
     "hint": "Adobe Form / Smartform / output",
@@ -3283,117 +3274,6 @@ window.APB_CONFIG = {
      }
     ]
    },
-   "IDoc": {
-    "group": "Integration & process",
-    "tcode": "WE20 / WE81 / WE30",
-    "abapNaming": true,
-    "usedHint": "Message type / segments you use",
-    "fields": [
-     {
-      "id": "direction",
-      "label": "Direction",
-      "kind": "radio",
-      "options": [
-       {
-        "value": "inbound",
-        "label": "Inbound"
-       },
-       {
-        "value": "outbound",
-        "label": "Outbound"
-       },
-       {
-        "value": "tbc",
-        "label": "To Be Confirmed"
-       }
-      ]
-     },
-     {
-      "id": "messageType",
-      "label": "Message type",
-      "kind": "text",
-      "placeholder": "e.g. ORDERS / INVOIC / DEBMAS",
-      "ask": "Message type"
-     },
-     {
-      "id": "basicType",
-      "label": "Basic type / extension",
-      "kind": "text",
-      "placeholder": "e.g. ORDERS05 + ZORDERS05_EXT"
-     },
-     {
-      "id": "segments",
-      "label": "Segments (custom / used)",
-      "kind": "grid",
-      "columns": [
-       {
-        "id": "segment",
-        "label": "Segment",
-        "kind": "text",
-        "w": 140,
-        "placeholder": "e.g. Z1SDBLOCK"
-       },
-       {
-        "id": "parent",
-        "label": "Parent",
-        "kind": "text",
-        "w": 120
-       },
-       {
-        "id": "min",
-        "label": "Min",
-        "kind": "text",
-        "w": 50
-       },
-       {
-        "id": "max",
-        "label": "Max",
-        "kind": "text",
-        "w": 60
-       },
-       {
-        "id": "fields",
-        "label": "Fields",
-        "kind": "text",
-        "w": 280,
-        "placeholder": "e.g. VBELN, FAKSK, REASON"
-       }
-      ],
-      "addLabel": "+ Segment",
-      "paste": true
-     },
-     {
-      "id": "processCode",
-      "label": "Process code / function module",
-      "kind": "text",
-      "placeholder": "e.g. ORDE / Z_IDOC_INPUT_ORDERS"
-     },
-     {
-      "id": "partner",
-      "label": "Partner profile / port",
-      "kind": "text",
-      "placeholder": "e.g. LS CRMCLNT100, port via tRFC"
-     },
-     {
-      "id": "trigger",
-      "label": "Trigger",
-      "kind": "text",
-      "placeholder": "e.g. Output type, change pointers (BD52), program"
-     },
-     {
-      "id": "mapping",
-      "label": "Field mapping",
-      "kind": "textarea",
-      "placeholder": "Source → target field mapping"
-     },
-     {
-      "id": "errorHandling",
-      "label": "Error handling / reprocessing",
-      "kind": "textarea",
-      "placeholder": "e.g. Status 51 with message, workflow to role, BD87"
-     }
-    ]
-   },
    "Form": {
     "group": "UI & forms",
     "tcode": "SFP / SMARTFORMS",
@@ -5319,10 +5199,6 @@ window.APB_CONFIG = {
         "label": "RFC / BAPI"
        },
        {
-        "value": "IDoc",
-        "label": "IDoc"
-       },
-       {
         "value": "tbc",
         "label": "To Be Confirmed"
        }
@@ -5856,11 +5732,6 @@ window.APB_CONFIG = {
     "label": "API"
    },
    {
-    "match": "idoc|edi|\\bale\\b",
-    "type": "IDoc",
-    "label": "IDoc"
-   },
-   {
     "match": "workflow|approv|release strateg",
     "type": "Workflow",
     "label": "Workflow"
@@ -5964,8 +5835,7 @@ window.APB_CONFIG = {
      "RFC",
      "CDS",
      "ODATA",
-     "FORM",
-     "IDOC"
+     "FORM"
     ],
     "anyOf": [
      "requirement.expectedOutput",
@@ -6235,22 +6105,6 @@ window.APB_CONFIG = {
       "name": "",
       "status": "new",
       "purpose": "Implementing class"
-     }
-    ]
-   },
-   {
-    "id": "idoc",
-    "label": "IDoc interface",
-    "description": "Inbound / outbound IDoc with custom segment",
-    "types": [
-     "IDOC"
-    ],
-    "objects": [
-     {
-      "type": "IDoc",
-      "name": "",
-      "status": "new",
-      "purpose": "Interface"
      }
     ]
    },

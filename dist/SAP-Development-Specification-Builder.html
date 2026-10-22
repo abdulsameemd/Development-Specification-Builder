@@ -633,7 +633,7 @@ body.is-info .preview-panel, body.is-info .view-tabs, body.is-info .stepper { di
           <span class="rotator" aria-hidden="true"><span id="rotator-text">ABAP reports</span><span class="caret"></span></span><span class="sr-only">ABAP reports, RAP business objects, CDS views, RFCs and CAP services</span>
         </p>
         <ul class="hero-chips" aria-label="Highlights">
-          <li><strong>28</strong> SAP object designers</li>
+          <li><strong id="designer-count">25</strong> SAP object designers</li>
           <li><strong>5</strong> steps · 5–10 min</li>
           <li><strong>0</strong> data leaves your machine</li>
         </ul>
@@ -805,15 +805,6 @@ window.APB_CONFIG = {
      "Fiori/UI5"
     ],
     "performance": false
-   },
-   "IDOC": {
-    "label": "IDoc / Interface",
-    "hint": "ALE / EDI inbound or outbound",
-    "mainObject": [
-     "IDoc",
-     "API"
-    ],
-    "performance": true
    },
    "FORM": {
     "label": "Form",
@@ -4000,117 +3991,6 @@ window.APB_CONFIG = {
      }
     ]
    },
-   "IDoc": {
-    "group": "Integration & process",
-    "tcode": "WE20 / WE81 / WE30",
-    "abapNaming": true,
-    "usedHint": "Message type / segments you use",
-    "fields": [
-     {
-      "id": "direction",
-      "label": "Direction",
-      "kind": "radio",
-      "options": [
-       {
-        "value": "inbound",
-        "label": "Inbound"
-       },
-       {
-        "value": "outbound",
-        "label": "Outbound"
-       },
-       {
-        "value": "tbc",
-        "label": "To Be Confirmed"
-       }
-      ]
-     },
-     {
-      "id": "messageType",
-      "label": "Message type",
-      "kind": "text",
-      "placeholder": "e.g. ORDERS / INVOIC / DEBMAS",
-      "ask": "Message type"
-     },
-     {
-      "id": "basicType",
-      "label": "Basic type / extension",
-      "kind": "text",
-      "placeholder": "e.g. ORDERS05 + ZORDERS05_EXT"
-     },
-     {
-      "id": "segments",
-      "label": "Segments (custom / used)",
-      "kind": "grid",
-      "columns": [
-       {
-        "id": "segment",
-        "label": "Segment",
-        "kind": "text",
-        "w": 140,
-        "placeholder": "e.g. Z1SDBLOCK"
-       },
-       {
-        "id": "parent",
-        "label": "Parent",
-        "kind": "text",
-        "w": 120
-       },
-       {
-        "id": "min",
-        "label": "Min",
-        "kind": "text",
-        "w": 50
-       },
-       {
-        "id": "max",
-        "label": "Max",
-        "kind": "text",
-        "w": 60
-       },
-       {
-        "id": "fields",
-        "label": "Fields",
-        "kind": "text",
-        "w": 280,
-        "placeholder": "e.g. VBELN, FAKSK, REASON"
-       }
-      ],
-      "addLabel": "+ Segment",
-      "paste": true
-     },
-     {
-      "id": "processCode",
-      "label": "Process code / function module",
-      "kind": "text",
-      "placeholder": "e.g. ORDE / Z_IDOC_INPUT_ORDERS"
-     },
-     {
-      "id": "partner",
-      "label": "Partner profile / port",
-      "kind": "text",
-      "placeholder": "e.g. LS CRMCLNT100, port via tRFC"
-     },
-     {
-      "id": "trigger",
-      "label": "Trigger",
-      "kind": "text",
-      "placeholder": "e.g. Output type, change pointers (BD52), program"
-     },
-     {
-      "id": "mapping",
-      "label": "Field mapping",
-      "kind": "textarea",
-      "placeholder": "Source → target field mapping"
-     },
-     {
-      "id": "errorHandling",
-      "label": "Error handling / reprocessing",
-      "kind": "textarea",
-      "placeholder": "e.g. Status 51 with message, workflow to role, BD87"
-     }
-    ]
-   },
    "Form": {
     "group": "UI & forms",
     "tcode": "SFP / SMARTFORMS",
@@ -6036,10 +5916,6 @@ window.APB_CONFIG = {
         "label": "RFC / BAPI"
        },
        {
-        "value": "IDoc",
-        "label": "IDoc"
-       },
-       {
         "value": "tbc",
         "label": "To Be Confirmed"
        }
@@ -6573,11 +6449,6 @@ window.APB_CONFIG = {
     "label": "API"
    },
    {
-    "match": "idoc|edi|\\bale\\b",
-    "type": "IDoc",
-    "label": "IDoc"
-   },
-   {
     "match": "workflow|approv|release strateg",
     "type": "Workflow",
     "label": "Workflow"
@@ -6681,8 +6552,7 @@ window.APB_CONFIG = {
      "RFC",
      "CDS",
      "ODATA",
-     "FORM",
-     "IDOC"
+     "FORM"
     ],
     "anyOf": [
      "requirement.expectedOutput",
@@ -6952,22 +6822,6 @@ window.APB_CONFIG = {
       "name": "",
       "status": "new",
       "purpose": "Implementing class"
-     }
-    ]
-   },
-   {
-    "id": "idoc",
-    "label": "IDoc interface",
-    "description": "Inbound / outbound IDoc with custom segment",
-    "types": [
-     "IDOC"
-    ],
-    "objects": [
-     {
-      "type": "IDoc",
-      "name": "",
-      "status": "new",
-      "purpose": "Interface"
      }
     ]
    },
@@ -7919,7 +7773,7 @@ window.APB_CONFIG = {
     ['text', 'objective', 'users', 'expectedOutput'].forEach(function (k) { s.requirement[k] = str(getPath(input, 'requirement.' + k)); });
     s.objects = arr(input.objects).map(function (o) {
       return {
-        id: str(o.id) || uid(), type: str(o.type) || 'Other', name: str(o.name),
+        id: str(o.id) || uid(), type: APB.config.definitions.objectTypes[o.type] ? o.type : 'Other', name: str(o.name),
         status: ['existing', 'change', 'new', 'tbc'].indexOf(o.status) >= 0 ? o.status : 'tbc',
         purpose: str(o.purpose), parent: str(o.parent),
         detail: o.detail && typeof o.detail === 'object' ? clone(o.detail) : {}
@@ -8922,7 +8776,6 @@ window.APB_CONFIG = {
     ENH: '<path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/>',
     ODATA: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3z"/>',
     FIORI: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>',
-    IDOC: '<path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/>',
     FORM: '<path d="M6 9V3h12v6M6 18H4v-7h16v7h-2M7 14h10v7H7z"/>'
   };
   function icon(k) { return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[k] || ICONS.REPORT) + '</svg>'; }
@@ -9903,6 +9756,7 @@ window.APB_CONFIG = {
 
   async function init() {
     renderDatalists();
+    $('#designer-count').textContent = D.objectTypes.filter(function (t) { return D.objectDef(t).fields.length; }).length;
     document.documentElement.dataset.theme = ST.getTheme();
     startRotator();
     let loaded = false;

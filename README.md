@@ -27,7 +27,7 @@ Business Requirement → Select Object → Add Existing/New Objects → Add Impo
 
 | Step | What you do |
 |---|---|
-| 1. Build | Pick Report / ABAP Class / RFC / RAP / CDS / CAPM / DDIC / Enhancement / OData / Fiori / IDoc / Form and paste the business requirement (the only two mandatory inputs). The main object is added automatically. |
+| 1. Build | Pick Report / ABAP Class / RFC / RAP / CDS / CAPM / DDIC / Enhancement / OData / Fiori / Form and paste the business requirement (the only two mandatory inputs). The main object is added automatically. |
 | 2. Requirement | Optional objective, users, expected output, business rules, acceptance criteria, assumptions. |
 | 3. Objects | One compact line per object: type, name, status (**Existing – reuse**, **Existing – change**, **New**, **To Be Confirmed**), purpose. Suggestions are offered, never assumed. A dependency map is drawn from the list. |
 | 4. Specify | A designer per new / changed object (see below). For reused objects: "what do you need from it?". Plus authorization (authority-check grid), testing, clean core. |
@@ -46,7 +46,7 @@ Business Requirement → Select Object → Add Existing/New Objects → Add Impo
 | CDS (ADT) | Entity type, VDM layer, data source, parameters, joins, associations/compositions with cardinality, element list (key, alias, annotations), WHERE, access control (DCL) |
 | RAP | Implementation type, strict / draft, behavior pool, **entities** (root/child, tables, draft table, operations, lock/authorization/etag master, field control, determinations, validations, actions), projection, service definition & binding, UI annotations |
 | CAPM | Runtime, database, **entities with elements**, services with exposed entities / actions / events, custom handlers, external services, auth (XSUAA/IAS), roles, UI, deployment (MTA / Kyma) |
-| OData, API, Fiori/UI5, BAdI / Enhancement, IDoc, Form, Background Job, Workflow | Entity sets & functions, payload & errors, app type & pages, enhancement spot / exit & logic, message/basic type & segments, form interface, job schedule, workflow steps |
+| OData, API, Fiori/UI5, BAdI / Enhancement, Form, Background Job, Workflow | Entity sets & functions, payload & errors, app type & pages, enhancement spot / exit & logic, form interface, job schedule, workflow steps |
 
 Grids accept **Paste from Excel** (tab-separated, same column order) and **Enter** moves to the next row (adding one at the end). Customer DDIC objects referenced in grids but not listed (e.g. a Z data element in a table field) are offered as one-click "+ add" chips.
 
@@ -54,7 +54,7 @@ A live Markdown preview sits next to the form (an Edit/Preview tab on small scre
 
 ## Essential vs. advanced fields
 
-Each object shows its essential questions first; optional ones (e.g. table technical settings, class attributes, RAP mapping and side effects, CAP multitenancy) sit behind *Advanced details ▸* on that object. Performance questions appear only for development types where they matter (Report, RFC, RAP, CDS, CAPM, OData, IDoc).
+Each object shows its essential questions first; optional ones (e.g. table technical settings, class attributes, RAP mapping and side effects, CAP multitenancy) sit behind *Advanced details ▸* on that object. Performance questions appear only for development types where they matter (Report, RFC, RAP, CDS, CAPM, OData).
 
 ## Generated Markdown
 
@@ -77,7 +77,7 @@ Everything auto-saves in this browser (`localStorage`): save, resume and delete 
 
 ## Supported object types
 
-Development types: Report, ABAP Class, RFC / Function Module, RAP, CDS, CAPM, DDIC objects, Enhancement / BAdI, OData service, Fiori / UI5 app, IDoc / interface, Form. Object types (28): Table, Structure, Data Element, Domain, Table Type, Search Help, Lock Object, Message Class, Authorization Object, Report, Class, Interface, Function Module, RFC, BAdI / Enhancement, IDoc, Form, Background Job, Workflow, CDS, RAP, CAPM, OData, API, Fiori/UI5, Infotype, LDB, Other. Combine as many as needed.
+Development types: Report, ABAP Class, RFC / Function Module, RAP, CDS, CAPM, DDIC objects, Enhancement / BAdI, OData service, Fiori / UI5 app, Form. Object types (27): Table, Structure, Data Element, Domain, Table Type, Search Help, Lock Object, Message Class, Authorization Object, Report, Class, Interface, Function Module, RFC, BAdI / Enhancement, Form, Background Job, Workflow, CDS, RAP, CAPM, OData, API, Fiori/UI5, Infotype, LDB, Other. Combine as many as needed.
 
 ## Architecture
 

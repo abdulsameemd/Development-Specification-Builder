@@ -58,7 +58,7 @@
     ['text', 'objective', 'users', 'expectedOutput'].forEach(function (k) { s.requirement[k] = str(getPath(input, 'requirement.' + k)); });
     s.objects = arr(input.objects).map(function (o) {
       return {
-        id: str(o.id) || uid(), type: str(o.type) || 'Other', name: str(o.name),
+        id: str(o.id) || uid(), type: APB.config.definitions.objectTypes[o.type] ? o.type : 'Other', name: str(o.name),
         status: ['existing', 'change', 'new', 'tbc'].indexOf(o.status) >= 0 ? o.status : 'tbc',
         purpose: str(o.purpose), parent: str(o.parent),
         detail: o.detail && typeof o.detail === 'object' ? clone(o.detail) : {}
