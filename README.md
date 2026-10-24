@@ -1,8 +1,11 @@
 # SAP Development Specification Builder
 
-> Turn SAP business requirements into structured GitHub Copilot development specifications.
+> Turn SAP business requirements into functional specifications checked against the SAP system, and into structured GitHub Copilot development specifications.
 
-A small, static web app that helps an SAP developer give GitHub Copilot the right context **before** coding starts. Fill in a requirement in 5–10 minutes, download `BUSINESS_REQUIREMENTS.md` (or send it straight to VS Code), and hand it to Copilot (VS Code or Eclipse ADT).
+A small, static web app with two modes (toggle **Functional | Technical** in the header):
+
+- **Functional** – functional consultants write a standard SAP functional specification (FS) in 15–30 minutes, check it against the live DEWA SAP system through a read-only Copilot agent, and download it as **Word** or Markdown. See [Functional specifications](#functional-specifications).
+- **Technical** – an SAP developer gives GitHub Copilot the right context **before** coding starts. Fill in a requirement in 5–10 minutes, download `BUSINESS_REQUIREMENTS.md` (or send it straight to VS Code), and hand it to Copilot (VS Code or Eclipse ADT).
 
 - **No backend, no database, no login, no AI API.** Open `index.html` — that's it.
 - **Private by design.** Requirements never leave your browser. Drafts are kept in the browser's local storage only.
@@ -18,7 +21,36 @@ open index.html          # double-click it; works from file://
 
 Optional: serve the folder with any static host (GitHub Pages: *Settings → Pages → Deploy from branch → root*).
 
-## How developers use it
+## Functional specifications
+
+```text
+Context → AS-IS / TO-BE process → Functional requirements (fit-gap) → System discovery + RICEFW → NFRs, UAT, sign-off
+        → Word / Markdown → RICEFW item → Development spec (Technical mode) → dewa-abap
+```
+
+| Step | What you do |
+|---|---|
+| 1. Context | Title, **module** and **business requirement** (the two mandatory inputs), objectives, KPIs, scope, stakeholders, org units. *Start from a module template* (FI-AP, MM, SD, IS-U, CRM) pre-fills typical process steps, FR headings and roles. |
+| 2. Process | AS-IS and TO-BE step grids (step, role, transaction / Fiori app, pain point / change). The TO-BE flow is drawn as you type; "Start TO-BE from AS-IS" copies the steps. |
+| 3. Requirements | FR-01 … with MoSCoW priority, **fit-gap** (SAP standard / configuration / custom), acceptance criteria; business rules and validations; data requirements (business field → SAP table / field). |
+| 4. Solution | **Current SAP system** (discovery, below), RICEFW items (R-01, E-01, UI-01 … per type) covering the gaps, roles & authorizations, interfaces, outputs, SPRO notes. Each RICEFW item can be handed over as a pre-filled **Development Specification**. |
+| 5. Sign-off | NFRs, UAT scenarios (*Create UAT skeleton from FRs*: one positive + one negative case per FR), risks / assumptions / open points, document control, version history, approvers. "Ready for sign-off" check → **Generate**. |
+
+**Output** – `FS_<Module>_<Title>.docx` (title page with document control, contents, numbered headings, tables, header with document ID and version, *Page X of Y* footer) and `FUNCTIONAL_SPECIFICATION.md`, both from the same content: Business Requirement · Scope · Stakeholders · AS-IS · TO-BE · Functional Requirements · Business Rules · Data Requirements · Current SAP System Context · Fit-Gap · Solution Design (RICEFW) · Roles & Authorizations · Interfaces · Outputs · NFRs · UAT · **Traceability matrix (FR ↔ RICEFW ↔ UAT)** · Risks · Open Questions · Version History & Approvals. Unknown values read `[TO BE CONFIRMED]`; empty sections are left out.
+
+### System discovery (read-only, through Copilot)
+
+The browser never connects to SAP. DEWA's VS Code already has GitHub Copilot with the **SAP ABAP ADT, Fiori, UI5 and CAP MCP servers**; the read-only agent [`dewa-fs-discovery`](vscode-extension-addon/agents/dewa-fs-discovery.agent.md) uses them to read what exists and returns a JSON **context pack** (`dewa-sap-context-pack`, v1: system/release, objects, transactions, Fiori/UI5 apps, CAP services, BAdIs, customizing hints, not-found list).
+
+1. Step 4 → **Discover in SAP**: the builder copies a prompt built from the FS (module, scope, FRs, every transaction/table/object named, proposed new names) and opens VS Code.
+2. With the DEWA extension add-on, Copilot Chat opens with `dewa-fs-discovery` and the prompt filled in. Sign in to Copilot if VS Code asks (VS Code's own sign-in), review, press **Enter**.
+3. Copy the agent's answer → **Import from clipboard** (or paste it). The pack is validated and treated as untrusted data.
+
+The FS then shows a *Current SAP System Context* section, a **reference check** (✓ in system · ✗ not found · ⚠ proposed name already exists · – not checked), discovered names as suggestions in the grids, and a warning when the pack is older than 30 days. *Try a sample pack* shows the flow without a system ([`docs/samples/fs-context-pack-sample.json`](docs/samples/fs-context-pack-sample.json), clearly marked as sample).
+
+**VS Code extension add-on** – [`vscode-extension-addon/`](vscode-extension-addon/INSTALL.md): a `/discover` URI handler (`vscode://<publisher>.<name>/discover?src=clipboard&v=1`) to merge into DEWA's extension, the agent file, install steps and unit tests (`node --test vscode-extension-addon/test/*.test.js`). Without the add-on choose *Plain VS Code (copy & paste)* in step 4 → *VS Code launch settings*.
+
+## How developers use it (Technical mode)
 
 ```text
 Business Requirement → Select Object → Add Existing/New Objects → Add Important Rules
@@ -88,6 +120,8 @@ config/                 ← source of truth (edit these)
   object-definitions.json   types, fields, conditional fields, SAP object types, suggestions, DoD
   validation-rules.json     mandatory + recommended checks
   templates.json            quick-start templates + demo example
+  fs-definitions.json       functional spec: steps, sections/fields, readiness rules, RICEFW types, discovery settings
+  fs-templates.json         FS module templates, worked examples, sample context pack
 js/
   config-bundle.js      generated from /config (so it works from file://)
   object-definitions.js config accessors
@@ -99,7 +133,14 @@ js/
   storage.js            localStorage drafts
   export.js             download, copy, share link, VS Code hand-off
   agents-guide.js       Agents info page (from docs/AGENT_WORKFLOWS.md)
-  app.js                UI
+  fs-state.js           functional spec model, templates, FR / RICEFW numbering
+  discovery.js          discovery prompt, context-pack validation, reference cross-check
+  fs-completeness.js    "Ready for sign-off", open questions
+  fs-generator.js       functional spec Markdown
+  docx.js               dependency-free Word writer (OOXML + ZIP)
+  fs-app.js             functional spec wizard, discovery panel, hand-off to a development spec
+  app.js                UI shell (both modes)
+vscode-extension-addon/ URI handler + dewa-fs-discovery agent for the DEWA VS Code extension
 scripts/build-config.js
 assets/morohub-logo.png
 ```
@@ -120,11 +161,11 @@ The model in `state.js` does not depend on Copilot; Copilot is just an **output 
 
 ## Agent workflows page
 
-The **Agents** button (header, or Ctrl K → "Agent workflows") opens an info page on the DEWA VS Code agents — `dewa-abap` and `dewa-codereview`: when to use which, their flows, confirmation keywords and boundaries, and how the VS Code extension installs them. Source: `docs/AGENT_WORKFLOWS.md` (content in `js/agents-guide.js`).
+The **Agents** button (header, or Ctrl K → "Agent workflows") opens an info page on the DEWA VS Code agents — `dewa-abap`, `dewa-codereview` and the read-only `dewa-fs-discovery`: when to use which, their flows, confirmation keywords and boundaries, and how the VS Code extension installs them. Source: `docs/AGENT_WORKFLOWS.md` (content in `js/agents-guide.js`).
 
 ## Try it
 
-**Try Example** offers complete worked examples: FI-AP vendor ageing report (Report + Class + DDIC), MM goods receipt RFC for an external WMS, SD billing block rules app (Table + CDS + RAP + Fiori), IS-U meter reading CDS view, CRM interaction log on CAP.
+**Examples** in Functional mode: FI-AP vendor ageing, MM goods receipt from WMS, SD billing block rules, IS-U implausible meter readings, CRM interaction log — each a complete FS. In Technical mode, **Try Example** offers complete worked examples: FI-AP vendor ageing report (Report + Class + DDIC), MM goods receipt RFC for an external WMS, SD billing block rules app (Table + CDS + RAP + Fiori), IS-U meter reading CDS view, CRM interaction log on CAP.
 
 ## Branding assets
 
@@ -134,4 +175,4 @@ The **Agents** button (header, or Ctrl K → "Agent workflows") opens an info pa
 
 Further output profiles (Claude Code, Codex, Cursor, SAP Joule, Gemini, Amazon Q), more object types (OData, Fiori Elements, SAPUI5, BAdI, enhancements, workflow, IDoc, Adobe Forms, background jobs, AMDP, integration).
 
-Not in scope by design: login, backend, database, AI API, chat, Jira/GitHub/SAP connections, project management, analytics, collaboration.
+Not in scope by design: login, backend, database, AI API, chat, Jira/GitHub connections, a direct browser-to-SAP connection (system facts come only through the read-only Copilot agent), project management, analytics, collaboration.

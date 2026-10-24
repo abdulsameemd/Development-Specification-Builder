@@ -1055,7 +1055,7 @@
     $$('[data-action="mode"]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.mode === mode)); });
     if (mode === chromeMode) return;
     chromeMode = mode;
-    document.body.dataset.mode = mode;
+    document.body.dataset.kind = mode;
     $('#hero').innerHTML = mode === 'fs' ? FA.hero : devHero;
     $('.pv-actions').innerHTML = mode === 'fs' ? FA.previewActions : devPvActions;
     $('#pv-file').textContent = mode === 'fs' ? FA.fileLabel : 'Business requirement';

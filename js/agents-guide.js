@@ -1,4 +1,5 @@
-/* "Agents" info page: how the DEWA backend agents (dewa-abap, dewa-codereview) work in VS Code.
+/* "Agents" info page: how the DEWA backend agents (dewa-abap, dewa-codereview) work in VS Code, plus the read-only
+   dewa-fs-discovery agent used by the functional-spec mode (agent file in vscode-extension-addon/agents/).
    Content follows docs/AGENT_WORKFLOWS.md (the Adobe Forms agent is intentionally not shown); the Mermaid charts
    there are redrawn as inline SVG / HTML so the page works offline. The agent files under agents/ and AGENTS.md
    remain the source of truth. */
@@ -46,13 +47,14 @@
       '<p class="step-count">Info</p><h2 class="step-title">DEWA Agent Workflows</h2>' +
       '<p class="muted">A practical guide to choosing and working with the DEWA backend agents in VS Code. The source of truth for exact rules remains each agent file under <code>agents/</code> and the shared router in <code>AGENTS.md</code>.</p>' +
 
-      '<nav class="ag-toc" aria-label="On this page">' + [['ag-glance', 'At a glance'], ['ag-choose', 'How to choose'], ['ag-builder', 'From this builder'], ['ag-session', 'Session pattern'], ['ag-abap', 'dewa-abap'], ['ag-review', 'dewa-codereview'], ['ag-vsix', 'VS Code extension'], ['ag-compare', 'Comparison'], ['ag-files', 'Source files']]
+      '<nav class="ag-toc" aria-label="On this page">' + [['ag-glance', 'At a glance'], ['ag-choose', 'How to choose'], ['ag-builder', 'From this builder'], ['ag-fs', 'Functional specs'], ['ag-session', 'Session pattern'], ['ag-abap', 'dewa-abap'], ['ag-review', 'dewa-codereview'], ['ag-vsix', 'VS Code extension'], ['ag-compare', 'Comparison'], ['ag-files', 'Source files']]
         .map(function (l) { return '<a href="#' + l[0] + '" data-action="info-jump" data-id="' + l[0] + '">' + l[1] + '</a>'; }).join('') + '</nav>' +
 
       '<section id="ag-glance" class="ag-sec"><h3>At a glance</h3><div class="ag-cards">' +
       card('dewa-abap', 'Build', 'Building new ABAP, CDS, RAP or CAP backend artifacts', 'One new/changed artifact at a time, with tests and validation status', 'Type ' + kw('CONFIRM ARTEFACT') + ' before the next artifact') +
       card('dewa-codereview', 'Review', 'Reviewing or safely improving existing ABAP, CDS, RAP or CAP code', 'Full review report, findings, safe fixes and optionally an as-built technical specification', 'Answer Y/N for flagged changes; type ' + kw('CONFIRM REVIEW') + ' before handoff') +
-      '</div><p class="ag-callout">Both agents are backend-focused and use the <strong>ADT MCP server</strong> for SAP repository operations where available. They do <strong>not</strong> replace target-system authorization, SAP activation, ATC, ABAP Unit, or required technical approvals.</p></section>' +
+      card('dewa-fs-discovery', 'Discover', 'Writing a functional specification against the real SAP system', 'A JSON context pack: existing objects, transactions, Fiori apps, BAdIs, CAP services, release', 'Review the pre-filled prompt, press Enter, import the answer in the builder') +
+      '</div><p class="ag-callout">' + agent('dewa-abap') + ' and ' + agent('dewa-codereview') + ' are backend-focused and use the <strong>ADT MCP server</strong> for SAP repository operations where available. They do <strong>not</strong> replace target-system authorization, SAP activation, ATC, ABAP Unit, or required technical approvals. ' + agent('dewa-fs-discovery') + ' only reads.</p></section>' +
 
       '<section id="ag-choose" class="ag-sec"><h3>How to choose</h3>' + chooser() +
       '<p class="muted">The agents are separate entry points, not a dependency chain. A typical handoff is optional: build with ' + agent('dewa-abap') + ', then review the result with ' + agent('dewa-codereview') + '.</p></section>' +
@@ -60,6 +62,16 @@
       '<section id="ag-builder" class="ag-sec"><h3>From this builder to the agent</h3>' +
       flow(['Fill in the five steps here', 'Download <code>BUSINESS_REQUIREMENTS.md</code> into the project folder, or use <strong>Open in VS Code</strong>', 'In Copilot Chat, select ' + agent('dewa-abap'), 'Paste the prompt (or let the agent read the file) and confirm target, package and scope', 'Review each artifact, then type ' + kw('CONFIRM ARTEFACT'), 'Optional: ' + agent('dewa-codereview') + ' on what was built']) +
       '<p class="muted small">' + agent('dewa-abap') + ' treats <code>BUSINESS_REQUIREMENTS.md</code> as its requirement source when the file is present, which is why the builder downloads under that name. Anything marked <code>[TO BE CONFIRMED]</code> in the specification is an open question for you, not something the agent should guess.</p></section>' +
+
+      '<section id="ag-fs" class="ag-sec ag-agent"><h3>' + agent('dewa-fs-discovery') + ' — functional specs against the live system</h3>' +
+      '<p>In <strong>Functional</strong> mode the builder writes the FS; the system facts come from the DEWA SAP system through Copilot. The browser itself never connects to SAP.</p>' +
+      flow(['Fill in context, process and FRs', 'Step 4: <strong>Discover in SAP</strong> copies a read-only prompt', 'VS Code opens Copilot Chat with ' + agent('dewa-fs-discovery') + ' and the prompt filled in', 'Sign in to Copilot if asked, press <kbd>Enter</kbd>', 'The agent reads ABAP ADT, Fiori, UI5 and CAP metadata via MCP', 'Copy the answer, <strong>Import from clipboard</strong>', 'Download Word for sign-off', 'Hand RICEFW items to ' + agent('dewa-abap') + ' as development specs']) +
+      '<h4>Rules of the agent</h4>' + bullets([
+        '<strong>Read only:</strong> never creates, changes, activates or transports anything; reads metadata, not table contents.',
+        '<strong>Never invents:</strong> everything checked but not found is listed under <code>notFound</code>; the builder shows each FS reference as ✓ in system, ✗ not found or – not checked.',
+        'Returns one <code>dewa-sap-context-pack</code> JSON block. The builder validates it, treats it as untrusted data and warns when it is older than 30 days.',
+        'One-click opening needs the DEWA extension with the discovery add-on (<code>vscode-extension-addon/INSTALL.md</code>). Without it, choose <em>Plain VS Code</em> in the launch settings and paste the prompt yourself.'
+      ]) + '</section>' +
 
       '<section id="ag-session" class="ag-sec"><h3>Shared session pattern</h3>' +
       '<p>Before SAP backend changes, establish the target and inspect the local context. The exact checklist depends on the agent, but commonly includes the target system/release, package/software component, ABAP language version, existing objects, test coverage, transport context and the functional requirement. Do not guess system facts or claim checks that were not run.</p>' +
@@ -134,7 +146,8 @@
         '<code>agents/dewa-abap.agent.md</code> — new backend development.',
         '<code>agents/dewa-codereview.agent.md</code> — existing-code review/refactor/optimization.',
         '<code>vscode-extension/extension.js</code> — agent installation into the VS Code user profile.',
-        '<code>vscode-extension/scripts/build-kit.js</code> — packaging source agents into the extension bundle.'
+        '<code>vscode-extension/scripts/build-kit.js</code> — packaging source agents into the extension bundle.',
+        '<code>vscode-extension-addon/</code> (this repository) — <code>dewa-fs-discovery.agent.md</code> and the <code>/discover</code> URI handler to merge into the extension.'
       ]) + '</section>' +
       '<div class="nav-row"><button type="button" class="btn btn-primary" data-action="close-info">← Back to the builder</button></div>' +
       '</div>';
