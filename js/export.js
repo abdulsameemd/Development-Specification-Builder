@@ -3,7 +3,12 @@
   'use strict';
 
   function download(name, text, mime) {
-    const blob = new Blob([text], { type: (mime || 'text/plain') + ';charset=utf-8' });
+    saveBlob(name, new Blob([text], { type: (mime || 'text/plain') + ';charset=utf-8' }));
+  }
+
+  function downloadBytes(name, bytes, mime) { saveBlob(name, new Blob([bytes], { type: mime || 'application/octet-stream' })); }
+
+  function saveBlob(name, blob) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -76,8 +81,9 @@
   }
 
   /* Hand over to VS Code through its registered vscode:// protocol (the browser may ask for permission once).
-     Browsers only allow this directly inside a click, never after an await. */
-  function launchVscode() { window.location.href = 'vscode://'; }
+     Browsers only allow this directly inside a click, never after an await. A URL such as
+     vscode://<extension-id>/discover?… is routed to that extension's URI handler. */
+  function launchVscode(url) { window.location.href = url || 'vscode://'; }
 
-  APB.exporter = { copyNow: copyNow, launchVscode: launchVscode, download: download, copy: copy, shareLink: shareLink, readShareLink: readShareLink };
+  APB.exporter = { copyNow: copyNow, launchVscode: launchVscode, download: download, downloadBytes: downloadBytes, copy: copy, shareLink: shareLink, readShareLink: readShareLink };
 })(window.APB = window.APB || {});

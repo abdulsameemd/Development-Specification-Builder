@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SAP Development Specification Builder</title>
-  <meta name="description" content="Turn SAP business requirements into structured GitHub Copilot development specifications for ABAP, RAP, CDS and CAP. Runs entirely in your browser.">
+  <meta name="description" content="Turn SAP business requirements into functional specifications (Word + Markdown, checked against the SAP system via a read-only Copilot agent) and GitHub Copilot development specifications for ABAP, RAP, CDS and CAP. Runs entirely in your browser.">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#0e1316">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0e11'/%3E%3Cpath d='M12 6q-7 10 0 20M20 6q7 10 0 20' fill='none' stroke='%23a3e635' stroke-width='3.5' stroke-linecap='round'/%3E%3C/svg%3E">
@@ -23,6 +23,10 @@
       <div class="brand">
         <img src="assets/morohub-logo.png" alt="MORO" width="101" height="33">
         <span class="brand-sub">Spec <span class="grad">Builder</span></span>
+      </div>
+      <div class="mode-toggle" role="group" aria-label="Specification type">
+        <button type="button" data-action="mode" data-mode="fs" aria-pressed="false" title="Functional specification (FS) for consultants">Functional</button>
+        <button type="button" data-action="mode" data-mode="dev" aria-pressed="true" title="Technical development specification for developers">Technical</button>
       </div>
       <nav class="main-nav" aria-label="Main">
         <button type="button" class="nav-link" data-action="new">New</button>
@@ -126,7 +130,7 @@
   <dialog id="palette" class="palette" aria-label="Command palette">
     <div class="palette-search">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="palette-input" type="text" placeholder="Type a command… e.g. example, RAP, download, step 4" aria-label="Search commands" aria-controls="palette-list" aria-autocomplete="list" autocomplete="off" spellcheck="false">
+      <input id="palette-input" type="text" placeholder="Type a command… e.g. example, word, discover, step 4" aria-label="Search commands" aria-controls="palette-list" aria-autocomplete="list" autocomplete="off" spellcheck="false">
       <kbd>Esc</kbd>
     </div>
     <ul id="palette-list" role="listbox" aria-label="Commands"></ul>
@@ -145,7 +149,13 @@
   <script src="js/templates.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/export.js"></script>
+  <script src="js/fs-state.js"></script>
+  <script src="js/discovery.js"></script>
+  <script src="js/fs-completeness.js"></script>
+  <script src="js/fs-generator.js"></script>
+  <script src="js/docx.js"></script>
   <script src="js/agents-guide.js"></script>
+  <script src="js/fs-app.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

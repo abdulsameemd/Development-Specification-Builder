@@ -6944,5 +6944,2377 @@ window.APB_CONFIG = {
     }
    }
   ]
+ },
+ "fsDefinitions": {
+  "version": 1,
+  "title": "Functional Specification",
+  "modules": [
+   {
+    "value": "",
+    "label": "— select —"
+   },
+   {
+    "value": "FI/CO",
+    "label": "FI/CO – Finance & Controlling"
+   },
+   {
+    "value": "MM",
+    "label": "MM – Materials Management"
+   },
+   {
+    "value": "SD",
+    "label": "SD – Sales & Distribution"
+   },
+   {
+    "value": "IS-U",
+    "label": "IS-U – Utilities"
+   },
+   {
+    "value": "CRM",
+    "label": "CRM – Customer Service"
+   },
+   {
+    "value": "PS/PM",
+    "label": "PS/PM – Projects & Plant Maintenance"
+   },
+   {
+    "value": "HCM",
+    "label": "HCM – Human Capital"
+   },
+   {
+    "value": "Cross-module",
+    "label": "Cross-module"
+   }
+  ],
+  "ricefw": [
+   {
+    "value": "",
+    "label": "— type —",
+    "code": "X"
+   },
+   {
+    "value": "report",
+    "label": "Report",
+    "code": "R",
+    "devType": "REPORT"
+   },
+   {
+    "value": "interface",
+    "label": "Interface (RFC / API)",
+    "code": "I",
+    "devType": "RFC"
+   },
+   {
+    "value": "conversion",
+    "label": "Conversion / data load",
+    "code": "C",
+    "devType": "REPORT"
+   },
+   {
+    "value": "enhancement",
+    "label": "Enhancement / BAdI",
+    "code": "E",
+    "devType": "ENH"
+   },
+   {
+    "value": "form",
+    "label": "Form / output",
+    "code": "F",
+    "devType": "FORM"
+   },
+   {
+    "value": "workflow",
+    "label": "Workflow",
+    "code": "W",
+    "devType": "CLASS"
+   },
+   {
+    "value": "fiori",
+    "label": "Fiori / UI5 app",
+    "code": "UI",
+    "devType": "FIORI"
+   },
+   {
+    "value": "cds",
+    "label": "CDS / analytics",
+    "code": "A",
+    "devType": "CDS"
+   },
+   {
+    "value": "rap",
+    "label": "RAP business object",
+    "code": "B",
+    "devType": "RAP"
+   },
+   {
+    "value": "odata",
+    "label": "OData service",
+    "code": "O",
+    "devType": "ODATA"
+   },
+   {
+    "value": "cap",
+    "label": "CAP service (BTP)",
+    "code": "S",
+    "devType": "CAPM"
+   }
+  ],
+  "steps": [
+   {
+    "n": 1,
+    "label": "Context",
+    "title": "Business context & scope",
+    "intro": "What the business needs and where it applies. Only the requirement and the module are required."
+   },
+   {
+    "n": 2,
+    "label": "Process",
+    "title": "Current and future process",
+    "intro": "AS-IS shows today's steps and pain points; TO-BE is the process after the change. Name the transaction or Fiori app per step — discovery checks them in the system."
+   },
+   {
+    "n": 3,
+    "label": "Requirements",
+    "title": "Functional requirements",
+    "intro": "One FR per testable need. Fit-gap tells the team whether standard SAP, configuration or custom development covers it."
+   },
+   {
+    "n": 4,
+    "label": "Solution",
+    "title": "System context & solution",
+    "intro": "Read the current DEWA SAP system first, then list the RICEFW items that close the gaps."
+   },
+   {
+    "n": 5,
+    "label": "Sign-off",
+    "title": "Quality, testing & sign-off",
+    "intro": "Non-functional requirements, UAT scenarios, risks and approvals."
+   }
+  ],
+  "sections": [
+   {
+    "id": "context",
+    "step": 1,
+    "fields": [
+     {
+      "id": "title",
+      "label": "Specification title",
+      "kind": "text",
+      "placeholder": "e.g. Vendor open items ageing for month-end close"
+     },
+     {
+      "id": "module",
+      "label": "Module",
+      "kind": "select",
+      "optionsRef": "modules"
+     },
+     {
+      "id": "processArea",
+      "label": "Process area",
+      "kind": "text",
+      "placeholder": "e.g. Accounts Payable – period-end closing"
+     },
+     {
+      "id": "requirement",
+      "label": "Business requirement",
+      "kind": "textarea",
+      "placeholder": "Describe the business need in the business's words, e.g.\nAP accountants need to see overdue vendor items per company code grouped into ageing buckets (0-30 / 31-60 / 61-90 / >90 days) for the month-end review."
+     },
+     {
+      "id": "objectives",
+      "label": "Business objectives",
+      "kind": "lines",
+      "placeholder": "e.g. Reduce month-end AP review from 2 days to 2 hours\nIdentify overdue vendors before the payment run"
+     },
+     {
+      "id": "kpis",
+      "label": "KPIs / success measures",
+      "kind": "lines",
+      "placeholder": "e.g. Ageing available on working day 1 of the close"
+     },
+     {
+      "id": "inScope",
+      "label": "In scope",
+      "kind": "lines",
+      "placeholder": "e.g. Company codes 1000 and 2000\nVendor open items in local currency"
+     },
+     {
+      "id": "outOfScope",
+      "label": "Out of scope",
+      "kind": "lines",
+      "placeholder": "e.g. Customer ageing (FI-AR)\nForeign-currency revaluation"
+     },
+     {
+      "id": "stakeholders",
+      "label": "Stakeholders",
+      "kind": "grid",
+      "advanced": true,
+      "addLabel": "+ Stakeholder",
+      "paste": true,
+      "columns": [
+       {
+        "id": "role",
+        "label": "Role",
+        "w": 170,
+        "placeholder": "e.g. Business process owner"
+       },
+       {
+        "id": "name",
+        "label": "Name",
+        "w": 150
+       },
+       {
+        "id": "department",
+        "label": "Department",
+        "w": 150,
+        "placeholder": "e.g. Finance – AP"
+       },
+       {
+        "id": "responsibility",
+        "label": "Responsibility",
+        "w": 220,
+        "placeholder": "e.g. Approves the FS"
+       }
+      ]
+     },
+     {
+      "id": "companyCodes",
+      "label": "Company codes",
+      "kind": "text",
+      "advanced": true,
+      "placeholder": "e.g. 1000, 2000"
+     },
+     {
+      "id": "plants",
+      "label": "Plants",
+      "kind": "text",
+      "advanced": true,
+      "placeholder": "e.g. 1100"
+     },
+     {
+      "id": "salesOrgs",
+      "label": "Sales organisations",
+      "kind": "text",
+      "advanced": true,
+      "placeholder": "e.g. 1000"
+     },
+     {
+      "id": "otherOrg",
+      "label": "Other org units",
+      "kind": "text",
+      "advanced": true,
+      "placeholder": "e.g. purchasing org, controlling area, division"
+     }
+    ]
+   },
+   {
+    "id": "process",
+    "step": 2,
+    "fields": [
+     {
+      "id": "asIs",
+      "label": "AS-IS process",
+      "kind": "grid",
+      "addLabel": "+ Step",
+      "paste": true,
+      "hint": "Today's steps, including manual work and Excel.",
+      "columns": [
+       {
+        "id": "step",
+        "label": "Step",
+        "w": 220,
+        "placeholder": "e.g. Download open items to Excel"
+       },
+       {
+        "id": "role",
+        "label": "Role",
+        "w": 140,
+        "placeholder": "e.g. AP accountant"
+       },
+       {
+        "id": "tx",
+        "label": "Transaction / app",
+        "w": 140,
+        "placeholder": "e.g. FBL1N",
+        "list": "ds-tx",
+        "check": "tx"
+       },
+       {
+        "id": "pain",
+        "label": "Pain point",
+        "w": 220,
+        "placeholder": "e.g. Manual bucketing, 2 days"
+       }
+      ]
+     },
+     {
+      "id": "toBe",
+      "label": "TO-BE process",
+      "kind": "grid",
+      "addLabel": "+ Step",
+      "paste": true,
+      "hint": "The process after the change. Drawn as a flow below.",
+      "columns": [
+       {
+        "id": "step",
+        "label": "Step",
+        "w": 220,
+        "placeholder": "e.g. Run the ageing report"
+       },
+       {
+        "id": "role",
+        "label": "Role",
+        "w": 140,
+        "placeholder": "e.g. AP accountant"
+       },
+       {
+        "id": "tx",
+        "label": "Transaction / app",
+        "w": 140,
+        "placeholder": "e.g. ZFI_AGEING",
+        "list": "ds-tx",
+        "check": "tx"
+       },
+       {
+        "id": "change",
+        "label": "Change",
+        "kind": "select",
+        "w": 130,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "unchanged",
+          "label": "Unchanged"
+         },
+         {
+          "value": "changed",
+          "label": "Changed"
+         },
+         {
+          "value": "new",
+          "label": "New"
+         },
+         {
+          "value": "automated",
+          "label": "Automated"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "id": "variants",
+      "label": "Process variants & exceptions",
+      "kind": "lines",
+      "advanced": true,
+      "placeholder": "e.g. Blocked vendors are listed separately\nIntercompany vendors are excluded"
+     }
+    ]
+   },
+   {
+    "id": "reqs",
+    "step": 3,
+    "fields": [
+     {
+      "id": "frs",
+      "label": "Functional requirements",
+      "kind": "records",
+      "itemLabel": "FR",
+      "titleField": "title",
+      "bulk": true,
+      "fields": [
+       {
+        "id": "title",
+        "label": "Requirement",
+        "kind": "text",
+        "placeholder": "e.g. Ageing buckets per vendor"
+       },
+       {
+        "id": "priority",
+        "label": "Priority (MoSCoW)",
+        "kind": "select",
+        "options": [
+         {
+          "value": "",
+          "label": "— select —"
+         },
+         {
+          "value": "must",
+          "label": "Must have"
+         },
+         {
+          "value": "should",
+          "label": "Should have"
+         },
+         {
+          "value": "could",
+          "label": "Could have"
+         },
+         {
+          "value": "wont",
+          "label": "Won't have (this release)"
+         }
+        ]
+       },
+       {
+        "id": "fit",
+        "label": "Fit-gap",
+        "kind": "select",
+        "options": [
+         {
+          "value": "",
+          "label": "— select —"
+         },
+         {
+          "value": "standard",
+          "label": "Fit – SAP standard"
+         },
+         {
+          "value": "config",
+          "label": "Fit – configuration"
+         },
+         {
+          "value": "custom",
+          "label": "Gap – custom development"
+         },
+         {
+          "value": "tbc",
+          "label": "To Be Confirmed"
+         }
+        ]
+       },
+       {
+        "id": "description",
+        "label": "Description",
+        "kind": "textarea",
+        "placeholder": "e.g. Group each vendor's open items by days past net due date into 0-30, 31-60, 61-90 and >90 days."
+       },
+       {
+        "id": "acceptance",
+        "label": "Acceptance criteria",
+        "kind": "lines",
+        "placeholder": "e.g. When the key date is 31.01., an item due 15.12. appears in 31-60 days"
+       },
+       {
+        "id": "approach",
+        "label": "Standard / configuration approach",
+        "kind": "textarea",
+        "advanced": true,
+        "placeholder": "e.g. Standard FBL1N layout covers drill-down; SPRO path for payment terms"
+       }
+      ]
+     },
+     {
+      "id": "rules",
+      "label": "Business rules & validations",
+      "kind": "grid",
+      "addLabel": "+ Rule",
+      "paste": true,
+      "columns": [
+       {
+        "id": "rule",
+        "label": "Rule",
+        "w": 260,
+        "placeholder": "e.g. Days overdue = key date − net due date"
+       },
+       {
+        "id": "type",
+        "label": "Type",
+        "kind": "select",
+        "w": 130,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "validation",
+          "label": "Validation"
+         },
+         {
+          "value": "derivation",
+          "label": "Derivation"
+         },
+         {
+          "value": "calculation",
+          "label": "Calculation"
+         },
+         {
+          "value": "authorization",
+          "label": "Authorization"
+         },
+         {
+          "value": "approval",
+          "label": "Approval"
+         }
+        ]
+       },
+       {
+        "id": "outcome",
+        "label": "Message / outcome",
+        "w": 220,
+        "placeholder": "e.g. Item is shown in the >90 bucket"
+       },
+       {
+        "id": "fr",
+        "label": "FR",
+        "w": 80,
+        "placeholder": "FR-01"
+       }
+      ]
+     },
+     {
+      "id": "data",
+      "label": "Data requirements",
+      "kind": "grid",
+      "addLabel": "+ Field",
+      "paste": true,
+      "hint": "Business field → SAP table and field. Leave the SAP side empty if unknown; discovery and the developer confirm it.",
+      "columns": [
+       {
+        "id": "field",
+        "label": "Business field",
+        "w": 170,
+        "placeholder": "e.g. Vendor"
+       },
+       {
+        "id": "table",
+        "label": "SAP table / CDS",
+        "w": 140,
+        "placeholder": "e.g. LFA1",
+        "list": "ds-obj",
+        "check": "obj"
+       },
+       {
+        "id": "sapField",
+        "label": "SAP field",
+        "w": 110,
+        "placeholder": "e.g. LIFNR"
+       },
+       {
+        "id": "mandatory",
+        "label": "Mand.",
+        "kind": "check",
+        "w": 55
+       },
+       {
+        "id": "validation",
+        "label": "Validation / format",
+        "w": 180,
+        "placeholder": "e.g. Must exist in company code"
+       },
+       {
+        "id": "source",
+        "label": "Source",
+        "kind": "select",
+        "w": 130,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "standard",
+          "label": "SAP standard"
+         },
+         {
+          "value": "custom",
+          "label": "Custom (Z)"
+         },
+         {
+          "value": "external",
+          "label": "External system"
+         },
+         {
+          "value": "user",
+          "label": "User input"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "solution",
+    "step": 4,
+    "fields": [
+     {
+      "id": "ricefw",
+      "label": "RICEFW items",
+      "kind": "records",
+      "itemLabel": "Item",
+      "titleField": "name",
+      "fields": [
+       {
+        "id": "type",
+        "label": "RICEFW type",
+        "kind": "select",
+        "optionsRef": "ricefw"
+       },
+       {
+        "id": "name",
+        "label": "Proposed object name",
+        "kind": "text",
+        "placeholder": "e.g. ZFI_AP_AGEING"
+       },
+       {
+        "id": "frs",
+        "label": "Covers FRs",
+        "kind": "text",
+        "placeholder": "e.g. FR-01, FR-02"
+       },
+       {
+        "id": "complexity",
+        "label": "Complexity",
+        "kind": "select",
+        "options": [
+         {
+          "value": "",
+          "label": "— select —"
+         },
+         {
+          "value": "low",
+          "label": "Low"
+         },
+         {
+          "value": "medium",
+          "label": "Medium"
+         },
+         {
+          "value": "high",
+          "label": "High"
+         }
+        ]
+       },
+       {
+        "id": "description",
+        "label": "What it does",
+        "kind": "textarea",
+        "placeholder": "e.g. Executable report with selection by company code, vendor and key date; ALV output per vendor with one column per bucket."
+       },
+       {
+        "id": "existing",
+        "label": "Existing objects / enhancement spots to use",
+        "kind": "text",
+        "list": "ds-obj",
+        "placeholder": "e.g. BSIK, LFA1, BAdI FI_ITEMS_CH_DATA"
+       }
+      ]
+     },
+     {
+      "id": "roles",
+      "label": "Roles & authorizations",
+      "kind": "grid",
+      "addLabel": "+ Role",
+      "paste": true,
+      "columns": [
+       {
+        "id": "role",
+        "label": "Business role",
+        "w": 170,
+        "placeholder": "e.g. AP accountant"
+       },
+       {
+        "id": "tx",
+        "label": "Transaction / app",
+        "w": 140,
+        "placeholder": "e.g. ZFI_AGEING",
+        "list": "ds-tx",
+        "check": "tx"
+       },
+       {
+        "id": "authObj",
+        "label": "Authorization object",
+        "w": 150,
+        "placeholder": "e.g. F_BKPF_BUK"
+       },
+       {
+        "id": "scope",
+        "label": "Activities / org levels",
+        "w": 200,
+        "placeholder": "e.g. ACTVT 03 · BUKRS 1000"
+       }
+      ]
+     },
+     {
+      "id": "interfaces",
+      "label": "Interfaces",
+      "kind": "grid",
+      "advanced": true,
+      "addLabel": "+ Interface",
+      "paste": true,
+      "columns": [
+       {
+        "id": "name",
+        "label": "Interface",
+        "w": 170,
+        "placeholder": "e.g. Goods receipt from WMS"
+       },
+       {
+        "id": "direction",
+        "label": "Direction",
+        "kind": "select",
+        "w": 120,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "inbound",
+          "label": "Inbound"
+         },
+         {
+          "value": "outbound",
+          "label": "Outbound"
+         },
+         {
+          "value": "both",
+          "label": "Bidirectional"
+         }
+        ]
+       },
+       {
+        "id": "partner",
+        "label": "Partner system",
+        "w": 140,
+        "placeholder": "e.g. WMS"
+       },
+       {
+        "id": "tech",
+        "label": "Technology",
+        "kind": "select",
+        "w": 150,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "RFC/BAPI",
+          "label": "RFC / BAPI"
+         },
+         {
+          "value": "OData",
+          "label": "OData"
+         },
+         {
+          "value": "REST",
+          "label": "REST API"
+         },
+         {
+          "value": "SOAP",
+          "label": "SOAP"
+         },
+         {
+          "value": "File",
+          "label": "File (SFTP)"
+         },
+         {
+          "value": "CPI",
+          "label": "Integration Suite (CPI)"
+         },
+         {
+          "value": "Other",
+          "label": "Other"
+         }
+        ]
+       },
+       {
+        "id": "frequency",
+        "label": "Frequency",
+        "w": 120,
+        "placeholder": "e.g. Real time"
+       },
+       {
+        "id": "volume",
+        "label": "Volume",
+        "w": 120,
+        "placeholder": "e.g. 5,000/day"
+       }
+      ]
+     },
+     {
+      "id": "outputs",
+      "label": "Outputs & forms",
+      "kind": "grid",
+      "advanced": true,
+      "addLabel": "+ Output",
+      "paste": true,
+      "columns": [
+       {
+        "id": "name",
+        "label": "Output",
+        "w": 180,
+        "placeholder": "e.g. Overdue vendor letter"
+       },
+       {
+        "id": "type",
+        "label": "Type",
+        "kind": "select",
+        "w": 130,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "form",
+          "label": "Form (PDF)"
+         },
+         {
+          "value": "email",
+          "label": "E-mail"
+         },
+         {
+          "value": "report",
+          "label": "Report / ALV"
+         },
+         {
+          "value": "file",
+          "label": "File"
+         },
+         {
+          "value": "notification",
+          "label": "Notification"
+         }
+        ]
+       },
+       {
+        "id": "channel",
+        "label": "Channel",
+        "w": 130,
+        "placeholder": "e.g. Print, e-mail"
+       },
+       {
+        "id": "trigger",
+        "label": "Trigger",
+        "w": 200,
+        "placeholder": "e.g. On demand from the report"
+       }
+      ]
+     },
+     {
+      "id": "customizing",
+      "label": "Configuration (SPRO) notes",
+      "kind": "lines",
+      "advanced": true,
+      "placeholder": "e.g. Payment terms per vendor group: SPRO → Financial Accounting → AP → Payment terms"
+     }
+    ]
+   },
+   {
+    "id": "quality",
+    "step": 5,
+    "fields": [
+     {
+      "id": "performance",
+      "label": "Performance",
+      "kind": "text",
+      "placeholder": "e.g. Online response < 10 s for one company code"
+     },
+     {
+      "id": "volume",
+      "label": "Data volumes",
+      "kind": "text",
+      "placeholder": "e.g. 200,000 open items at month-end"
+     },
+     {
+      "id": "availability",
+      "label": "Availability / processing window",
+      "kind": "text",
+      "placeholder": "e.g. Business hours; background run overnight"
+     },
+     {
+      "id": "audit",
+      "label": "Audit & compliance",
+      "kind": "text",
+      "placeholder": "e.g. Change log kept 10 years (internal audit)"
+     },
+     {
+      "id": "privacy",
+      "label": "Data privacy",
+      "kind": "text",
+      "placeholder": "e.g. No personal data beyond vendor name"
+     },
+     {
+      "id": "uat",
+      "label": "UAT scenarios",
+      "kind": "grid",
+      "addLabel": "+ Scenario",
+      "paste": true,
+      "hint": "Use “Create UAT skeleton from FRs” to start with one positive and one negative case per requirement.",
+      "columns": [
+       {
+        "id": "fr",
+        "label": "FR",
+        "w": 80,
+        "placeholder": "FR-01"
+       },
+       {
+        "id": "scenario",
+        "label": "Scenario",
+        "w": 260,
+        "placeholder": "e.g. Run ageing for company code 1000, key date 31.01."
+       },
+       {
+        "id": "type",
+        "label": "Type",
+        "kind": "select",
+        "w": 110,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "positive",
+          "label": "Positive"
+         },
+         {
+          "value": "negative",
+          "label": "Negative"
+         }
+        ]
+       },
+       {
+        "id": "expected",
+        "label": "Expected result",
+        "w": 240,
+        "placeholder": "e.g. Item due 15.12. listed in 31-60"
+       }
+      ]
+     },
+     {
+      "id": "risks",
+      "label": "Risks, assumptions & open points",
+      "kind": "grid",
+      "addLabel": "+ Item",
+      "paste": true,
+      "columns": [
+       {
+        "id": "type",
+        "label": "Type",
+        "kind": "select",
+        "w": 130,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "risk",
+          "label": "Risk"
+         },
+         {
+          "value": "assumption",
+          "label": "Assumption"
+         },
+         {
+          "value": "open",
+          "label": "Open point"
+         },
+         {
+          "value": "dependency",
+          "label": "Dependency"
+         }
+        ]
+       },
+       {
+        "id": "text",
+        "label": "Description",
+        "w": 280
+       },
+       {
+        "id": "owner",
+        "label": "Owner",
+        "w": 130
+       },
+       {
+        "id": "action",
+        "label": "Mitigation / due",
+        "w": 180
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "control",
+    "step": 5,
+    "fields": [
+     {
+      "id": "docId",
+      "label": "Document ID",
+      "kind": "text",
+      "placeholder": "e.g. FS-FI-0042"
+     },
+     {
+      "id": "version",
+      "label": "Version",
+      "kind": "text",
+      "placeholder": "e.g. 0.1"
+     },
+     {
+      "id": "status",
+      "label": "Status",
+      "kind": "select",
+      "options": [
+       {
+        "value": "draft",
+        "label": "Draft"
+       },
+       {
+        "value": "review",
+        "label": "In review"
+       },
+       {
+        "value": "approved",
+        "label": "Approved"
+       }
+      ]
+     },
+     {
+      "id": "author",
+      "label": "Author",
+      "kind": "text",
+      "placeholder": "e.g. Functional consultant name"
+     },
+     {
+      "id": "history",
+      "label": "Version history",
+      "kind": "grid",
+      "advanced": true,
+      "addLabel": "+ Version",
+      "columns": [
+       {
+        "id": "version",
+        "label": "Version",
+        "w": 80
+       },
+       {
+        "id": "date",
+        "label": "Date",
+        "w": 110,
+        "placeholder": "e.g. 2026-10-24"
+       },
+       {
+        "id": "author",
+        "label": "Author",
+        "w": 150
+       },
+       {
+        "id": "change",
+        "label": "Change",
+        "w": 260,
+        "placeholder": "e.g. First draft"
+       }
+      ]
+     },
+     {
+      "id": "approvals",
+      "label": "Approvals",
+      "kind": "grid",
+      "addLabel": "+ Approver",
+      "columns": [
+       {
+        "id": "role",
+        "label": "Role",
+        "w": 180,
+        "placeholder": "e.g. Business process owner"
+       },
+       {
+        "id": "name",
+        "label": "Name",
+        "w": 160
+       },
+       {
+        "id": "date",
+        "label": "Date",
+        "w": 110
+       },
+       {
+        "id": "decision",
+        "label": "Decision",
+        "kind": "select",
+        "w": 130,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "pending",
+          "label": "Pending"
+         },
+         {
+          "value": "approved",
+          "label": "Approved"
+         },
+         {
+          "value": "rejected",
+          "label": "Rejected"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "mandatory": [
+   {
+    "id": "requirement",
+    "label": "Business requirement",
+    "step": 1,
+    "path": "context.requirement",
+    "minLength": 10
+   },
+   {
+    "id": "module",
+    "label": "Module",
+    "step": 1,
+    "path": "context.module"
+   }
+  ],
+  "recommended": [
+   {
+    "id": "toBe",
+    "label": "TO-BE process steps",
+    "step": 2,
+    "important": true,
+    "anyOf": [
+     "process.toBe"
+    ],
+    "question": "The TO-BE process steps (who does what, in which transaction or app)."
+   },
+   {
+    "id": "frs",
+    "label": "Functional requirements",
+    "step": 3,
+    "important": true,
+    "anyOf": [
+     "reqs.frs"
+    ],
+    "question": "The functional requirements (FR-01 …) the solution must meet."
+   },
+   {
+    "id": "frAcceptance",
+    "label": "Acceptance criteria for every FR",
+    "step": 3,
+    "important": true,
+    "anyOf": [
+     "fr:acceptance"
+    ]
+   },
+   {
+    "id": "frFit",
+    "label": "Fit-gap for every FR",
+    "step": 3,
+    "anyOf": [
+     "fr:fit"
+    ]
+   },
+   {
+    "id": "discovery",
+    "label": "Current SAP system context (discovery)",
+    "step": 4,
+    "important": true,
+    "anyOf": [
+     "discovery"
+    ]
+   },
+   {
+    "id": "ricefw",
+    "label": "RICEFW items for the gaps",
+    "step": 4,
+    "important": true,
+    "when": "fr:hasGap",
+    "anyOf": [
+     "solution.ricefw"
+    ],
+    "question": "Which RICEFW objects close the custom-development gaps."
+   },
+   {
+    "id": "roles",
+    "label": "Roles & authorizations",
+    "step": 4,
+    "anyOf": [
+     "solution.roles"
+    ],
+    "question": "Business roles and the authorizations they need."
+   },
+   {
+    "id": "data",
+    "label": "Data requirements",
+    "step": 3,
+    "anyOf": [
+     "reqs.data"
+    ]
+   },
+   {
+    "id": "nfr",
+    "label": "Non-functional requirements",
+    "step": 5,
+    "anyOf": [
+     "quality.performance",
+     "quality.volume",
+     "quality.availability",
+     "quality.audit",
+     "quality.privacy"
+    ],
+    "question": "Performance, data volume and compliance expectations."
+   },
+   {
+    "id": "uat",
+    "label": "UAT scenarios",
+    "step": 5,
+    "important": true,
+    "anyOf": [
+     "quality.uat"
+    ]
+   },
+   {
+    "id": "approvals",
+    "label": "Approvers",
+    "step": 5,
+    "anyOf": [
+     "control.approvals"
+    ],
+    "question": "Who signs off this specification."
+   }
+  ],
+  "discovery": {
+   "packKind": "dewa-sap-context-pack",
+   "packVersion": 1,
+   "marker": "DEWA-FS-DISCOVERY v1",
+   "agent": "dewa-fs-discovery",
+   "extensionId": "dewa.dewa-sap-agents",
+   "staleDays": 30,
+   "mcpServers": [
+    "SAP ABAP ADT",
+    "SAP Fiori",
+    "SAP UI5",
+    "SAP CAP"
+   ],
+   "objectTypeMap": {
+    "TABL": "Table",
+    "VIEW": "Table",
+    "DTEL": "Data Element",
+    "DOMA": "Domain",
+    "TTYP": "Table Type",
+    "SHLP": "Search Help",
+    "ENQU": "Lock Object",
+    "MSAG": "Message Class",
+    "SUSO": "Authorization Object",
+    "PROG": "Report",
+    "CLAS": "Class",
+    "INTF": "Interface",
+    "FUGR": "Function Module",
+    "FUNC": "Function Module",
+    "ENHS": "BAdI / Enhancement",
+    "ENHO": "BAdI / Enhancement",
+    "BADI": "BAdI / Enhancement",
+    "SXSD": "BAdI / Enhancement",
+    "DDLS": "CDS",
+    "BDEF": "RAP",
+    "SRVD": "OData",
+    "SRVB": "OData",
+    "IWSV": "OData",
+    "WAPA": "Fiori/UI5",
+    "UI5": "Fiori/UI5",
+    "FORM": "Form",
+    "SFPF": "Form",
+    "PDTS": "Workflow",
+    "CAP": "CAPM"
+   }
+  }
+ },
+ "fsTemplates": {
+  "version": 1,
+  "templates": [
+   {
+    "id": "fs-fi-ap",
+    "label": "FI-AP · Procure-to-pay finance",
+    "module": "FI/CO",
+    "description": "Typical AP steps: invoice, payment run, period-end review.",
+    "data": {
+     "context": {
+      "module": "FI/CO",
+      "processArea": "Accounts Payable"
+     },
+     "process": {
+      "toBe": [
+       {
+        "step": "Post vendor invoice",
+        "role": "AP accountant",
+        "tx": "MIRO / FB60"
+       },
+       {
+        "step": "Review open items",
+        "role": "AP accountant",
+        "tx": "FBL1N"
+       },
+       {
+        "step": "Run payment proposal and payment",
+        "role": "Treasury",
+        "tx": "F110"
+       },
+       {
+        "step": "Period-end review",
+        "role": "AP lead",
+        "tx": ""
+       }
+      ]
+     },
+     "reqs": {
+      "frs": [
+       {
+        "title": "Selection criteria"
+       },
+       {
+        "title": "Output / layout"
+       },
+       {
+        "title": "Authorization by company code"
+       }
+      ]
+     },
+     "solution": {
+      "roles": [
+       {
+        "role": "AP accountant",
+        "authObj": "F_BKPF_BUK"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "id": "fs-mm-p2p",
+    "label": "MM · Purchase-to-receipt",
+    "module": "MM",
+    "description": "Requisition, purchase order, goods receipt, invoice verification.",
+    "data": {
+     "context": {
+      "module": "MM",
+      "processArea": "Procurement & inventory"
+     },
+     "process": {
+      "toBe": [
+       {
+        "step": "Create purchase requisition",
+        "role": "Requester",
+        "tx": "ME51N"
+       },
+       {
+        "step": "Create purchase order",
+        "role": "Buyer",
+        "tx": "ME21N"
+       },
+       {
+        "step": "Post goods receipt",
+        "role": "Warehouse",
+        "tx": "MIGO"
+       },
+       {
+        "step": "Verify invoice",
+        "role": "AP accountant",
+        "tx": "MIRO"
+       }
+      ]
+     },
+     "reqs": {
+      "frs": [
+       {
+        "title": "Document creation"
+       },
+       {
+        "title": "Validations and messages"
+       },
+       {
+        "title": "Monitoring / error handling"
+       }
+      ]
+     },
+     "solution": {
+      "roles": [
+       {
+        "role": "Warehouse clerk",
+        "authObj": "M_MSEG_BWA"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "id": "fs-sd-o2c",
+    "label": "SD · Order-to-cash",
+    "module": "SD",
+    "description": "Sales order, delivery, billing, credit control.",
+    "data": {
+     "context": {
+      "module": "SD",
+      "processArea": "Order-to-cash"
+     },
+     "process": {
+      "toBe": [
+       {
+        "step": "Create sales order",
+        "role": "Sales support",
+        "tx": "VA01"
+       },
+       {
+        "step": "Create outbound delivery",
+        "role": "Shipping",
+        "tx": "VL01N"
+       },
+       {
+        "step": "Process billing due list",
+        "role": "Billing",
+        "tx": "VF04"
+       },
+       {
+        "step": "Release billing block",
+        "role": "Billing lead",
+        "tx": "V.23"
+       }
+      ]
+     },
+     "reqs": {
+      "frs": [
+       {
+        "title": "Determination rules"
+       },
+       {
+        "title": "Maintenance of rules"
+       },
+       {
+        "title": "Audit trail"
+       }
+      ]
+     },
+     "solution": {
+      "roles": [
+       {
+        "role": "Billing clerk",
+        "authObj": "V_VBAK_VKO"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "id": "fs-isu-m2c",
+    "label": "IS-U · Meter-to-cash",
+    "module": "IS-U",
+    "description": "Meter reading, plausibility, billing, invoicing.",
+    "data": {
+     "context": {
+      "module": "IS-U",
+      "processArea": "Meter-to-cash"
+     },
+     "process": {
+      "toBe": [
+       {
+        "step": "Create meter reading orders",
+        "role": "Meter reading planner",
+        "tx": "EL01"
+       },
+       {
+        "step": "Upload / enter meter readings",
+        "role": "Meter reader",
+        "tx": "EL28"
+       },
+       {
+        "step": "Check implausible readings",
+        "role": "Billing analyst",
+        "tx": "EL31"
+       },
+       {
+        "step": "Bill and invoice",
+        "role": "Billing analyst",
+        "tx": "EA00 / EA19"
+       }
+      ]
+     },
+     "reqs": {
+      "frs": [
+       {
+        "title": "Reading validation"
+       },
+       {
+        "title": "Exception handling"
+       },
+       {
+        "title": "Reporting"
+       }
+      ]
+     },
+     "solution": {
+      "roles": [
+       {
+        "role": "Billing analyst",
+        "authObj": "E_ABLBELEG"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "id": "fs-crm-service",
+    "label": "CRM · Customer service",
+    "module": "CRM",
+    "description": "Interaction, service request, resolution, follow-up.",
+    "data": {
+     "context": {
+      "module": "CRM",
+      "processArea": "Customer service"
+     },
+     "process": {
+      "toBe": [
+       {
+        "step": "Log customer interaction",
+        "role": "Contact centre agent",
+        "tx": ""
+       },
+       {
+        "step": "Create service request",
+        "role": "Contact centre agent",
+        "tx": ""
+       },
+       {
+        "step": "Resolve and close",
+        "role": "Back office",
+        "tx": ""
+       },
+       {
+        "step": "Customer follow-up",
+        "role": "Supervisor",
+        "tx": ""
+       }
+      ]
+     },
+     "reqs": {
+      "frs": [
+       {
+        "title": "Capture interaction"
+       },
+       {
+        "title": "Search and history"
+       },
+       {
+        "title": "Integration with SAP back end"
+       }
+      ]
+     }
+    }
+   }
+  ],
+  "examples": [
+   {
+    "id": "fs-fi-ap-ageing",
+    "module": "FI",
+    "label": "FI-AP: Vendor open items ageing",
+    "state": {
+     "context": {
+      "title": "Vendor open items ageing for month-end close",
+      "module": "FI/CO",
+      "processArea": "Accounts Payable – period-end closing",
+      "requirement": "AP accountants need a list of open vendor items per company code and key date, grouped per vendor into ageing buckets (0-30, 31-60, 61-90 and more than 90 days past the net due date), for the month-end review of overdue payables.",
+      "objectives": "Reduce the month-end AP review from 2 days to 2 hours\nIdentify overdue vendors before the payment run",
+      "kpis": "Ageing available on working day 1 of the close",
+      "inScope": "Company codes 1000 and 2000\nVendor open items in company code currency",
+      "outOfScope": "Customer ageing (FI-AR)\nForeign-currency revaluation",
+      "stakeholders": [
+       {
+        "role": "Business process owner",
+        "name": "",
+        "department": "Finance – AP",
+        "responsibility": "Approves the FS"
+       },
+       {
+        "role": "Key user",
+        "name": "",
+        "department": "Finance – AP",
+        "responsibility": "UAT"
+       }
+      ],
+      "companyCodes": "1000, 2000"
+     },
+     "process": {
+      "asIs": [
+       {
+        "step": "Download open items to Excel",
+        "role": "AP accountant",
+        "tx": "FBL1N",
+        "pain": "Large downloads, slow"
+       },
+       {
+        "step": "Calculate days overdue and buckets",
+        "role": "AP accountant",
+        "tx": "",
+        "pain": "Manual formulas, error-prone"
+       },
+       {
+        "step": "Send summary to AP lead",
+        "role": "AP accountant",
+        "tx": "",
+        "pain": "No single version"
+       }
+      ],
+      "toBe": [
+       {
+        "step": "Run the ageing report for company code and key date",
+        "role": "AP accountant",
+        "tx": "ZFI_AGEING",
+        "change": "new"
+       },
+       {
+        "step": "Drill down to vendor line items",
+        "role": "AP accountant",
+        "tx": "FBL1N",
+        "change": "unchanged"
+       },
+       {
+        "step": "Export / review overdue vendors",
+        "role": "AP lead",
+        "tx": "ZFI_AGEING",
+        "change": "new"
+       }
+      ]
+     },
+     "reqs": {
+      "frs": [
+       {
+        "title": "Selection by company code, vendor and key date",
+        "priority": "must",
+        "fit": "custom",
+        "description": "Company code and key date are mandatory; vendor is optional (range).",
+        "acceptance": "When company code or key date is empty, the report does not run and shows a message\nWhen vendor is empty, all vendors of the company code are listed"
+       },
+       {
+        "title": "Ageing buckets per vendor",
+        "priority": "must",
+        "fit": "custom",
+        "description": "Days overdue = key date − net due date. Buckets 0-30, 31-60, 61-90, >90 days; one amount column per bucket in company code currency.",
+        "acceptance": "When the key date is 31.01., an item due on 15.12. appears in 31-60\nCredit items reduce the bucket amount"
+       },
+       {
+        "title": "Drill-down to line items",
+        "priority": "should",
+        "fit": "standard",
+        "description": "Double-click on a vendor opens its open items.",
+        "acceptance": "When the user double-clicks a vendor, FBL1N opens for that vendor and company code",
+        "approach": "Call standard FBL1N with the vendor and company code"
+       }
+      ],
+      "rules": [
+       {
+        "rule": "Days overdue = key date − net due date (ZFBDT + payment terms)",
+        "type": "calculation",
+        "outcome": "Bucket assigned per item",
+        "fr": "FR-02"
+       },
+       {
+        "rule": "User needs display authorization for the company code",
+        "type": "authorization",
+        "outcome": "Company code skipped with a message",
+        "fr": "FR-01"
+       }
+      ],
+      "data": [
+       {
+        "field": "Company code",
+        "table": "BSIK",
+        "sapField": "BUKRS",
+        "mandatory": true,
+        "source": "standard"
+       },
+       {
+        "field": "Vendor",
+        "table": "LFA1",
+        "sapField": "LIFNR",
+        "source": "standard"
+       },
+       {
+        "field": "Vendor name",
+        "table": "LFA1",
+        "sapField": "NAME1",
+        "source": "standard"
+       },
+       {
+        "field": "Net due date basis",
+        "table": "BSIK",
+        "sapField": "ZFBDT",
+        "source": "standard"
+       },
+       {
+        "field": "Amount in local currency",
+        "table": "BSIK",
+        "sapField": "DMBTR",
+        "source": "standard"
+       }
+      ]
+     },
+     "solution": {
+      "ricefw": [
+       {
+        "type": "report",
+        "name": "ZFI_AP_AGEING",
+        "frs": "FR-01, FR-02, FR-03",
+        "complexity": "medium",
+        "description": "Executable report with selection by company code, vendor and key date; ALV output per vendor with one amount column per ageing bucket; drill-down to FBL1N.",
+        "existing": "BSIK, LFA1, F_BKPF_BUK"
+       }
+      ],
+      "roles": [
+       {
+        "role": "AP accountant",
+        "tx": "ZFI_AGEING",
+        "authObj": "F_BKPF_BUK",
+        "scope": "ACTVT 03 · BUKRS 1000, 2000"
+       }
+      ]
+     },
+     "quality": {
+      "performance": "Online response under 10 seconds for one company code",
+      "volume": "About 200,000 open items at month-end",
+      "audit": "Read-only report; no postings",
+      "uat": [
+       {
+        "fr": "FR-01",
+        "scenario": "Run without key date",
+        "type": "negative",
+        "expected": "Message, no output"
+       },
+       {
+        "fr": "FR-02",
+        "scenario": "Company code 1000, key date 31.01.",
+        "type": "positive",
+        "expected": "Item due 15.12. in 31-60 bucket"
+       },
+       {
+        "fr": "FR-03",
+        "scenario": "Double-click a vendor",
+        "type": "positive",
+        "expected": "FBL1N opens for the vendor"
+       }
+      ],
+      "risks": [
+       {
+        "type": "assumption",
+        "text": "BSIK compatibility view is used on S/4HANA",
+        "owner": "Developer",
+        "action": "Confirm with discovery"
+       }
+      ]
+     },
+     "control": {
+      "docId": "FS-FI-0042",
+      "version": "0.1",
+      "status": "draft",
+      "author": "",
+      "approvals": [
+       {
+        "role": "Business process owner",
+        "name": "",
+        "decision": "pending"
+       },
+       {
+        "role": "Solution architect",
+        "name": "",
+        "decision": "pending"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "id": "fs-mm-gr-wms",
+    "module": "MM",
+    "label": "MM: Goods receipt from external WMS",
+    "state": {
+     "context": {
+      "title": "Goods receipt posting from the external WMS",
+      "module": "MM",
+      "processArea": "Inbound logistics",
+      "requirement": "Goods receipts confirmed in the external warehouse management system (WMS) must be posted in SAP against the purchase order automatically, without manual MIGO entry, with clear error feedback to the WMS.",
+      "objectives": "Remove manual MIGO postings\nStock in SAP matches the WMS on the same day",
+      "inScope": "Goods receipts for purchase orders (movement type 101)\nPlants 1100 and 1200",
+      "outOfScope": "Returns to vendor\nStock transfers",
+      "plants": "1100, 1200"
+     },
+     "process": {
+      "asIs": [
+       {
+        "step": "Print GR list from WMS",
+        "role": "Warehouse",
+        "tx": "",
+        "pain": "Paper hand-over"
+       },
+       {
+        "step": "Post goods receipt",
+        "role": "Warehouse clerk",
+        "tx": "MIGO",
+        "pain": "Typing errors, 1-day delay"
+       }
+      ],
+      "toBe": [
+       {
+        "step": "Confirm receipt in WMS",
+        "role": "Warehouse",
+        "tx": "",
+        "change": "unchanged"
+       },
+       {
+        "step": "Post goods receipt automatically",
+        "role": "System",
+        "tx": "",
+        "change": "automated"
+       },
+       {
+        "step": "Monitor and correct errors",
+        "role": "MM key user",
+        "tx": "",
+        "change": "new"
+       }
+      ]
+     },
+     "reqs": {
+      "frs": [
+       {
+        "title": "Post GR against purchase order",
+        "priority": "must",
+        "fit": "custom",
+        "description": "The WMS calls SAP with PO, item, quantity and plant/storage location; SAP posts movement type 101.",
+        "acceptance": "When the PO item is open, a material document is returned\nWhen the PO is closed, an error message is returned and nothing is posted"
+       },
+       {
+        "title": "Error feedback to WMS",
+        "priority": "must",
+        "fit": "custom",
+        "description": "All messages returned in a structured form.",
+        "acceptance": "When posting fails, the WMS receives the SAP message text and number"
+       }
+      ],
+      "rules": [
+       {
+        "rule": "Only movement type 101 is allowed",
+        "type": "validation",
+        "outcome": "Other movement types are rejected",
+        "fr": "FR-01"
+       }
+      ],
+      "data": [
+       {
+        "field": "Purchase order",
+        "table": "EKPO",
+        "sapField": "EBELN",
+        "mandatory": true,
+        "source": "external"
+       },
+       {
+        "field": "Quantity",
+        "table": "",
+        "sapField": "",
+        "mandatory": true,
+        "source": "external"
+       }
+      ]
+     },
+     "solution": {
+      "ricefw": [
+       {
+        "type": "interface",
+        "name": "Z_MM_GR_POST",
+        "frs": "FR-01, FR-02",
+        "complexity": "medium",
+        "description": "RFC-enabled function module posting the goods receipt via BAPI_GOODSMVT_CREATE and returning BAPIRET2 messages.",
+        "existing": "BAPI_GOODSMVT_CREATE, EKPO"
+       }
+      ],
+      "interfaces": [
+       {
+        "name": "Goods receipt confirmation",
+        "direction": "inbound",
+        "partner": "WMS",
+        "tech": "RFC/BAPI",
+        "frequency": "Real time",
+        "volume": "2,000/day"
+       }
+      ],
+      "roles": [
+       {
+        "role": "Technical RFC user (WMS)",
+        "authObj": "M_MSEG_BWA",
+        "scope": "BWART 101 · WERKS 1100, 1200"
+       }
+      ]
+     },
+     "quality": {
+      "performance": "Below 2 seconds per call",
+      "volume": "Up to 2,000 receipts per day",
+      "uat": [
+       {
+        "fr": "FR-01",
+        "scenario": "Post GR for open PO item",
+        "type": "positive",
+        "expected": "Material document returned"
+       },
+       {
+        "fr": "FR-01",
+        "scenario": "Post GR for closed PO",
+        "type": "negative",
+        "expected": "Error returned, nothing posted"
+       }
+      ]
+     },
+     "control": {
+      "docId": "FS-MM-0107",
+      "version": "0.1",
+      "status": "draft"
+     }
+    }
+   },
+   {
+    "id": "fs-sd-billing-block",
+    "module": "SD",
+    "label": "SD: Billing block rules maintenance",
+    "state": {
+     "context": {
+      "title": "Billing block rules per sales organisation",
+      "module": "SD",
+      "processArea": "Order-to-cash – billing",
+      "requirement": "The billing team needs to maintain which billing block reasons stop billing per sales organisation and distribution channel, without IT tickets, so that blocked orders are excluded from the billing due list.",
+      "objectives": "Business-maintained rules\nNo blocked orders billed by mistake",
+      "salesOrgs": "1000, 2000"
+     },
+     "process": {
+      "asIs": [
+       {
+        "step": "Request rule change via ticket",
+        "role": "Billing lead",
+        "tx": "",
+        "pain": "1-week lead time"
+       }
+      ],
+      "toBe": [
+       {
+        "step": "Maintain block rules",
+        "role": "Billing lead",
+        "tx": "Fiori app (new)",
+        "change": "new"
+       },
+       {
+        "step": "Process billing due list",
+        "role": "Billing clerk",
+        "tx": "VF04",
+        "change": "changed"
+       }
+      ]
+     },
+     "reqs": {
+      "frs": [
+       {
+        "title": "Maintain billing block rules",
+        "priority": "must",
+        "fit": "custom",
+        "description": "Create, change and delete rules (sales org, distribution channel, billing block reason, active flag).",
+        "acceptance": "When a rule is saved, it is used by the next billing run\nWhen a duplicate rule is entered, a message is shown"
+       },
+       {
+        "title": "Exclude blocked orders from billing",
+        "priority": "must",
+        "fit": "custom",
+        "description": "Orders with an active blocking reason are excluded from VF04.",
+        "acceptance": "When an order has an active block reason, it is not in the billing due list"
+       }
+      ],
+      "rules": [
+       {
+        "rule": "Combination sales org + channel + reason is unique",
+        "type": "validation",
+        "outcome": "Duplicate rejected",
+        "fr": "FR-01"
+       }
+      ],
+      "data": [
+       {
+        "field": "Sales organisation",
+        "table": "TVKO",
+        "sapField": "VKORG",
+        "mandatory": true,
+        "source": "standard"
+       },
+       {
+        "field": "Billing block reason",
+        "table": "TVFS",
+        "sapField": "FAKSP",
+        "mandatory": true,
+        "source": "standard"
+       }
+      ]
+     },
+     "solution": {
+      "ricefw": [
+       {
+        "type": "rap",
+        "name": "ZI_SD_BILLBLOCK",
+        "frs": "FR-01",
+        "complexity": "medium",
+        "description": "Managed RAP BO with draft for the rules table; Fiori elements list report.",
+        "existing": "TVKO, TVFS"
+       },
+       {
+        "type": "enhancement",
+        "name": "ZSD_BILLING_BLOCK_CHECK",
+        "frs": "FR-02",
+        "complexity": "low",
+        "description": "Exclude orders with an active block reason from the billing due list.",
+        "existing": ""
+       }
+      ],
+      "roles": [
+       {
+        "role": "Billing lead",
+        "tx": "Fiori app (new)",
+        "authObj": "V_VBAK_VKO",
+        "scope": "ACTVT 01, 02, 06 · VKORG"
+       }
+      ]
+     },
+     "quality": {
+      "audit": "Changes logged with user and timestamp",
+      "uat": [
+       {
+        "fr": "FR-02",
+        "scenario": "Order with active block reason",
+        "type": "positive",
+        "expected": "Not in VF04"
+       }
+      ]
+     },
+     "control": {
+      "docId": "FS-SD-0015",
+      "version": "0.1",
+      "status": "draft"
+     }
+    }
+   },
+   {
+    "id": "fs-isu-meter",
+    "module": "IS-U",
+    "label": "IS-U: Implausible meter readings worklist",
+    "state": {
+     "context": {
+      "title": "Worklist of implausible meter readings",
+      "module": "IS-U",
+      "processArea": "Meter-to-cash – meter reading",
+      "requirement": "Billing analysts need a daily worklist of implausible meter reading results per portion, with the previous reading and expected consumption, so they can correct readings before the billing run.",
+      "objectives": "Fewer estimated bills\nCorrections done before billing"
+     },
+     "process": {
+      "toBe": [
+       {
+        "step": "Upload meter readings",
+        "role": "Meter reader",
+        "tx": "EL28",
+        "change": "unchanged"
+       },
+       {
+        "step": "Review implausible readings worklist",
+        "role": "Billing analyst",
+        "tx": "Fiori app (new)",
+        "change": "new"
+       },
+       {
+        "step": "Correct or release reading",
+        "role": "Billing analyst",
+        "tx": "EL29",
+        "change": "unchanged"
+       }
+      ]
+     },
+     "reqs": {
+      "frs": [
+       {
+        "title": "Implausible readings per portion",
+        "priority": "must",
+        "fit": "custom",
+        "description": "List results with status implausible, previous reading and expected consumption.",
+        "acceptance": "When a reading is implausible, it appears in the worklist for its portion"
+       }
+      ],
+      "data": [
+       {
+        "field": "Meter reading result",
+        "table": "EABL",
+        "sapField": "ABLBELNR",
+        "source": "standard"
+       },
+       {
+        "field": "Installation",
+        "table": "EANL",
+        "sapField": "ANLAGE",
+        "source": "standard"
+       }
+      ]
+     },
+     "solution": {
+      "ricefw": [
+       {
+        "type": "cds",
+        "name": "ZI_ISU_MR_IMPLAUSIBLE",
+        "frs": "FR-01",
+        "complexity": "medium",
+        "description": "CDS view entity over meter reading results with previous reading and expected consumption; consumed by a Fiori list report.",
+        "existing": "EABL, EABLG, EANL"
+       }
+      ]
+     },
+     "quality": {
+      "volume": "About 50,000 readings per day",
+      "uat": [
+       {
+        "fr": "FR-01",
+        "scenario": "Portion with two implausible readings",
+        "type": "positive",
+        "expected": "Both listed"
+       }
+      ]
+     },
+     "control": {
+      "docId": "FS-ISU-0031",
+      "version": "0.1",
+      "status": "draft"
+     }
+    }
+   },
+   {
+    "id": "fs-crm-log",
+    "module": "CRM",
+    "label": "CRM: Customer interaction log",
+    "state": {
+     "context": {
+      "title": "Customer interaction log",
+      "module": "CRM",
+      "processArea": "Customer service",
+      "requirement": "Contact centre agents need to log every customer interaction (channel, topic, outcome) against the business partner and see the interaction history, so supervisors can report first-contact resolution.",
+      "objectives": "Complete interaction history per customer\nMeasure first-contact resolution"
+     },
+     "process": {
+      "toBe": [
+       {
+        "step": "Identify the customer",
+        "role": "Agent",
+        "tx": "",
+        "change": "unchanged"
+       },
+       {
+        "step": "Log interaction",
+        "role": "Agent",
+        "tx": "Interaction log app",
+        "change": "new"
+       },
+       {
+        "step": "Report first-contact resolution",
+        "role": "Supervisor",
+        "tx": "",
+        "change": "new"
+       }
+      ]
+     },
+     "reqs": {
+      "frs": [
+       {
+        "title": "Log interaction",
+        "priority": "must",
+        "fit": "custom",
+        "description": "Channel, topic, outcome and notes per business partner.",
+        "acceptance": "When an interaction is saved, it appears in the customer's history"
+       },
+       {
+        "title": "Interaction history",
+        "priority": "should",
+        "fit": "custom",
+        "acceptance": "When the agent opens a customer, the last 20 interactions are shown"
+       }
+      ]
+     },
+     "solution": {
+      "ricefw": [
+       {
+        "type": "cap",
+        "name": "dewa-interaction-log",
+        "frs": "FR-01, FR-02",
+        "complexity": "medium",
+        "description": "CAP service on BTP with an Interactions entity linked to the business partner number."
+       }
+      ],
+      "interfaces": [
+       {
+        "name": "Business partner lookup",
+        "direction": "outbound",
+        "partner": "S/4HANA",
+        "tech": "OData",
+        "frequency": "On demand"
+       }
+      ]
+     },
+     "quality": {
+      "privacy": "Notes may contain personal data – retention 2 years",
+      "uat": [
+       {
+        "fr": "FR-01",
+        "scenario": "Save an interaction",
+        "type": "positive",
+        "expected": "Visible in history"
+       }
+      ]
+     },
+     "control": {
+      "docId": "FS-CRM-0008",
+      "version": "0.1",
+      "status": "draft"
+     }
+    }
+   }
+  ],
+  "samplePack": {
+   "kind": "dewa-sap-context-pack",
+   "version": 1,
+   "sample": true,
+   "generatedAt": "2026-10-20T09:30:00Z",
+   "system": {
+    "sid": "DEMO",
+    "client": "100",
+    "release": "S/4HANA 2023 FPS02 (sample)",
+    "components": [
+     {
+      "name": "S4CORE",
+      "release": "108"
+     },
+     {
+      "name": "SAP_BASIS",
+      "release": "758"
+     }
+    ]
+   },
+   "objects": [
+    {
+     "type": "VIEW",
+     "name": "BSIK",
+     "description": "Vendor open items (compatibility view)",
+     "package": "FBAS",
+     "origin": "standard",
+     "released": false
+    },
+    {
+     "type": "TABL",
+     "name": "LFA1",
+     "description": "Supplier master (general section)",
+     "package": "BF00",
+     "origin": "standard",
+     "released": false
+    },
+    {
+     "type": "DDLS",
+     "name": "I_OPERATIONALACCTGDOCITEM",
+     "description": "Operational accounting document item",
+     "package": "ODATA_GLO_FIN_ACCOUNTING",
+     "origin": "standard",
+     "released": true
+    },
+    {
+     "type": "DDLS",
+     "name": "I_SUPPLIER",
+     "description": "Supplier",
+     "package": "VDM_MD_BP",
+     "origin": "standard",
+     "released": true
+    },
+    {
+     "type": "SUSO",
+     "name": "F_BKPF_BUK",
+     "description": "Accounting document: authorization for company codes",
+     "package": "FBAS",
+     "origin": "standard",
+     "released": false
+    },
+    {
+     "type": "PROG",
+     "name": "ZFI_AP_OPEN_ITEMS_OLD",
+     "description": "Legacy AP open items list (custom)",
+     "package": "ZFI_AP",
+     "origin": "custom",
+     "released": false
+    }
+   ],
+   "transactions": [
+    {
+     "code": "FBL1N",
+     "description": "Supplier line items"
+    },
+    {
+     "code": "MIRO",
+     "description": "Enter incoming invoice"
+    },
+    {
+     "code": "FB60",
+     "description": "Enter incoming invoices"
+    },
+    {
+     "code": "F110",
+     "description": "Automatic payment transactions"
+    }
+   ],
+   "fioriApps": [
+    {
+     "appId": "F0712",
+     "title": "Manage Supplier Line Items",
+     "semanticObject": "Supplier",
+     "action": "manageLineItems",
+     "odataService": "FAP_MANAGE_SUPPLIER_LINE_ITEMS_SRV"
+    },
+    {
+     "appId": "F1747",
+     "title": "Aging Analysis",
+     "semanticObject": "AccountsPayable",
+     "action": "analyzeAging",
+     "odataService": ""
+    }
+   ],
+   "ui5Apps": [],
+   "capServices": [],
+   "enhancements": [
+    {
+     "type": "BAdI",
+     "name": "FI_ITEMS_CH_DATA",
+     "description": "Change line item data in FBL1N/FBL3N/FBL5N",
+     "implemented": false
+    }
+   ],
+   "customizingHints": [
+    {
+     "path": "SPRO › Financial Accounting › AR and AP › Business Transactions › Incoming Invoices › Payment terms",
+     "note": "Net due date depends on the payment terms"
+    }
+   ],
+   "notFound": [
+    {
+     "name": "ZFI_AGEING",
+     "reason": "No transaction with this name (expected – it is new)"
+    },
+    {
+     "name": "ZFI_AP_AGEING",
+     "reason": "No object with this name"
+    }
+   ]
+  }
  }
 };

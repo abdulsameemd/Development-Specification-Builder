@@ -331,5 +331,9 @@
     return html.join('\n');
   }
 
-  APB.markdown = { build: build, filename: filename, chatPrompt: chatPrompt, toHtml: toHtml, profiles: profiles };
+  APB.markdown = {
+    build: build, filename: filename, chatPrompt: chatPrompt, toHtml: toHtml, profiles: profiles,
+    // shared with the functional-spec generator (fs-generator.js)
+    helpers: { table: table, gridMd: gridMd, renderFields: renderFields, clean: clean, cell: cell, splitLines: splitLines, slug: slug }
+  };
 })(window.APB = window.APB || {});

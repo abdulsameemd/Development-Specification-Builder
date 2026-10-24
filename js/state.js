@@ -28,7 +28,9 @@
     return APB.config.definitions.definitionOfDone.map(function (text) { return { id: uid(), text: text, on: true }; });
   }
 
-  function blank() {
+  /* kind 'fs' = functional specification (js/fs-state.js); anything else is the technical development spec. */
+  function blank(kind) {
+    if (kind === 'fs') return APB.fs.model.blank();
     const now = Date.now();
     return {
       schema: SCHEMA_VERSION,
@@ -48,6 +50,7 @@
 
   /* Coerce anything (imported JSON, old drafts) into a valid state. Unknown keys are dropped. */
   function migrate(input) {
+    if (input && input.kind === 'fs') return APB.fs.model.migrate(input);
     const base = blank();
     if (!input || typeof input !== 'object') return base;
     const s = base;
@@ -108,6 +111,7 @@
       current.meta.updated = Date.now();
       emit({ structural: true });
     },
+    isFs: function (s) { return (s || current).kind === 'fs'; },
     replace: function (next) {
       current = migrate(next);
       emit({ replaced: true, structural: true });

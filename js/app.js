@@ -1,8 +1,16 @@
-/* UI: 5-step wizard, per-object builders, live preview, drafts. Plain DOM; state lives in state.js. */
+/* UI: 5-step wizard, per-object builders, live preview, drafts. Plain DOM; state lives in state.js.
+   Two modes share this shell: Technical (development spec, below) and Functional (js/fs-app.js), chosen by state.kind. */
 (function (APB) {
   'use strict';
 
   const S = APB.state, D = APB.defs, C = APB.completeness, M = APB.markdown, ST = APB.storage, X = APB.exporter, T = APB.templates, V = APB.validation;
+  const FA = APB.fsApp, FC = APB.fsCompleteness, FM = APB.fsMarkdown;
+
+  function isFs() { return S.isFs(); }
+  function steps() { return isFs() ? APB.fs.steps : STEPS; }
+  function buildMd(s) { return s.kind === 'fs' ? FM.build(s) : M.build(s); }
+  function evaluate(s) { return s.kind === 'fs' ? FC.evaluate(s) : C.evaluate(s); }
+  function mandatoryMissing(s) { return s.kind === 'fs' ? FC.checkMandatory(s) : V.checkMandatory(s); }
 
   const STEPS = [
     { n: 1, title: 'What are you building?', label: 'Build' },
@@ -122,7 +130,7 @@
       r = r || {};
       const rp = path + '.' + i;
       const titleId = idOf(rp) + '-title';
-      return '<section class="rec" aria-labelledby="' + titleId + '"><div class="rec-head"><h5 id="' + titleId + '"><span class="rec-kind">' + esc(field.itemLabel) + ' ' + (i + 1) + '</span> <span data-title-of="' + esc(rp + '.' + field.titleField) + '">' + esc(r[field.titleField] || '') + '</span></h5>' +
+      return '<section class="rec" aria-labelledby="' + titleId + '"><div class="rec-head"><h5 id="' + titleId + '"><span class="rec-kind">' + esc(field.labelFor ? field.labelFor(recs, i) : field.itemLabel + ' ' + (i + 1)) + '</span> <span data-title-of="' + esc(rp + '.' + field.titleField) + '">' + esc(r[field.titleField] || '') + '</span></h5>' +
         '<div class="row-actions"><button type="button" class="g-btn" data-action="rec-dup" data-path="' + esc(path) + '" data-i="' + i + '" aria-label="Duplicate ' + esc(field.itemLabel) + ' ' + (i + 1) + '" title="Duplicate">⧉</button>' +
         '<button type="button" class="g-btn" data-action="rec-del" data-path="' + esc(path) + '" data-i="' + i + '" aria-label="Delete ' + esc(field.itemLabel) + ' ' + (i + 1) + '" title="Delete">✕</button></div></div>' +
         fieldsBlock(field.fields, r, rp) + '</section>';
@@ -368,6 +376,7 @@
       return '<div class="status is-almost">' + ring(ev) + '<div><strong>A few details could improve the result</strong>' +
         '<p>Consider adding:</p><ul>' + ev.important.map(function (r) { return '<li>' + esc(r.label) + '</li>'; }).join('') + '</ul></div></div>';
     }
+    if (isFs()) return '<div class="status is-ready">' + ring(ev) + '<div><strong>Ready for sign-off</strong>' + (detailed ? '<p>The specification covers the essentials for review and approval.</p>' : '') + '</div></div>';
     return '<div class="status is-ready">' + ring(ev) + '<div><strong>Ready for Copilot</strong>' + (detailed ? '<p>Your requirement contains the essential information.</p>' : '') + '</div></div>';
   }
 
@@ -410,8 +419,8 @@
   /* ---------------------------------------------------------------- render core */
   function renderStepper() {
     const el = $('#stepper');
-    el.style.setProperty('--p', ui.generated ? 1 : (ui.step - 1) / (STEPS.length - 1));
-    el.innerHTML = STEPS.map(function (st) {
+    el.style.setProperty('--p', ui.generated ? 1 : (ui.step - 1) / (steps().length - 1));
+    el.innerHTML = steps().map(function (st) {
       const cur = !ui.generated && st.n === ui.step;
       const cls = cur ? 'is-current' : (ui.generated || st.n < ui.step) ? 'is-done' : '';
       return '<li><button type="button" data-action="goto" data-step="' + st.n + '"' + (cur ? ' aria-current="step"' : '') + ' class="' + cls + '"><span class="step-n">' + st.n + '</span><span class="step-l">' + st.label + '</span></button></li>';
@@ -424,14 +433,16 @@
     const info = ui.view === 'agents';
     keepFocus(function () {
       if (info) { $('#main').innerHTML = APB.agentsGuide.html(); return; }
-      const html = ui.generated ? generatedView(s) : [step1, step2, step3, step4, step5][ui.step - 1](s);
+      const html = isFs() ? (ui.generated ? FA.generatedView(s, ui) : FA.renderStep(ui.step, s, ui))
+        : ui.generated ? generatedView(s) : [step1, step2, step3, step4, step5][ui.step - 1](s);
       $('#main').innerHTML = '<p class="step-count">' + (ui.generated ? 'Done' : 'Step ' + ui.step + ' of 5') + '</p>' + html;
     });
+    applyChrome();
     renderStepper();
     renderMap();
     document.body.classList.toggle('is-info', info);
     document.body.classList.toggle('is-generated', ui.generated && !info);
-    document.body.classList.toggle('is-wide', !info && !ui.generated && (ui.step === 3 || ui.step === 4));
+    document.body.classList.toggle('is-wide', !info && !ui.generated && (isFs() ? ui.step >= 2 : ui.step === 3 || ui.step === 4));
     $('#hero').hidden = info || ui.generated || ui.step !== 1;
     renderPreview();
   }
@@ -443,10 +454,10 @@
     requestAnimationFrame(function () {
       pvQueued = false;
       const s = S.get();
-      const md = M.build(s);
-      $('#pv-status').innerHTML = statusHtml(C.evaluate(s), false);
-      const blank = !s.requirement.text.trim() && !s.types.length && !s.objects.length;
-      $('#pv-body').innerHTML = blank ? '<p class="muted">Your specification builds here as you fill in the form.</p>' : ui.raw ? '<pre>' + esc(md) + '</pre>' : M.toHtml(md);
+      const md = buildMd(s);
+      $('#pv-status').innerHTML = statusHtml(evaluate(s), false);
+      const blank = ST.isEmpty(s);
+      $('#pv-body').innerHTML = blank ? '<p class="muted">Your ' + (isFs() ? 'functional ' : '') + 'specification builds here as you fill in the form.</p>' : ui.raw ? '<pre>' + esc(md) + '</pre>' : M.toHtml(md);
       $$('[data-action="view-rendered"]').forEach(function (b) { b.setAttribute('aria-pressed', String(!ui.raw)); });
       $$('[data-action="view-raw"]').forEach(function (b) { b.setAttribute('aria-pressed', String(ui.raw)); });
       if (ui.generated) {
@@ -548,6 +559,7 @@
   /* Find a grid/records field definition from its state path (objects.N.detail.a.M.b / quality.x). */
   function fieldAt(path) {
     const s = S.get();
+    if (isFs()) return APB.fs.fieldAtPath(path);
     const parts = path.split('.');
     let fields, i;
     if (parts[0] === 'objects') { fields = D.objectDef(s.objects[Number(parts[1])].type).fields; i = 3; }
@@ -572,7 +584,8 @@
   function openDrafts() {
     const list = ST.list();
     $('#drafts-list').innerHTML = list.length ? '<ul class="draft-list">' + list.map(function (d) {
-      return '<li><div><strong>' + esc(d.name) + '</strong><span class="muted small">' + esc((d.types || []).join(' + ') || 'no object selected') + ' · ' + new Date(d.updated).toLocaleString() + (d.id === S.get().id ? ' · current' : '') + '</span></div>' +
+      const fs = d.kind === 'fs';
+      return '<li><div><strong><span class="module' + (fs ? ' kind-fs' : '') + '">' + (fs ? 'FS' : 'DEV') + '</span> ' + esc(d.name) + '</strong><span class="muted small">' + esc(fs ? (d.module || 'no module') : (d.types || []).join(' + ') || 'no object selected') + ' · ' + new Date(d.updated).toLocaleString() + (d.id === S.get().id ? ' · current' : '') + '</span></div>' +
         '<div class="row-actions"><button type="button" class="btn btn-ghost btn-sm" data-action="resume" data-id="' + esc(d.id) + '">Resume</button>' +
         '<button type="button" class="btn btn-ghost btn-sm" data-action="delete-draft" data-id="' + esc(d.id) + '">Delete</button></div></li>';
     }).join('') + '</ul>' : '<p class="empty">No saved drafts yet. Your work is saved automatically as you type.</p>';
@@ -580,6 +593,15 @@
   }
 
   function openExamples() {
+    if (isFs()) {
+      $('#examples-list').innerHTML = '<ul class="draft-list">' + APB.fs.templates.examples().map(function (e) {
+        const st = e.state;
+        return '<li><div><strong><span class="module">' + esc(e.module) + '</span> ' + esc(e.label) + '</strong><span class="muted small">Functional specification · ' + (st.reqs.frs || []).length + ' FRs · ' + ((st.solution || {}).ricefw || []).length + ' RICEFW</span></div>' +
+          '<div class="row-actions"><button type="button" class="btn btn-ghost btn-sm" data-action="load-example" data-id="' + esc(e.id) + '">Load</button></div></li>';
+      }).join('') + '</ul>';
+      openDialog('#examples-dialog');
+      return;
+    }
     $('#examples-list').innerHTML = '<ul class="draft-list">' + T.examples().map(function (e) {
       const st = e.state;
       return '<li><div><strong><span class="module">' + esc(e.module) + '</span> ' + esc(e.label) + '</strong><span class="muted small">' + esc(st.types.map(function (t) { return D.types[t].label; }).join(' + ')) + ' · ' + st.objects.length + ' objects</span></div>' +
@@ -590,7 +612,7 @@
 
   /* ----------------------------------------------------------------- actions */
   function copyMarkdown() {
-    Promise.resolve(X.copy(M.build(S.get()))).then(function (ok) { toast(ok ? 'Markdown copied to clipboard' : 'Copy failed – select the text in Markdown view instead'); });
+    Promise.resolve(X.copy(buildMd(S.get()))).then(function (ok) { toast(ok ? 'Markdown copied to clipboard' : 'Copy failed – select the text in Markdown view instead'); });
   }
 
   const actions = {
@@ -612,7 +634,7 @@
     },
     goto: function (el) { setStep(Number(el.dataset.step)); },
     next: function () {
-      if (ui.step === 1 && V.checkMandatory(S.get()).length) {
+      if (ui.step === 1 && mandatoryMissing(S.get()).length) {
         ui.showErrors = true;
         renderMain();
         const bad = $('[aria-invalid="true"], .field-error');
@@ -634,8 +656,14 @@
       toast('Template applied — name the objects in step 3');
     },
     examples: openExamples,
-    'load-example': function (el) { closeDialogs(); loadState(T.example(el.dataset.id), 'Example loaded'); },
-    new: function () { loadState(S.blank(), 'Started a new requirement'); },
+    'load-example': function (el) { closeDialogs(); loadState(isFs() ? APB.fs.templates.example(el.dataset.id) : T.example(el.dataset.id), 'Example loaded'); },
+    new: function () { loadState(S.blank(isFs() ? 'fs' : 'dev'), isFs() ? 'Started a new functional specification' : 'Started a new requirement'); },
+    mode: function (el) {
+      const want = el.dataset.mode === 'fs' ? 'fs' : 'dev';
+      if ((isFs() ? 'fs' : 'dev') === want) { if (ui.view) { ui.view = null; renderMain(); } return; }
+      const d = ST.latest(want);
+      loadState(d ? d.state : S.blank(want), want === 'fs' ? 'Functional specification' : 'Technical development specification');
+    },
     drafts: openDrafts,
     resume: function (el) {
       const d = ST.load(el.dataset.id);
@@ -645,7 +673,7 @@
     'delete-draft': function (el) {
       const id = el.dataset.id;
       ST.remove(id);
-      if (id === S.get().id) { S.replace(S.blank()); ui.step = 1; ui.generated = false; renderMain(); }
+      if (id === S.get().id) { S.replace(S.blank(isFs() ? 'fs' : 'dev')); ui.step = 1; ui.generated = false; renderMain(); }
       openDrafts();
       toast('Draft deleted');
     },
@@ -722,12 +750,12 @@
     'add-dod': function () { updateSteps(function (s) { s.dod.push({ id: S.uid(), text: '', on: true }); }); focusLast('[data-bind^="dod."]'); },
     'remove-dod': function (el) { updateSteps(function (s) { s.dod.splice(Number(el.dataset.i), 1); }); },
     missing: function () {
-      const ev = C.evaluate(S.get());
+      const ev = evaluate(S.get());
       const first = ev.important[0] || ev.optional[0];
       if (first) setStep(first.step);
     },
     generate: function () {
-      if (V.checkMandatory(S.get()).length) return;
+      if (mandatoryMissing(S.get()).length) return;
       ui.generated = true;
       renderMain();
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -737,7 +765,7 @@
     'skip-stream': function () { stopStream(true); },
     start: function () {
       if (ui.step !== 1 || ui.generated) setStep(1);
-      const r = $('#req');
+      const r = $('#req') || $('#fs-req');
       if (r) { r.scrollIntoView({ behavior: 'smooth', block: 'center' }); r.focus({ preventScroll: true }); }
     },
     theme: function () {
@@ -762,13 +790,15 @@
     },
     download: function () {
       const s = S.get();
-      if (V.checkMandatory(s).length) { toast('Add a requirement and a development object first'); return; }
-      X.download(M.filename(s), M.build(s), 'text/markdown');
-      toast('Downloaded ' + M.filename(s));
+      if (mandatoryMissing(s).length) { toast(isFs() ? 'Add the business requirement and the module first' : 'Add a requirement and a development object first'); return; }
+      const name = isFs() ? FM.filename(s) : M.filename(s);
+      X.download(name, buildMd(s), 'text/markdown');
+      toast('Downloaded ' + name);
     },
     copy: copyMarkdown,
     vscode: function () {
       const s = S.get();
+      if (isFs()) { FA.actions['fs-discover'](); return; }
       if (V.checkMandatory(s).length) { toast('Add a requirement and a development object first'); return; }
       const copied = X.copyNow(M.chatPrompt(s));
       X.launchVscode();
@@ -794,7 +824,7 @@
   function streamDoc() {
     const doc = $('.gen-doc');
     if (!doc || reduceMotion || ui.raw) { confetti(); return; }
-    const lines = M.build(S.get()).split('\n');
+    const lines = buildMd(S.get()).split('\n');
     const bar = document.createElement('div');
     bar.className = 'streambar';
     bar.innerHTML = '<span class="dots" aria-hidden="true"><span></span><span></span><span></span></span><span>Generating specification…</span><button type="button" class="btn btn-ghost btn-sm" data-action="skip-stream">Skip</button>';
@@ -813,7 +843,7 @@
     if (!stream) return;
     clearInterval(stream.timer);
     stream.doc.classList.remove('streaming');
-    stream.doc.innerHTML = M.toHtml(M.build(S.get()));
+    stream.doc.innerHTML = M.toHtml(buildMd(S.get()));
     stream.bar.remove();
     stream = null;
     if (!skipped) confetti();
@@ -835,17 +865,21 @@
 
   /* Hero typewriter. */
   function startRotator() {
-    const el = $('#rotator-text');
+    let el = $('#rotator-text');
     if (!el || reduceMotion) return;
-    const words = ['ABAP reports', 'RAP business objects', 'CDS view entities', 'RFC function modules', 'CAP services', 'DDIC tables', 'BAdI implementations', 'Fiori apps'];
-    let w = 0, i = words[0].length, del = true;
+    const devWords = ['ABAP reports', 'RAP business objects', 'CDS view entities', 'RFC function modules', 'CAP services', 'DDIC tables', 'BAdI implementations', 'Fiori apps'];
+    let w = 0, i = devWords[0].length, del = true;
     (function tick() {
-      const word = words[w];
+      const target = $('#rotator-text');
+      if (target !== el) { el = target; w = 0; i = 0; del = false; } // hero re-rendered for the other mode
+      const words = isFs() ? FA.rotator : devWords;
+      const word = words[w % words.length];
+      if (!el) { setTimeout(tick, 400); return; }
       i += del ? -1 : 1;
       el.textContent = word.slice(0, i);
       let wait = del ? 35 : 70;
       if (!del && i === word.length) { del = true; wait = 1600; }
-      else if (del && i === 0) { del = false; w = (w + 1) % words.length; wait = 250; }
+      else if (del && i <= 0) { del = false; w = (w + 1) % words.length; wait = 250; }
       setTimeout(tick, wait);
     })();
   }
@@ -854,7 +888,17 @@
   let palItems = [], palIndex = 0;
 
   function commands() {
-    const list = [
+    const modeCmd = { g: 'Mode', i: '⇄', t: isFs() ? 'Switch to Technical (development spec)' : 'Switch to Functional (functional spec)', run: function () { actions.mode({ dataset: { mode: isFs() ? 'dev' : 'fs' } }); } };
+    if (isFs()) {
+      return FA.commands({ setStep: setStep, actions: actions, loadState: loadState }).concat([
+        modeCmd,
+        { g: 'Share', i: '🔗', t: 'Copy share link', run: actions.share },
+        { g: 'Drafts', i: '☰', t: 'Saved drafts', run: openDrafts },
+        { g: 'Info', i: 'ℹ', t: 'Agent workflows (dewa-fs-discovery, dewa-abap, dewa-codereview)', run: actions.agents },
+        { g: 'View', i: '◐', t: 'Toggle light / dark theme', run: actions.theme }
+      ]);
+    }
+    const list = [modeCmd,
       { g: 'Navigate', i: '1', t: 'Step 1 · What are you building?', run: function () { setStep(1); } },
       { g: 'Navigate', i: '2', t: 'Step 2 · Requirement details', run: function () { setStep(2); } },
       { g: 'Navigate', i: '3', t: 'Step 3 · SAP objects', run: function () { setStep(3); } },
@@ -867,7 +911,7 @@
       { g: 'Create', i: '›', t: 'Open in VS Code (copy prompt for Copilot Chat)', run: actions.vscode },
       { g: 'Share', i: '🔗', t: 'Copy share link', run: actions.share },
       { g: 'Drafts', i: '☰', t: 'Saved drafts', run: openDrafts },
-      { g: 'Info', i: 'ℹ', t: 'Agent workflows (dewa-abap, dewa-codereview)', run: actions.agents },
+      { g: 'Info', i: 'ℹ', t: 'Agent workflows (dewa-abap, dewa-codereview, dewa-fs-discovery)', run: actions.agents },
       { g: 'View', i: '◐', t: 'Toggle light / dark theme', run: actions.theme }
     ];
     T.examples().forEach(function (e) { list.push({ g: 'Example', i: e.module, t: e.label, run: function () { loadState(T.example(e.id), 'Example loaded'); } }); });
@@ -996,13 +1040,42 @@
   $$('dialog').forEach(function (d) { d.addEventListener('click', function (e) { if (e.target === d) closeDialogs(); }); });
 
   /* ---------------------------------------------------------------- bootstrap */
+  /* Static lists from the config plus, in FS mode, the names found by system discovery (ds-tx, ds-obj). */
   function renderDatalists() {
-    $('#datalists').innerHTML = Object.keys(D.datalists).map(function (id) {
-      return '<datalist id="' + id + '">' + D.datalists[id].map(function (v) { return '<option value="' + esc(v) + '">'; }).join('') + '</datalist>';
+    const lists = Object.assign({}, D.datalists, APB.discovery.datalists(isFs() ? S.get().discovery : null));
+    $('#datalists').innerHTML = Object.keys(lists).map(function (id) {
+      return '<datalist id="' + id + '">' + lists[id].map(function (v) { return '<option value="' + esc(v) + '">'; }).join('') + '</datalist>';
     }).join('');
   }
 
+  /* Header toggle, hero, preview title and actions follow the mode. */
+  let chromeMode = null, devHero = '', devPvActions = '';
+  function applyChrome() {
+    const mode = isFs() ? 'fs' : 'dev';
+    $$('[data-action="mode"]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.mode === mode)); });
+    if (mode === chromeMode) return;
+    chromeMode = mode;
+    document.body.dataset.mode = mode;
+    $('#hero').innerHTML = mode === 'fs' ? FA.hero : devHero;
+    $('.pv-actions').innerHTML = mode === 'fs' ? FA.previewActions : devPvActions;
+    $('#pv-file').textContent = mode === 'fs' ? FA.fileLabel : 'Business requirement';
+    document.title = mode === 'fs' ? 'SAP Functional Specification Builder' : 'SAP Development Specification Builder';
+    if (mode === 'dev') $('#designer-count').textContent = D.objectTypes.filter(function (t) { return D.objectDef(t).fields.length; }).length;
+    renderDatalists();
+  }
+
+  Object.assign(actions, FA.actions);
+
+  /* Shared with js/fs-app.js. */
+  APB.ui = {
+    ui: ui, esc: esc, toast: toast, nav: nav, stat: stat, statusHtml: statusHtml, detailsAttrs: detailsAttrs,
+    fieldsBlock: fieldsBlock, fieldHtml: fieldHtml, renderMain: renderMain, updateSteps: updateSteps, loadState: loadState,
+    renderDatalists: renderDatalists
+  };
+
   async function init() {
+    devHero = $('#hero').innerHTML;
+    devPvActions = $('.pv-actions').innerHTML;
     renderDatalists();
     $('#designer-count').textContent = D.objectTypes.filter(function (t) { return D.objectDef(t).fields.length; }).length;
     document.documentElement.dataset.theme = ST.getTheme();

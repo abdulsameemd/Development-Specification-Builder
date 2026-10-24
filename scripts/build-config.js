@@ -9,7 +9,9 @@ const root = path.join(__dirname, '..');
 const files = {
   definitions: 'config/object-definitions.json',
   validation: 'config/validation-rules.json',
-  templates: 'config/templates.json'
+  templates: 'config/templates.json',
+  fsDefinitions: 'config/fs-definitions.json',
+  fsTemplates: 'config/fs-templates.json'
 };
 
 const bundle = {};
