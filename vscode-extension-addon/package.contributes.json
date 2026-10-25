@@ -1,3 +1,59 @@
 {
-  "activationEvents": ["onUri"]
+  "activationEvents": [
+    "onUri",
+    "onCommand:dewa.specBuilder.open",
+    "onWebviewPanel:dewaSpecBuilder"
+  ],
+  "contributes": {
+    "commands": [
+      { "command": "dewa.specBuilder.open", "title": "Open SAP Spec Builder", "category": "DEWA" }
+    ],
+    "configuration": {
+      "title": "DEWA SAP Spec Builder",
+      "properties": {
+        "dewaSpecBuilder.discoveryTools": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["*abap*", "*adt*", "*fiori*", "*ui5*", "*cap*"],
+          "markdownDescription": "Tool-name patterns (`*` wildcard) of the SAP MCP servers that **automatic discovery** may use. Tools whose names contain a write verb (create, update, delete, activate, transport, …) are always excluded."
+        },
+        "dewaSpecBuilder.maxToolRounds": {
+          "type": "number",
+          "default": 25,
+          "minimum": 1,
+          "maximum": 60,
+          "description": "Maximum number of tool-calling rounds for automatic discovery."
+        }
+      }
+    },
+    "languageModelTools": [
+      {
+        "name": "dewa_submitContextPack",
+        "toolReferenceName": "dewa_submitContextPack",
+        "displayName": "Send context pack to SAP Spec Builder",
+        "userDescription": "Imports the SAP system context pack into the open SAP Spec Builder.",
+        "modelDescription": "Call this once at the end of a dewa-fs-discovery run with the complete dewa-sap-context-pack JSON object. It imports the pack into the SAP Spec Builder panel. It does not change anything in SAP.",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(notebook)",
+        "inputSchema": {
+          "type": "object",
+          "required": ["kind", "version"],
+          "properties": {
+            "kind": { "type": "string", "enum": ["dewa-sap-context-pack"] },
+            "version": { "type": "number", "enum": [1] },
+            "generatedAt": { "type": "string" },
+            "system": { "type": "object" },
+            "objects": { "type": "array", "items": { "type": "object" } },
+            "transactions": { "type": "array", "items": { "type": "object" } },
+            "fioriApps": { "type": "array", "items": { "type": "object" } },
+            "ui5Apps": { "type": "array", "items": { "type": "object" } },
+            "capServices": { "type": "array", "items": { "type": "object" } },
+            "enhancements": { "type": "array", "items": { "type": "object" } },
+            "customizingHints": { "type": "array", "items": { "type": "object" } },
+            "notFound": { "type": "array", "items": { "type": "object" } }
+          }
+        }
+      }
+    ]
+  }
 }

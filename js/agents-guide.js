@@ -70,7 +70,8 @@
         '<strong>Read only:</strong> never creates, changes, activates or transports anything; reads metadata, not table contents.',
         '<strong>Never invents:</strong> everything checked but not found is listed under <code>notFound</code>; the builder shows each FS reference as ✓ in system, ✗ not found or – not checked.',
         'Returns one <code>dewa-sap-context-pack</code> JSON block. The builder validates it, treats it as untrusted data and warns when it is older than 30 days.',
-        'One-click opening needs the DEWA extension with the discovery add-on (<code>vscode-extension-addon/INSTALL.md</code>). Without it, choose <em>Plain VS Code</em> in the launch settings and paste the prompt yourself.'
+        '<strong>Inside VS Code:</strong> with the DEWA extension add-on, <em>DEWA: Open SAP Spec Builder</em> opens this builder as a VS Code tab. Sign in to Copilot there; <strong>Discover automatically</strong> runs the agent\'s instructions with only the read tools of the MCP servers and imports the result, or <strong>Run in Copilot Chat</strong> lets the agent send the pack back with <code>dewa_submitContextPack</code>.',
+        'In the browser, one-click opening needs the same add-on (<code>vscode-extension-addon/INSTALL.md</code>). Without it, choose <em>Plain VS Code</em> in the launch settings and paste the prompt yourself.'
       ]) + '</section>' +
 
       '<section id="ag-session" class="ag-sec"><h3>Shared session pattern</h3>' +

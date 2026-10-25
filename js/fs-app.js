@@ -98,6 +98,82 @@
     return '<span class="chk ' + m[0] + '">' + m[1] + '</span>';
   }
 
+  /* ---------------------------------------------- discovery inside VS Code */
+  const H = APB.host;
+  const disc = { auth: null, running: false, mode: '', log: [], error: '' }; // runtime only, never saved
+
+  function copilotStatus() {
+    const a = disc.auth;
+    if (!a) return '<span class="chip chip-static">Checking GitHub Copilot…</span>';
+    if (!a.copilot) return '<span class="chip chip-static chk bad">GitHub Copilot Chat is not installed</span>';
+    return a.signedIn
+      ? '<span class="chip chip-static copilot-on">● GitHub Copilot · signed in as ' + esc(a.account || 'GitHub user') + '</span>'
+      : '<span class="chip chip-static">GitHub Copilot · not signed in</span> <button type="button" class="btn btn-primary btn-sm" data-action="fs-signin">Sign in to GitHub Copilot</button>';
+  }
+
+  function logHtml() {
+    if (!disc.log.length && !disc.error) return '';
+    const icon = { running: '…', done: '✓', blocked: '⛔', error: '✗', info: '›' };
+    return '<ol class="fs-log" aria-live="polite">' + disc.log.map(function (l) {
+      return '<li class="' + esc(l.status || 'info') + '"><span aria-hidden="true">' + (icon[l.status] || '›') + '</span> ' + esc(l.text) + '</li>';
+    }).join('') + (disc.error ? '<li class="error"><span aria-hidden="true">✗</span> ' + esc(disc.error) + '</li>' : '') + '</ol>';
+  }
+
+  function vscodeHow() {
+    return '<div class="chips fs-copilot">' + copilotStatus() + '</div>' +
+      '<ol class="ag-steps fs-how">' +
+      '<li>Sign in to <strong>GitHub Copilot</strong> in VS Code (button above, or the Accounts menu).</li>' +
+      '<li><strong>Discover automatically</strong> runs the read-only <code class="agent-name">' + esc(DS.cfg.agent) + '</code> instructions here, using only the read tools of the ' + esc(DS.cfg.mcpServers.join(', ')) + ' MCP servers. Or <strong>Run in Copilot Chat</strong> to watch and steer the agent beside this panel.</li>' +
+      '<li>The result is imported into this FS automatically — nothing in SAP is changed.</li></ol>';
+  }
+
+  function vscodeActions(p) {
+    const ready = disc.auth && disc.auth.copilot && disc.auth.signedIn;
+    return '<div class="gen-actions">' +
+      (disc.running
+        ? '<button type="button" class="btn btn-ghost" data-action="fs-stop">Stop discovery</button><span class="muted small">' + (disc.mode === 'chat' ? 'Waiting for the agent in Copilot Chat…' : 'Reading the SAP system…') + '</span>'
+        : '<button type="button" class="btn btn-primary" data-action="fs-auto"' + (ready ? '' : ' disabled') + '>✦ ' + (p ? 'Re-run discovery' : 'Discover automatically') + '</button>' +
+          '<button type="button" class="btn btn-ghost" data-action="fs-chat"' + (ready ? '' : ' disabled') + '>Run in Copilot Chat</button>' +
+          '<button type="button" class="btn btn-ghost" data-action="fs-import-clip">Import from clipboard</button>' +
+          (p ? '<button type="button" class="btn btn-ghost" data-action="fs-clear-pack">Remove pack</button>' : '<button type="button" class="link small" data-action="fs-sample-pack">Try a sample pack</button>')) +
+      '</div>' + logHtml();
+  }
+
+  function rerenderDiscovery() {
+    if (S.isFs() && !U().ui.generated && U().ui.step === 4 && !U().ui.view) U().renderMain();
+  }
+
+  if (H.isVscode) {
+    H.on('auth', function (m) { disc.auth = { signedIn: !!m.signedIn, account: String(m.account || ''), copilot: m.copilot !== false }; rerenderDiscovery(); });
+    H.on('discovery-progress', function (m) {
+      const text = String(m.text || '').slice(0, 300);
+      const last = disc.log[disc.log.length - 1];
+      if (m.key && last && last.key === m.key) { last.text = text; last.status = m.status; } else disc.log.push({ key: m.key, text: text, status: m.status });
+      if (disc.log.length > 80) disc.log.shift();
+      const el = document.querySelector('.fs-log');
+      if (el) el.outerHTML = logHtml(); else rerenderDiscovery();
+    });
+    H.on('discovery-result', function (m) {
+      disc.running = false;
+      if (!importText(String(m.text || ''), disc.mode === 'chat' ? 'Copilot Chat' : 'Copilot')) {
+        disc.error = 'The answer did not contain a valid context pack. Try again, or run it in Copilot Chat.';
+        rerenderDiscovery();
+      }
+    });
+    H.on('discovery-error', function (m) { disc.running = false; disc.error = String(m.message || 'Discovery failed').slice(0, 400); rerenderDiscovery(); });
+    H.on('saved', function (m) { U().toast('Saved ' + String(m.path || ''), 5000); });
+    H.post({ type: 'auth-status' });
+  }
+
+  function startDiscovery(mode) {
+    const s = S.get();
+    if (FC.checkMandatory(s).length) { U().toast('Add the business requirement and the module first (step 1)'); return; }
+    disc.running = true; disc.mode = mode; disc.error = ''; disc.log = [];
+    disc.log.push({ text: mode === 'chat' ? 'Opening Copilot Chat with ' + DS.cfg.agent + ' — press Enter there' : 'Starting read-only discovery with GitHub Copilot', status: 'info' });
+    H.post({ type: 'discover', mode: mode, prompt: DS.prompt(s) });
+    rerenderDiscovery();
+  }
+
   function discoveryPanel(s) {
     const p = s.discovery;
     const launch = APB.storage.getPref('vscodeLaunch', 'extension');
@@ -121,7 +197,7 @@
       (p ? '<button type="button" class="btn btn-ghost" data-action="fs-clear-pack">Remove pack</button>' : '<button type="button" class="link small" data-action="fs-sample-pack">Try a sample pack</button>') + '</div>';
     let body;
     if (!p) {
-      body = '<p class="muted">Read what already exists in the DEWA SAP system — tables, CDS views, transactions, Fiori apps, BAdIs, CAP services — so the FS is written against the real system, not from memory.</p>' + how;
+      body = '<p class="muted">Read what already exists in the DEWA SAP system — tables, CDS views, transactions, Fiori apps, BAdIs, CAP services — so the FS is written against the real system, not from memory.</p>' + (H.isVscode ? vscodeHow() : how);
     } else {
       const age = DS.ageDays(p);
       const sys = p.system;
@@ -130,13 +206,15 @@
       body = (p.sample ? '<p class="note">Sample pack for demonstration — not read from your system. Run <strong>Discover in SAP</strong> for real data.</p>' : '') +
         (DS.isStale(p) ? '<p class="note">This discovery is ' + age + ' days old. Re-run it before sign-off so the FS matches the current system.</p>' : '') +
         '<div class="chips fs-sys">' + chips.map(function (c) { return '<span class="chip chip-static">' + esc(c) + '</span>'; }).join('') + '</div>' +
-        '<div class="stats">' + n.map(function (x) { return U().stat(esc(x[1]), String(x[0])); }).join('') + '</div>';
+        '<div class="stats">' + n.map(function (x) { return U().stat(esc(x[1]), String(x[0])); }).join('') + '</div>' +
+        (H.isVscode ? '<div class="chips fs-copilot">' + copilotStatus() + '</div>' : '');
     }
     const checks = p ? DS.crossCheck(s) : [];
     const checkHtml = checks.length ? '<h4>Reference check</h4><p class="muted small">Names used in this FS compared with the system.</p><div class="table-scroll"><table class="grid fs-check"><thead><tr><th>Name</th><th>Used in</th><th>Result</th></tr></thead><tbody>' +
       checks.map(function (r) { return '<tr><td><code>' + esc(r.name) + '</code></td><td>' + esc(r.where) + '</td><td>' + badge(r.status) + (r.info && r.status !== 'unchecked' ? ' <span class="muted small">' + esc(r.info) + '</span>' : '') + '</td></tr>'; }).join('') +
       '</tbody></table></div>' : '';
-    return '<section class="card fs-disc" aria-labelledby="h-disc"><h3 id="h-disc">Current SAP system</h3>' + body + actions + paste + checkHtml + settings + '</section>';
+    return '<section class="card fs-disc" aria-labelledby="h-disc"><h3 id="h-disc">Current SAP system</h3>' + body +
+      (H.isVscode ? vscodeActions(p) + paste + checkHtml : actions + paste + checkHtml + settings) + '</section>';
   }
 
   function handoffHtml(s) {
@@ -287,6 +365,7 @@
       U().toast(rows.length + ' UAT case(s) added — complete the expected results');
     },
     'fs-discover': function () {
+      if (H.isVscode) { startDiscovery('auto'); return; }
       const s = S.get();
       if (FC.checkMandatory(s).length) { U().toast('Add the business requirement and the module first (step 1)'); return; }
       const mode = APB.storage.getPref('vscodeLaunch', 'extension');
@@ -299,7 +378,15 @@
     'fs-copy-prompt': function () {
       Promise.resolve(APB.exporter.copy(DS.prompt(S.get()))).then(function (ok) { U().toast(ok ? 'Discovery prompt copied' : 'Copy failed'); });
     },
+    'fs-signin': function () { H.post({ type: 'sign-in' }); },
+    'fs-auto': function () { startDiscovery('auto'); },
+    'fs-chat': function () { startDiscovery('chat'); },
+    'fs-stop': function () { H.post({ type: 'stop' }); disc.running = false; disc.log.push({ text: 'Stopped', status: 'info' }); rerenderDiscovery(); },
     'fs-import-clip': function () {
+      if (H.isVscode) {
+        H.request('clipboard-read').then(function (t) { importText(String(t || ''), 'clipboard'); }, function () { U().toast('Could not read the clipboard'); });
+        return;
+      }
       if (!navigator.clipboard || !navigator.clipboard.readText) { U().ui.open['fs-paste'] = true; U().renderMain(); U().toast('Clipboard access is not available here — paste the answer below'); return; }
       navigator.clipboard.readText().then(function (t) { importText(t, 'clipboard'); }, function () {
         U().ui.open['fs-paste'] = true; U().renderMain();
@@ -327,7 +414,7 @@
       if (FC.checkMandatory(s).length) { U().toast('Add the business requirement and the module first'); return; }
       const bytes = APB.docx.fromMarkdown(FM.build(s), FM.docMeta(s));
       APB.exporter.downloadBytes(FM.docxFilename(s), bytes, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-      U().toast('Downloaded ' + FM.docxFilename(s));
+      U().toast(U().savedMsg(FM.docxFilename(s)));
     }
   };
 
@@ -344,7 +431,7 @@
       { g: 'Create', i: '⬇', t: 'Download Markdown', run: run.actions.download },
       { g: 'Create', i: '⧉', t: 'Copy Markdown', run: run.actions.copy },
       { g: 'Create', i: '+', t: 'New functional specification', run: run.actions.new },
-      { g: 'System', i: '›', t: 'Discover in SAP (open VS Code with ' + DS.cfg.agent + ')', run: function () { run.setStep(4); actions['fs-discover'](); } },
+      { g: 'System', i: '›', t: H.isVscode ? 'Discover in SAP (automatic, read-only)' : 'Discover in SAP (open VS Code with ' + DS.cfg.agent + ')', run: function () { run.setStep(4); actions['fs-discover'](); } },
       { g: 'System', i: '⇩', t: 'Import context pack from clipboard', run: function () { run.setStep(4); actions['fs-import-clip'](); } },
       { g: 'Create', i: '✓', t: 'Create UAT skeleton from FRs', run: function () { run.setStep(5); actions['fs-uat'](); } }
     );

@@ -5,6 +5,7 @@
    This URI handler takes the prompt from the clipboard, makes sure GitHub Copilot Chat is installed and the
    user is signed in (VS Code's own sign-in – no token ever passes through the builder), and opens Copilot Chat
    with the dewa-fs-discovery agent and the prompt pre-filled. The user reviews it and presses Enter.
+   Registered by index.js, which also routes /builder to the SAP Spec Builder panel.
 
    The prompt travels via the clipboard, not the URL: no length limit and nothing in OS / browser history. */
 
@@ -71,12 +72,4 @@ function create(vscode) {
   return { handleUri: handleUri, ensureSignedIn: ensureSignedIn, openChat: openChat };
 }
 
-/* Call from the extension's activate(). If the extension already registers a URI handler (only one is allowed
-   per extension), call create(vscode).handleUri(uri) from that handler for uri.path === '/discover' instead. */
-function activate(context, vscode) {
-  const handler = create(vscode);
-  context.subscriptions.push(vscode.window.registerUriHandler({ handleUri: handler.handleUri }));
-  return handler;
-}
-
-module.exports = { create: create, activate: activate, MARKER: MARKER, AGENT: AGENT, COPILOT_CHAT: COPILOT_CHAT };
+module.exports = { create: create, MARKER: MARKER, AGENT: AGENT, COPILOT_CHAT: COPILOT_CHAT };

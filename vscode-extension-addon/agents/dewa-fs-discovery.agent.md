@@ -2,7 +2,8 @@
 description: Read-only SAP system discovery for functional specifications. Reads the DEWA SAP system through the ABAP ADT, Fiori, UI5 and CAP MCP servers and returns a JSON context pack for the SAP Specification Builder. Never changes anything.
 # Limit the agent to read tools. Replace the server names with the ones in your mcp.json (keep only read operations
 # where the server lets you pick individual tools), e.g. 'sap-abap-adt/*', 'sap-fiori/*', 'sap-ui5/*', 'sap-cap/*'.
-tools: ['sap-abap-adt/*', 'sap-fiori/*', 'sap-ui5/*', 'sap-cap/*']
+# dewa_submitContextPack (from the DEWA extension) hands the pack to the SAP Spec Builder panel.
+tools: ['sap-abap-adt/*', 'sap-fiori/*', 'sap-ui5/*', 'sap-cap/*', 'dewa_submitContextPack']
 ---
 
 # dewa-fs-discovery — read-only SAP system discovery
@@ -62,7 +63,10 @@ objects or existing implementations). Then return **exactly one** fenced `json` 
 
 - `generatedAt` is the current time (ISO 8601, UTC). The builder warns when a pack is older than 30 days.
 - Use upper-case SAP names. Leave lists empty (`[]`) when nothing applies; do not add other keys.
-- The consultant copies your answer and clicks **Import from clipboard** in the builder.
+- **In Copilot Chat:** after the answer, call the `dewa_submitContextPack` tool once with the same JSON object. It
+  imports the pack into the SAP Spec Builder panel (it changes nothing in SAP). If the tool is not available, the
+  consultant copies your answer and clicks **Import from clipboard** in the builder.
+- **Automatic discovery** (started from the builder panel) uses these instructions too; there, just return the answer.
 
 ## After the pack
 

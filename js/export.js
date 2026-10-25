@@ -1,12 +1,24 @@
-/* Download / copy / share link / VS Code hand-off. All client-side. */
+/* Download / copy / share link / VS Code hand-off. All client-side. Inside the VS Code panel, files and the
+   clipboard go through the extension (save dialog, VS Code clipboard). */
 (function (APB) {
   'use strict';
+  const H = APB.host;
+
+  function toBase64(bytes) {
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+  }
 
   function download(name, text, mime) {
+    if (H.isVscode) { downloadBytes(name, new TextEncoder().encode(text), mime || 'text/plain'); return; }
     saveBlob(name, new Blob([text], { type: (mime || 'text/plain') + ';charset=utf-8' }));
   }
 
-  function downloadBytes(name, bytes, mime) { saveBlob(name, new Blob([bytes], { type: mime || 'application/octet-stream' })); }
+  function downloadBytes(name, bytes, mime) {
+    if (H.isVscode) { H.post({ type: 'save-file', name: name, mime: mime || 'application/octet-stream', base64: toBase64(bytes) }); return; }
+    saveBlob(name, new Blob([bytes], { type: mime || 'application/octet-stream' }));
+  }
 
   function saveBlob(name, blob) {
     const url = URL.createObjectURL(blob);
@@ -20,6 +32,7 @@
   }
 
   function copy(text) {
+    if (H.isVscode) return H.request('clipboard-write', { text: text }).then(function () { return true; }, function () { return false; });
     if (navigator.clipboard && window.isSecureContext) {
       return navigator.clipboard.writeText(text).then(function () { return true; }, function () { return fallbackCopy(text); });
     }
@@ -75,6 +88,7 @@
 
   /* Copy synchronously inside the click, so the same click can still launch VS Code afterwards. */
   function copyNow(text) {
+    if (H.isVscode) { H.post({ type: 'clipboard-write', text: text }); return true; }
     if (fallbackCopy(text)) return true;
     if (navigator.clipboard) { navigator.clipboard.writeText(text).catch(function () {}); return true; }
     return false;

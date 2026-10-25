@@ -1,4 +1,5 @@
-/* Browser-only persistence (localStorage). Nothing leaves the machine. */
+/* Local persistence: localStorage in the browser, VS Code's extension storage in the VS Code panel (js/host.js).
+   Nothing leaves the machine. */
 (function (APB) {
   'use strict';
   const KEY_DRAFTS = 'apb.drafts.v1';
@@ -6,9 +7,11 @@
   const memory = {};
 
   function read(key) {
+    if (APB.host && APB.host.isVscode) return APB.host.storage.get(key);
     try { const v = window.localStorage.getItem(key); return v == null ? memory[key] || null : v; } catch (e) { return memory[key] || null; }
   }
   function write(key, value) {
+    if (APB.host && APB.host.isVscode) return APB.host.storage.set(key, value);
     memory[key] = value;
     try { window.localStorage.setItem(key, value); return true; } catch (e) { return false; }
   }
@@ -56,7 +59,11 @@
     },
     getPref: function (k, dflt) { const v = read('apb.pref.' + k); return v == null || v === '' ? dflt : v; },
     setPref: function (k, v) { write('apb.pref.' + k, v); },
-    getTheme: function () { return read('apb.theme.v1') === 'dark' ? 'dark' : 'light'; },
+    getTheme: function () {
+      const t = read('apb.theme.v1');
+      if (!t && APB.host && APB.host.isVscode) return APB.host.prefersDark() ? 'dark' : 'light'; // follow the VS Code theme
+      return t === 'dark' ? 'dark' : 'light';
+    },
     setTheme: function (t) { write('apb.theme.v1', t); },
     isEmpty: isEmpty
   };

@@ -106,11 +106,3 @@ test('stops when the user declines sign-in', async () => {
   assert.strictEqual(r.status, 'not-signed-in');
   assert.strictEqual(vs.calls.commands.length, 0);
 });
-
-test('activate registers the URI handler', () => {
-  const vs = mockVscode();
-  const ctx = { subscriptions: [] };
-  addon.activate(ctx, vs);
-  assert.strictEqual(ctx.subscriptions.length, 1);
-  assert.strictEqual(typeof vs.calls.registered.handleUri, 'function');
-});

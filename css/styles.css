@@ -456,6 +456,18 @@ table.fs-check td { padding: 6px 8px; font-size: .84rem; vertical-align: top; }
 .fs-handoff { background: var(--ok-bg); border: 1px solid rgba(163, 230, 53, .3); border-radius: 12px; padding: 10px 12px; }
 .fs-handoff p { margin: 0 0 4px; }
 
+.host-vscode [data-action="share"] { display: none !important; }
+.fs-copilot { margin: 6px 0 10px; }
+.fs-copilot .btn { margin-left: 4px; }
+.copilot-on { border-color: rgba(163, 230, 53, .55); color: var(--accent-text); }
+.fs-log { list-style: none; margin: 6px 0 4px; padding: 10px 12px; max-height: 240px; overflow: auto; background: var(--input); border: 1px solid var(--line); border-radius: 10px; font: .8rem/1.5 var(--mono); }
+.fs-log li { display: flex; gap: 8px; min-width: 0; overflow-wrap: anywhere; color: var(--muted); }
+.fs-log li span { flex: none; width: 1.2em; text-align: center; }
+.fs-log .done { color: var(--ink); }
+.fs-log .done span { color: var(--accent-text); }
+.fs-log .running span { color: var(--amber); }
+.fs-log .blocked, .fs-log .error { color: var(--danger); }
+
 /* ---------- footer, dialogs, palette, toast ---------- */
 .site-footer { border-top: 1px solid var(--line); padding: 30px 0; margin-top: 24px; background: var(--panel); backdrop-filter: blur(12px); }
 .footer-inner { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }

@@ -471,6 +471,18 @@ table.fs-check td { padding: 6px 8px; font-size: .84rem; vertical-align: top; }
 .fs-handoff { background: var(--ok-bg); border: 1px solid rgba(163, 230, 53, .3); border-radius: 12px; padding: 10px 12px; }
 .fs-handoff p { margin: 0 0 4px; }
 
+.host-vscode [data-action="share"] { display: none !important; }
+.fs-copilot { margin: 6px 0 10px; }
+.fs-copilot .btn { margin-left: 4px; }
+.copilot-on { border-color: rgba(163, 230, 53, .55); color: var(--accent-text); }
+.fs-log { list-style: none; margin: 6px 0 4px; padding: 10px 12px; max-height: 240px; overflow: auto; background: var(--input); border: 1px solid var(--line); border-radius: 10px; font: .8rem/1.5 var(--mono); }
+.fs-log li { display: flex; gap: 8px; min-width: 0; overflow-wrap: anywhere; color: var(--muted); }
+.fs-log li span { flex: none; width: 1.2em; text-align: center; }
+.fs-log .done { color: var(--ink); }
+.fs-log .done span { color: var(--accent-text); }
+.fs-log .running span { color: var(--amber); }
+.fs-log .blocked, .fs-log .error { color: var(--danger); }
+
 /* ---------- footer, dialogs, palette, toast ---------- */
 .site-footer { border-top: 1px solid var(--line); padding: 30px 0; margin-top: 24px; background: var(--panel); backdrop-filter: blur(12px); }
 .footer-inner { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
@@ -10069,6 +10081,65 @@ window.APB_CONFIG = {
 
 </script>
   <script>
+/* Where the builder runs: a normal browser tab, or the "SAP Spec Builder" panel inside VS Code (DEWA extension,
+   vscode-extension-addon/src/specBuilderPanel.js). In VS Code, storage, downloads and the clipboard go through the
+   extension (webviews cannot download files), and system discovery runs in VS Code with GitHub Copilot. */
+(function (APB) {
+  'use strict';
+
+  const api = typeof window.acquireVsCodeApi === 'function' ? window.acquireVsCodeApi() : null;
+  const info = api && window.APB_HOST && typeof window.APB_HOST === 'object' ? window.APB_HOST : {};
+  const store = info.storage && typeof info.storage === 'object' ? Object.assign({}, info.storage) : {};
+  const handlers = {};
+  const pending = {};
+  let seq = 0;
+
+  if (api) {
+    window.addEventListener('message', function (e) {
+      const m = e.data;
+      if (!m || typeof m !== 'object' || typeof m.type !== 'string') return;
+      if (m.type === 'reply' && pending[m.id]) {
+        const p = pending[m.id];
+        delete pending[m.id];
+        if (m.ok) p.resolve(m.value); else p.reject(new Error(m.error || 'failed'));
+        return;
+      }
+      (handlers[m.type] || []).forEach(function (fn) { try { fn(m); } catch (err) { console.error(err); } });
+    });
+  }
+
+  function post(msg) { if (api) api.postMessage(msg); }
+
+  /* Request / reply over postMessage (e.g. reading the clipboard through VS Code). */
+  function request(type, payload) {
+    if (!api) return Promise.reject(new Error('not in VS Code'));
+    return new Promise(function (resolve, reject) {
+      const id = 'r' + (++seq);
+      pending[id] = { resolve: resolve, reject: reject };
+      post(Object.assign({ type: type, id: id }, payload || {}));
+      setTimeout(function () { if (pending[id]) { delete pending[id]; reject(new Error('timeout')); } }, 30000);
+    });
+  }
+
+  APB.host = {
+    kind: api ? 'vscode' : 'browser',
+    isVscode: !!api,
+    version: info.version || '',
+    post: post,
+    request: request,
+    on: function (type, fn) { (handlers[type] = handlers[type] || []).push(fn); },
+    /* Key/value store kept by the extension in VS Code's globalState (survives restarts). */
+    storage: {
+      get: function (k) { return Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null; },
+      set: function (k, v) { store[k] = v; post({ type: 'storage', key: k, value: v }); return true; }
+    },
+    /* VS Code marks the webview body with its theme kind. */
+    prefersDark: function () { return !!document.body && /vscode-(dark|high-contrast)(?!-light)/.test(document.body.className); }
+  };
+})(window.APB = window.APB || {});
+
+</script>
+  <script>
 /* Accessors over the configuration (config/*.json, bundled into config-bundle.js). */
 (function (APB) {
   'use strict';
@@ -10861,7 +10932,8 @@ window.APB_CONFIG = {
 
 </script>
   <script>
-/* Browser-only persistence (localStorage). Nothing leaves the machine. */
+/* Local persistence: localStorage in the browser, VS Code's extension storage in the VS Code panel (js/host.js).
+   Nothing leaves the machine. */
 (function (APB) {
   'use strict';
   const KEY_DRAFTS = 'apb.drafts.v1';
@@ -10869,9 +10941,11 @@ window.APB_CONFIG = {
   const memory = {};
 
   function read(key) {
+    if (APB.host && APB.host.isVscode) return APB.host.storage.get(key);
     try { const v = window.localStorage.getItem(key); return v == null ? memory[key] || null : v; } catch (e) { return memory[key] || null; }
   }
   function write(key, value) {
+    if (APB.host && APB.host.isVscode) return APB.host.storage.set(key, value);
     memory[key] = value;
     try { window.localStorage.setItem(key, value); return true; } catch (e) { return false; }
   }
@@ -10919,7 +10993,11 @@ window.APB_CONFIG = {
     },
     getPref: function (k, dflt) { const v = read('apb.pref.' + k); return v == null || v === '' ? dflt : v; },
     setPref: function (k, v) { write('apb.pref.' + k, v); },
-    getTheme: function () { return read('apb.theme.v1') === 'dark' ? 'dark' : 'light'; },
+    getTheme: function () {
+      const t = read('apb.theme.v1');
+      if (!t && APB.host && APB.host.isVscode) return APB.host.prefersDark() ? 'dark' : 'light'; // follow the VS Code theme
+      return t === 'dark' ? 'dark' : 'light';
+    },
     setTheme: function (t) { write('apb.theme.v1', t); },
     isEmpty: isEmpty
   };
@@ -10929,15 +11007,27 @@ window.APB_CONFIG = {
 
 </script>
   <script>
-/* Download / copy / share link / VS Code hand-off. All client-side. */
+/* Download / copy / share link / VS Code hand-off. All client-side. Inside the VS Code panel, files and the
+   clipboard go through the extension (save dialog, VS Code clipboard). */
 (function (APB) {
   'use strict';
+  const H = APB.host;
+
+  function toBase64(bytes) {
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+  }
 
   function download(name, text, mime) {
+    if (H.isVscode) { downloadBytes(name, new TextEncoder().encode(text), mime || 'text/plain'); return; }
     saveBlob(name, new Blob([text], { type: (mime || 'text/plain') + ';charset=utf-8' }));
   }
 
-  function downloadBytes(name, bytes, mime) { saveBlob(name, new Blob([bytes], { type: mime || 'application/octet-stream' })); }
+  function downloadBytes(name, bytes, mime) {
+    if (H.isVscode) { H.post({ type: 'save-file', name: name, mime: mime || 'application/octet-stream', base64: toBase64(bytes) }); return; }
+    saveBlob(name, new Blob([bytes], { type: mime || 'application/octet-stream' }));
+  }
 
   function saveBlob(name, blob) {
     const url = URL.createObjectURL(blob);
@@ -10951,6 +11041,7 @@ window.APB_CONFIG = {
   }
 
   function copy(text) {
+    if (H.isVscode) return H.request('clipboard-write', { text: text }).then(function () { return true; }, function () { return false; });
     if (navigator.clipboard && window.isSecureContext) {
       return navigator.clipboard.writeText(text).then(function () { return true; }, function () { return fallbackCopy(text); });
     }
@@ -11006,6 +11097,7 @@ window.APB_CONFIG = {
 
   /* Copy synchronously inside the click, so the same click can still launch VS Code afterwards. */
   function copyNow(text) {
+    if (H.isVscode) { H.post({ type: 'clipboard-write', text: text }); return true; }
     if (fallbackCopy(text)) return true;
     if (navigator.clipboard) { navigator.clipboard.writeText(text).catch(function () {}); return true; }
     return false;
@@ -12179,7 +12271,8 @@ window.APB_CONFIG = {
         '<strong>Read only:</strong> never creates, changes, activates or transports anything; reads metadata, not table contents.',
         '<strong>Never invents:</strong> everything checked but not found is listed under <code>notFound</code>; the builder shows each FS reference as ✓ in system, ✗ not found or – not checked.',
         'Returns one <code>dewa-sap-context-pack</code> JSON block. The builder validates it, treats it as untrusted data and warns when it is older than 30 days.',
-        'One-click opening needs the DEWA extension with the discovery add-on (<code>vscode-extension-addon/INSTALL.md</code>). Without it, choose <em>Plain VS Code</em> in the launch settings and paste the prompt yourself.'
+        '<strong>Inside VS Code:</strong> with the DEWA extension add-on, <em>DEWA: Open SAP Spec Builder</em> opens this builder as a VS Code tab. Sign in to Copilot there; <strong>Discover automatically</strong> runs the agent\'s instructions with only the read tools of the MCP servers and imports the result, or <strong>Run in Copilot Chat</strong> lets the agent send the pack back with <code>dewa_submitContextPack</code>.',
+        'In the browser, one-click opening needs the same add-on (<code>vscode-extension-addon/INSTALL.md</code>). Without it, choose <em>Plain VS Code</em> in the launch settings and paste the prompt yourself.'
       ]) + '</section>' +
 
       '<section id="ag-session" class="ag-sec"><h3>Shared session pattern</h3>' +
@@ -12374,6 +12467,82 @@ window.APB_CONFIG = {
     return '<span class="chk ' + m[0] + '">' + m[1] + '</span>';
   }
 
+  /* ---------------------------------------------- discovery inside VS Code */
+  const H = APB.host;
+  const disc = { auth: null, running: false, mode: '', log: [], error: '' }; // runtime only, never saved
+
+  function copilotStatus() {
+    const a = disc.auth;
+    if (!a) return '<span class="chip chip-static">Checking GitHub Copilot…</span>';
+    if (!a.copilot) return '<span class="chip chip-static chk bad">GitHub Copilot Chat is not installed</span>';
+    return a.signedIn
+      ? '<span class="chip chip-static copilot-on">● GitHub Copilot · signed in as ' + esc(a.account || 'GitHub user') + '</span>'
+      : '<span class="chip chip-static">GitHub Copilot · not signed in</span> <button type="button" class="btn btn-primary btn-sm" data-action="fs-signin">Sign in to GitHub Copilot</button>';
+  }
+
+  function logHtml() {
+    if (!disc.log.length && !disc.error) return '';
+    const icon = { running: '…', done: '✓', blocked: '⛔', error: '✗', info: '›' };
+    return '<ol class="fs-log" aria-live="polite">' + disc.log.map(function (l) {
+      return '<li class="' + esc(l.status || 'info') + '"><span aria-hidden="true">' + (icon[l.status] || '›') + '</span> ' + esc(l.text) + '</li>';
+    }).join('') + (disc.error ? '<li class="error"><span aria-hidden="true">✗</span> ' + esc(disc.error) + '</li>' : '') + '</ol>';
+  }
+
+  function vscodeHow() {
+    return '<div class="chips fs-copilot">' + copilotStatus() + '</div>' +
+      '<ol class="ag-steps fs-how">' +
+      '<li>Sign in to <strong>GitHub Copilot</strong> in VS Code (button above, or the Accounts menu).</li>' +
+      '<li><strong>Discover automatically</strong> runs the read-only <code class="agent-name">' + esc(DS.cfg.agent) + '</code> instructions here, using only the read tools of the ' + esc(DS.cfg.mcpServers.join(', ')) + ' MCP servers. Or <strong>Run in Copilot Chat</strong> to watch and steer the agent beside this panel.</li>' +
+      '<li>The result is imported into this FS automatically — nothing in SAP is changed.</li></ol>';
+  }
+
+  function vscodeActions(p) {
+    const ready = disc.auth && disc.auth.copilot && disc.auth.signedIn;
+    return '<div class="gen-actions">' +
+      (disc.running
+        ? '<button type="button" class="btn btn-ghost" data-action="fs-stop">Stop discovery</button><span class="muted small">' + (disc.mode === 'chat' ? 'Waiting for the agent in Copilot Chat…' : 'Reading the SAP system…') + '</span>'
+        : '<button type="button" class="btn btn-primary" data-action="fs-auto"' + (ready ? '' : ' disabled') + '>✦ ' + (p ? 'Re-run discovery' : 'Discover automatically') + '</button>' +
+          '<button type="button" class="btn btn-ghost" data-action="fs-chat"' + (ready ? '' : ' disabled') + '>Run in Copilot Chat</button>' +
+          '<button type="button" class="btn btn-ghost" data-action="fs-import-clip">Import from clipboard</button>' +
+          (p ? '<button type="button" class="btn btn-ghost" data-action="fs-clear-pack">Remove pack</button>' : '<button type="button" class="link small" data-action="fs-sample-pack">Try a sample pack</button>')) +
+      '</div>' + logHtml();
+  }
+
+  function rerenderDiscovery() {
+    if (S.isFs() && !U().ui.generated && U().ui.step === 4 && !U().ui.view) U().renderMain();
+  }
+
+  if (H.isVscode) {
+    H.on('auth', function (m) { disc.auth = { signedIn: !!m.signedIn, account: String(m.account || ''), copilot: m.copilot !== false }; rerenderDiscovery(); });
+    H.on('discovery-progress', function (m) {
+      const text = String(m.text || '').slice(0, 300);
+      const last = disc.log[disc.log.length - 1];
+      if (m.key && last && last.key === m.key) { last.text = text; last.status = m.status; } else disc.log.push({ key: m.key, text: text, status: m.status });
+      if (disc.log.length > 80) disc.log.shift();
+      const el = document.querySelector('.fs-log');
+      if (el) el.outerHTML = logHtml(); else rerenderDiscovery();
+    });
+    H.on('discovery-result', function (m) {
+      disc.running = false;
+      if (!importText(String(m.text || ''), disc.mode === 'chat' ? 'Copilot Chat' : 'Copilot')) {
+        disc.error = 'The answer did not contain a valid context pack. Try again, or run it in Copilot Chat.';
+        rerenderDiscovery();
+      }
+    });
+    H.on('discovery-error', function (m) { disc.running = false; disc.error = String(m.message || 'Discovery failed').slice(0, 400); rerenderDiscovery(); });
+    H.on('saved', function (m) { U().toast('Saved ' + String(m.path || ''), 5000); });
+    H.post({ type: 'auth-status' });
+  }
+
+  function startDiscovery(mode) {
+    const s = S.get();
+    if (FC.checkMandatory(s).length) { U().toast('Add the business requirement and the module first (step 1)'); return; }
+    disc.running = true; disc.mode = mode; disc.error = ''; disc.log = [];
+    disc.log.push({ text: mode === 'chat' ? 'Opening Copilot Chat with ' + DS.cfg.agent + ' — press Enter there' : 'Starting read-only discovery with GitHub Copilot', status: 'info' });
+    H.post({ type: 'discover', mode: mode, prompt: DS.prompt(s) });
+    rerenderDiscovery();
+  }
+
   function discoveryPanel(s) {
     const p = s.discovery;
     const launch = APB.storage.getPref('vscodeLaunch', 'extension');
@@ -12397,7 +12566,7 @@ window.APB_CONFIG = {
       (p ? '<button type="button" class="btn btn-ghost" data-action="fs-clear-pack">Remove pack</button>' : '<button type="button" class="link small" data-action="fs-sample-pack">Try a sample pack</button>') + '</div>';
     let body;
     if (!p) {
-      body = '<p class="muted">Read what already exists in the DEWA SAP system — tables, CDS views, transactions, Fiori apps, BAdIs, CAP services — so the FS is written against the real system, not from memory.</p>' + how;
+      body = '<p class="muted">Read what already exists in the DEWA SAP system — tables, CDS views, transactions, Fiori apps, BAdIs, CAP services — so the FS is written against the real system, not from memory.</p>' + (H.isVscode ? vscodeHow() : how);
     } else {
       const age = DS.ageDays(p);
       const sys = p.system;
@@ -12406,13 +12575,15 @@ window.APB_CONFIG = {
       body = (p.sample ? '<p class="note">Sample pack for demonstration — not read from your system. Run <strong>Discover in SAP</strong> for real data.</p>' : '') +
         (DS.isStale(p) ? '<p class="note">This discovery is ' + age + ' days old. Re-run it before sign-off so the FS matches the current system.</p>' : '') +
         '<div class="chips fs-sys">' + chips.map(function (c) { return '<span class="chip chip-static">' + esc(c) + '</span>'; }).join('') + '</div>' +
-        '<div class="stats">' + n.map(function (x) { return U().stat(esc(x[1]), String(x[0])); }).join('') + '</div>';
+        '<div class="stats">' + n.map(function (x) { return U().stat(esc(x[1]), String(x[0])); }).join('') + '</div>' +
+        (H.isVscode ? '<div class="chips fs-copilot">' + copilotStatus() + '</div>' : '');
     }
     const checks = p ? DS.crossCheck(s) : [];
     const checkHtml = checks.length ? '<h4>Reference check</h4><p class="muted small">Names used in this FS compared with the system.</p><div class="table-scroll"><table class="grid fs-check"><thead><tr><th>Name</th><th>Used in</th><th>Result</th></tr></thead><tbody>' +
       checks.map(function (r) { return '<tr><td><code>' + esc(r.name) + '</code></td><td>' + esc(r.where) + '</td><td>' + badge(r.status) + (r.info && r.status !== 'unchecked' ? ' <span class="muted small">' + esc(r.info) + '</span>' : '') + '</td></tr>'; }).join('') +
       '</tbody></table></div>' : '';
-    return '<section class="card fs-disc" aria-labelledby="h-disc"><h3 id="h-disc">Current SAP system</h3>' + body + actions + paste + checkHtml + settings + '</section>';
+    return '<section class="card fs-disc" aria-labelledby="h-disc"><h3 id="h-disc">Current SAP system</h3>' + body +
+      (H.isVscode ? vscodeActions(p) + paste + checkHtml : actions + paste + checkHtml + settings) + '</section>';
   }
 
   function handoffHtml(s) {
@@ -12563,6 +12734,7 @@ window.APB_CONFIG = {
       U().toast(rows.length + ' UAT case(s) added — complete the expected results');
     },
     'fs-discover': function () {
+      if (H.isVscode) { startDiscovery('auto'); return; }
       const s = S.get();
       if (FC.checkMandatory(s).length) { U().toast('Add the business requirement and the module first (step 1)'); return; }
       const mode = APB.storage.getPref('vscodeLaunch', 'extension');
@@ -12575,7 +12747,15 @@ window.APB_CONFIG = {
     'fs-copy-prompt': function () {
       Promise.resolve(APB.exporter.copy(DS.prompt(S.get()))).then(function (ok) { U().toast(ok ? 'Discovery prompt copied' : 'Copy failed'); });
     },
+    'fs-signin': function () { H.post({ type: 'sign-in' }); },
+    'fs-auto': function () { startDiscovery('auto'); },
+    'fs-chat': function () { startDiscovery('chat'); },
+    'fs-stop': function () { H.post({ type: 'stop' }); disc.running = false; disc.log.push({ text: 'Stopped', status: 'info' }); rerenderDiscovery(); },
     'fs-import-clip': function () {
+      if (H.isVscode) {
+        H.request('clipboard-read').then(function (t) { importText(String(t || ''), 'clipboard'); }, function () { U().toast('Could not read the clipboard'); });
+        return;
+      }
       if (!navigator.clipboard || !navigator.clipboard.readText) { U().ui.open['fs-paste'] = true; U().renderMain(); U().toast('Clipboard access is not available here — paste the answer below'); return; }
       navigator.clipboard.readText().then(function (t) { importText(t, 'clipboard'); }, function () {
         U().ui.open['fs-paste'] = true; U().renderMain();
@@ -12603,7 +12783,7 @@ window.APB_CONFIG = {
       if (FC.checkMandatory(s).length) { U().toast('Add the business requirement and the module first'); return; }
       const bytes = APB.docx.fromMarkdown(FM.build(s), FM.docMeta(s));
       APB.exporter.downloadBytes(FM.docxFilename(s), bytes, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-      U().toast('Downloaded ' + FM.docxFilename(s));
+      U().toast(U().savedMsg(FM.docxFilename(s)));
     }
   };
 
@@ -12620,7 +12800,7 @@ window.APB_CONFIG = {
       { g: 'Create', i: '⬇', t: 'Download Markdown', run: run.actions.download },
       { g: 'Create', i: '⧉', t: 'Copy Markdown', run: run.actions.copy },
       { g: 'Create', i: '+', t: 'New functional specification', run: run.actions.new },
-      { g: 'System', i: '›', t: 'Discover in SAP (open VS Code with ' + DS.cfg.agent + ')', run: function () { run.setStep(4); actions['fs-discover'](); } },
+      { g: 'System', i: '›', t: H.isVscode ? 'Discover in SAP (automatic, read-only)' : 'Discover in SAP (open VS Code with ' + DS.cfg.agent + ')', run: function () { run.setStep(4); actions['fs-discover'](); } },
       { g: 'System', i: '⇩', t: 'Import context pack from clipboard', run: function () { run.setStep(4); actions['fs-import-clip'](); } },
       { g: 'Create', i: '✓', t: 'Create UAT skeleton from FRs', run: function () { run.setStep(5); actions['fs-uat'](); } }
     );
@@ -12653,7 +12833,11 @@ window.APB_CONFIG = {
   const S = APB.state, D = APB.defs, C = APB.completeness, M = APB.markdown, ST = APB.storage, X = APB.exporter, T = APB.templates, V = APB.validation;
   const FA = APB.fsApp, FC = APB.fsCompleteness, FM = APB.fsMarkdown;
 
+  const H = APB.host;
   function isFs() { return S.isFs(); }
+  /* Inside the VS Code panel the hand-off goes straight to Copilot Chat; files go through a save dialog. */
+  const VS_LABEL = H.isVscode ? 'Open in Copilot Chat' : 'Open in VS Code';
+  function savedMsg(name) { return H.isVscode ? 'Choose where to save ' + name : 'Downloaded ' + name; }
   function steps() { return isFs() ? APB.fs.steps : STEPS; }
   function buildMd(s) { return s.kind === 'fs' ? FM.build(s) : M.build(s); }
   function evaluate(s) { return s.kind === 'fs' ? FC.evaluate(s) : C.evaluate(s); }
@@ -13031,8 +13215,8 @@ window.APB_CONFIG = {
     const md = M.build(s);
     return '<div class="gen-head"><h2 class="step-title">Your specification is ready</h2>' +
       '<p class="muted">Not sure which VS Code agent to use? See <button type="button" class="link" data-action="agents">Agent workflows</button>.</p>' +
-      '<p class="muted">Use <strong>Open in VS Code</strong> to copy the prompt and jump straight into your project, or download <code>' + esc(M.filename(s)) + '</code> into your project folder — <code>dewa-abap</code> reads it as its requirement source — and reference it in Copilot Chat (<code>#file</code> in VS Code, or attach it in Eclipse ADT).</p></div>' +
-      '<div class="gen-actions"><button type="button" class="btn btn-primary btn-lg" data-action="vscode"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3 8 12l9 9 4-2V5z"/><path d="M8 12 3 8m5 4-5 4"/></svg> Open in VS Code</button>' +
+      '<p class="muted">Use <strong>' + VS_LABEL + '</strong> to ' + (H.isVscode ? 'hand the prompt to <code>dewa-abap</code> in Copilot Chat' : 'copy the prompt and jump straight into your project') + ', or download <code>' + esc(M.filename(s)) + '</code> into your project folder — <code>dewa-abap</code> reads it as its requirement source — and reference it in Copilot Chat (<code>#file</code> in VS Code, or attach it in Eclipse ADT).</p></div>' +
+      '<div class="gen-actions"><button type="button" class="btn btn-primary btn-lg" data-action="vscode"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3 8 12l9 9 4-2V5z"/><path d="M8 12 3 8m5 4-5 4"/></svg> ' + VS_LABEL + '</button>' +
       '<button type="button" class="btn btn-ghost btn-lg" data-action="download">Download file</button>' +
       '<button type="button" class="btn btn-ghost" data-action="copy">Copy Markdown</button>' +
       '<button type="button" class="btn btn-ghost" data-action="share">Copy share link</button>' +
@@ -13440,12 +13624,18 @@ window.APB_CONFIG = {
       if (mandatoryMissing(s).length) { toast(isFs() ? 'Add the business requirement and the module first' : 'Add a requirement and a development object first'); return; }
       const name = isFs() ? FM.filename(s) : M.filename(s);
       X.download(name, buildMd(s), 'text/markdown');
-      toast('Downloaded ' + name);
+      toast(savedMsg(name));
     },
     copy: copyMarkdown,
     vscode: function () {
       const s = S.get();
       if (isFs()) { FA.actions['fs-discover'](); return; }
+      if (H.isVscode) {
+        if (V.checkMandatory(s).length) { toast('Add a requirement and a development object first'); return; }
+        H.post({ type: 'open-chat', agent: 'dewa-abap', prompt: M.chatPrompt(s) });
+        toast('Copilot Chat opens with dewa-abap and the specification — review it and press Enter', 6000);
+        return;
+      }
       if (V.checkMandatory(s).length) { toast('Add a requirement and a development object first'); return; }
       const copied = X.copyNow(M.chatPrompt(s));
       X.launchVscode();
@@ -13555,7 +13745,7 @@ window.APB_CONFIG = {
       { g: 'Create', i: '+', t: 'New requirement', run: actions.new },
       { g: 'Create', i: '⬇', t: 'Download file', run: actions.download },
       { g: 'Create', i: '⧉', t: 'Copy Markdown', run: actions.copy },
-      { g: 'Create', i: '›', t: 'Open in VS Code (copy prompt for Copilot Chat)', run: actions.vscode },
+      { g: 'Create', i: '›', t: H.isVscode ? 'Open in Copilot Chat (dewa-abap)' : 'Open in VS Code (copy prompt for Copilot Chat)', run: actions.vscode },
       { g: 'Share', i: '🔗', t: 'Copy share link', run: actions.share },
       { g: 'Drafts', i: '☰', t: 'Saved drafts', run: openDrafts },
       { g: 'Info', i: 'ℹ', t: 'Agent workflows (dewa-abap, dewa-codereview, dewa-fs-discovery)', run: actions.agents },
@@ -13572,7 +13762,7 @@ window.APB_CONFIG = {
 
   function renderPalette() {
     const q = $('#palette-input').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
-    palItems = commands().filter(function (c) { const h = (c.t + ' ' + c.g).toLowerCase(); return q.every(function (w) { return h.indexOf(w) >= 0; }); }).slice(0, 40);
+    palItems = commands().filter(function (c) { return !(H.isVscode && c.run === actions.share); }).filter(function (c) { const h = (c.t + ' ' + c.g).toLowerCase(); return q.every(function (w) { return h.indexOf(w) >= 0; }); }).slice(0, 40);
     palIndex = Math.min(palIndex, Math.max(0, palItems.length - 1));
     $('#palette-list').innerHTML = palItems.length ? palItems.map(function (c, i) {
       return '<li role="option" id="pal-' + i + '" data-pal="' + i + '" aria-selected="' + (i === palIndex) + '"><span class="p-ico" aria-hidden="true">' + esc(c.i) + '</span><span>' + esc(c.t) + '</span><span class="p-group">' + esc(c.g) + '</span></li>';
@@ -13717,12 +13907,13 @@ window.APB_CONFIG = {
   APB.ui = {
     ui: ui, esc: esc, toast: toast, nav: nav, stat: stat, statusHtml: statusHtml, detailsAttrs: detailsAttrs,
     fieldsBlock: fieldsBlock, fieldHtml: fieldHtml, renderMain: renderMain, updateSteps: updateSteps, loadState: loadState,
-    renderDatalists: renderDatalists
+    renderDatalists: renderDatalists, savedMsg: savedMsg
   };
 
   async function init() {
+    document.body.classList.toggle('host-vscode', H.isVscode);
     devHero = $('#hero').innerHTML;
-    devPvActions = $('.pv-actions').innerHTML;
+    devPvActions = $('.pv-actions').innerHTML.replace('Open in VS Code', VS_LABEL);
     renderDatalists();
     $('#designer-count').textContent = D.objectTypes.filter(function (t) { return D.objectDef(t).fields.length; }).length;
     document.documentElement.dataset.theme = ST.getTheme();

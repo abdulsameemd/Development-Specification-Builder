@@ -1,88 +1,109 @@
-# DEWA VS Code extension – FS discovery add-on
+# DEWA VS Code extension – SAP Spec Builder add-on
 
-This add-on lets the **SAP Specification Builder** (Functional mode, step 4 → **Discover in SAP**) open VS Code
-straight into GitHub Copilot Chat with the read-only `dewa-fs-discovery` agent and the discovery prompt filled in.
-The consultant signs in to Copilot if VS Code asks, presses **Enter**, copies the agent's answer and clicks
-**Import from clipboard** in the builder.
+Adds the **SAP Spec Builder** to DEWA's VS Code extension, so consultants and developers work in one window:
+
+- **DEWA: Open SAP Spec Builder** (command palette, status-bar item *Spec Builder*, or `vscode://<publisher>.<name>/builder`)
+  opens the builder as an editor tab — the same app as the standalone HTML file, Functional and Technical mode.
+- The user signs in to **GitHub Copilot** in VS Code (button in the builder or the Accounts menu). VS Code handles the
+  sign-in; the builder only sees the account name.
+- **Discover automatically** (Functional, step 4) reads the SAP system **read-only** with the Copilot model and the
+  read tools of the ABAP ADT / Fiori / UI5 / CAP MCP servers, shows progress in the panel and imports the result.
+- **Run in Copilot Chat** opens Copilot Chat beside the panel with `dewa-fs-discovery` and the prompt filled in; the
+  agent hands the result back through the `dewa_submitContextPack` tool.
+- Word / Markdown files are saved through a VS Code save dialog (default: the workspace folder). In Technical mode,
+  **Open in Copilot Chat** hands the development spec to `dewa-abap`.
+
+The standalone browser version keeps working as before (copy & paste or `vscode://…/discover`).
 
 ```text
-Builder ──copy prompt + open vscode://<publisher>.<name>/discover?src=clipboard&v=1──▶ DEWA extension (URI handler)
-   ▲                                                                                     │ reads clipboard, checks marker,
-   │                                                                                     │ Copilot installed + GitHub sign-in
-   │                                                                                     ▼
-   └──── Import from clipboard ◀── JSON context pack ◀── dewa-fs-discovery ◀── Copilot Chat (prompt pre-filled)
-                                                         (ABAP ADT / Fiori / UI5 / CAP MCP servers, read-only)
+VS Code ┌──────────────────────── SAP Spec Builder (webview) ────────────────────────┐
+        │ FS wizard · Copilot status · Discover automatically · progress · Word       │
+        └───────────────┬──────────────────────────────────────────▲─────────────────┘
+          postMessage   │                                          │ pack
+        ┌───────────────▼──────────────── extension (this add-on) ─┴─────────────────┐
+        │ storage · save dialog · clipboard · GitHub sign-in                           │
+        │ discoveryRunner: vscode.lm (Copilot) + read-only MCP tools (allow + deny)    │
+        │ or Copilot Chat + dewa-fs-discovery → dewa_submitContextPack                 │
+        └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## What is in this folder
+## Files
 
 | File | Purpose |
 |---|---|
-| `src/fsDiscovery.js` | URI handler: `/discover` → clipboard → checks → `workbench.action.chat.open` |
-| `agents/dewa-fs-discovery.agent.md` | The read-only discovery agent (custom Copilot agent) |
+| `src/index.js` | Entry point: panel, command, serializer, status-bar item, submit tool, URI handler (`/builder`, `/discover`) |
+| `src/specBuilderPanel.js` | Webview panel: loads the builder with a strict CSP + nonce, validated message routing |
+| `src/discoveryRunner.js` | Automatic discovery: Copilot model + read-only MCP tools, round limit, cancellation |
+| `src/submitPackTool.js` | `dewa_submitContextPack` language-model tool (Copilot Chat → panel) |
+| `src/fsDiscovery.js` | `/discover` URI handler for the browser version, `openChat()` |
+| `agents/dewa-fs-discovery.agent.md` | Read-only discovery agent |
 | `package.contributes.json` | What to merge into the extension's `package.json` |
-| `test/fsDiscovery.test.js` | Unit tests with a mocked `vscode` API |
+| `test/*.test.js` | Unit tests with a mocked `vscode` API |
 
 ## Install into the DEWA extension
 
-1. **Copy files** into the extension source:
-   - `src/fsDiscovery.js` → e.g. `src/fsDiscovery.js`
-   - `agents/dewa-fs-discovery.agent.md` → next to the agent files the extension already ships
-     (`dewa-abap`, `dewa-codereview`), so it is installed the same way.
-2. **Edit the agent's `tools:` line** to the MCP server names in your `mcp.json` (keep read operations only where the
-   server lets you choose individual tools).
-3. **Activate on URIs** – merge `package.contributes.json` into `package.json`:
-   ```json
-   "activationEvents": ["onUri"]
+1. **Build the builder** in this repository and copy it into the extension:
+   ```bash
+   node scripts/build-single.js
+   cp dist/SAP-Development-Specification-Builder.html <extension>/media/spec-builder.html
    ```
-4. **Register the handler** in `activate()`:
+2. **Copy the add-on**: `src/*.js` → `<extension>/src/specBuilder/`, `agents/dewa-fs-discovery.agent.md` → next to the
+   agent files the extension already ships (`dewa-abap`, `dewa-codereview`) **and** to `<extension>/agents/` (the panel
+   reads the instructions from there for automatic discovery; change `agentPath` below if you keep it elsewhere).
+3. **Merge `package.contributes.json`** into `package.json`: `activationEvents`, `contributes.commands`,
+   `contributes.configuration`, `contributes.languageModelTools`. Make sure `media/` and `agents/` are packaged
+   (not excluded in `.vscodeignore`).
+4. **Activate** in the extension's `activate()`:
    ```js
-   const fsDiscovery = require('./fsDiscovery');
    exports.activate = function (context) {
      // … existing activation …
-     fsDiscovery.activate(context, require('vscode'));
+     require('./specBuilder/index').activate(context, require('vscode'), {
+       htmlPath: 'media/spec-builder.html',            // defaults shown
+       agentPath: 'agents/dewa-fs-discovery.agent.md'
+     });
    };
    ```
-   An extension can register **only one** URI handler. If yours already has one, route the path instead:
-   ```js
-   const discovery = require('./fsDiscovery').create(vscode);
-   vscode.window.registerUriHandler({
-     handleUri(uri) {
-       if (uri.path === '/discover') return discovery.handleUri(uri);
-       // … existing routes …
-     }
-   });
-   ```
-5. **Package and distribute** as usual (`vsce package`) and install the new VSIX.
-6. **Set the extension ID in the builder** – Functional → step 4 → *VS Code launch settings* → *DEWA extension ID*
-   = `<publisher>.<name>` from the extension's `package.json` (default `dewa.dewa-sap-agents`). To make it the default
-   for everyone, change `discovery.extensionId` in `config/fs-definitions.json` and run `node scripts/build-config.js`.
+   An extension can register only **one** URI handler. If yours already has one, pass `uriHandler: false` and call the
+   returned `handleUri(uri)` from your handler for `/builder` and `/discover`.
+5. **Tool names**: set the agent's `tools:` line and the setting `dewaSpecBuilder.discoveryTools` to the tool names of
+   your MCP servers (see *MCP: List Servers* / the tools picker in Copilot Chat). Default patterns: `*abap*`, `*adt*`,
+   `*fiori*`, `*ui5*`, `*cap*`. Tools with a write verb in their name (create, update, delete, change, activate, lock,
+   transport, release, run, …) are **always** excluded from automatic discovery.
+6. **Package** (`vsce package`) and install the VSIX. To make the browser version's one-click launch work too, set the
+   extension ID in `config/fs-definitions.json` → `discovery.extensionId` (or in the builder's launch settings).
 
 ## Verify on a DEWA machine
 
-1. In the builder load **Examples → FI-AP: Vendor open items ageing**, go to step 4 and click **Discover in SAP**.
-2. The browser asks once to open VS Code – allow it.
-3. Expected: Copilot Chat opens with `dewa-fs-discovery` selected and the prompt (starting with `DEWA-FS-DISCOVERY v1`)
-   in the input box, not yet sent. If you are not signed in, VS Code's own GitHub sign-in appears first.
-4. Press Enter, wait for the summary and the `json` block, copy the answer, click **Import from clipboard**.
+1. **DEWA: Open SAP Spec Builder** → the builder opens in a tab; the status bar shows *Spec Builder*.
+2. Functional → Examples → *FI-AP: Vendor open items ageing* → step 4. The card shows *GitHub Copilot · not signed in*
+   → **Sign in to GitHub Copilot** → VS Code's GitHub sign-in → *signed in as …*.
+3. **Discover automatically**. First time only, VS Code asks to allow the extension to use the Copilot language model —
+   allow it. The log lists the model, the number of read tools, each tool call, and any excluded write tools; the pack
+   is imported and the reference check shows ✓ / ✗.
+4. **Run in Copilot Chat** → Chat opens beside the panel with `dewa-fs-discovery` and the prompt; press Enter. At the end
+   the agent calls *Send context pack to SAP Spec Builder* (confirm if VS Code asks) and the panel updates.
+5. Download Word → save dialog in the workspace folder → *Open*.
+6. Technical → load an example → **Open in Copilot Chat** → `dewa-abap` with the specification prompt.
 
 Things to confirm on DEWA's VS Code / Copilot version:
 
-- `workbench.action.chat.open` accepts `mode: 'dewa-fs-discovery'` (custom agent). If it does not, the handler falls
-  back to agent mode and prefixes the prompt with an instruction to act as `dewa-fs-discovery`; the user can also pick
-  the agent in the chat's agent picker.
-- `isPartialQuery: true` leaves the prompt unsent so the user reviews it first.
+- `vscode.lm.tools` lists the MCP server tools (needed for automatic discovery). If the log says *No read tools of the
+  SAP MCP servers are available*, adjust `dewaSpecBuilder.discoveryTools`, or use **Run in Copilot Chat**.
+- Whether `vscode.lm.invokeTool` asks for confirmation of MCP tools outside the chat.
+- `workbench.action.chat.open` accepts the custom agent as `mode` (otherwise the fallback opens agent mode with an
+  instruction to act as the agent).
+- The `dewa_submitContextPack` tool is offered to the agent (listed in `tools:`).
 
-If the extension is not installed, choose **Plain VS Code (copy & paste)** in the builder's launch settings: the prompt
-is still copied, VS Code opens, and the user pastes it into Copilot Chat with `dewa-fs-discovery` selected.
+## Security
 
-## Security notes
-
-- The builder never sees GitHub or SAP credentials; sign-in is VS Code's GitHub authentication.
-- The prompt goes through the clipboard (no URL length limits, nothing in browser/OS history). The handler ignores
-  anything that does not start with the builder's marker and refuses prompts over 100 KB.
-- The agent is read-only by instruction and should also be restricted to read tools via `tools:`.
-- The builder treats the returned pack as untrusted data: it validates the structure, limits sizes and escapes all text.
+- **No credentials in the panel.** GitHub sign-in is VS Code's; the webview receives only the account label.
+- **Read-only, twice over.** Automatic discovery is limited by the instructions *and* by tool filtering (allow-list
+  plus write-verb deny-list; calls to tools that were not offered are refused). In Copilot Chat the agent's `tools:`
+  list applies.
+- **Webview:** `default-src 'none'`, scripts only with a per-load nonce, no remote resources. Every message from the
+  panel is checked by type and shape; anything else is ignored. Saved file names are sanitised (`.md`, `.docx`,
+  `.json` only).
+- **Pack:** validated again in the builder, size-limited and escaped (untrusted data).
 
 ## Tests
 

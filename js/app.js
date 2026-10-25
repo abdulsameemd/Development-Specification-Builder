@@ -6,7 +6,11 @@
   const S = APB.state, D = APB.defs, C = APB.completeness, M = APB.markdown, ST = APB.storage, X = APB.exporter, T = APB.templates, V = APB.validation;
   const FA = APB.fsApp, FC = APB.fsCompleteness, FM = APB.fsMarkdown;
 
+  const H = APB.host;
   function isFs() { return S.isFs(); }
+  /* Inside the VS Code panel the hand-off goes straight to Copilot Chat; files go through a save dialog. */
+  const VS_LABEL = H.isVscode ? 'Open in Copilot Chat' : 'Open in VS Code';
+  function savedMsg(name) { return H.isVscode ? 'Choose where to save ' + name : 'Downloaded ' + name; }
   function steps() { return isFs() ? APB.fs.steps : STEPS; }
   function buildMd(s) { return s.kind === 'fs' ? FM.build(s) : M.build(s); }
   function evaluate(s) { return s.kind === 'fs' ? FC.evaluate(s) : C.evaluate(s); }
@@ -384,8 +388,8 @@
     const md = M.build(s);
     return '<div class="gen-head"><h2 class="step-title">Your specification is ready</h2>' +
       '<p class="muted">Not sure which VS Code agent to use? See <button type="button" class="link" data-action="agents">Agent workflows</button>.</p>' +
-      '<p class="muted">Use <strong>Open in VS Code</strong> to copy the prompt and jump straight into your project, or download <code>' + esc(M.filename(s)) + '</code> into your project folder — <code>dewa-abap</code> reads it as its requirement source — and reference it in Copilot Chat (<code>#file</code> in VS Code, or attach it in Eclipse ADT).</p></div>' +
-      '<div class="gen-actions"><button type="button" class="btn btn-primary btn-lg" data-action="vscode"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3 8 12l9 9 4-2V5z"/><path d="M8 12 3 8m5 4-5 4"/></svg> Open in VS Code</button>' +
+      '<p class="muted">Use <strong>' + VS_LABEL + '</strong> to ' + (H.isVscode ? 'hand the prompt to <code>dewa-abap</code> in Copilot Chat' : 'copy the prompt and jump straight into your project') + ', or download <code>' + esc(M.filename(s)) + '</code> into your project folder — <code>dewa-abap</code> reads it as its requirement source — and reference it in Copilot Chat (<code>#file</code> in VS Code, or attach it in Eclipse ADT).</p></div>' +
+      '<div class="gen-actions"><button type="button" class="btn btn-primary btn-lg" data-action="vscode"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3 8 12l9 9 4-2V5z"/><path d="M8 12 3 8m5 4-5 4"/></svg> ' + VS_LABEL + '</button>' +
       '<button type="button" class="btn btn-ghost btn-lg" data-action="download">Download file</button>' +
       '<button type="button" class="btn btn-ghost" data-action="copy">Copy Markdown</button>' +
       '<button type="button" class="btn btn-ghost" data-action="share">Copy share link</button>' +
@@ -793,12 +797,18 @@
       if (mandatoryMissing(s).length) { toast(isFs() ? 'Add the business requirement and the module first' : 'Add a requirement and a development object first'); return; }
       const name = isFs() ? FM.filename(s) : M.filename(s);
       X.download(name, buildMd(s), 'text/markdown');
-      toast('Downloaded ' + name);
+      toast(savedMsg(name));
     },
     copy: copyMarkdown,
     vscode: function () {
       const s = S.get();
       if (isFs()) { FA.actions['fs-discover'](); return; }
+      if (H.isVscode) {
+        if (V.checkMandatory(s).length) { toast('Add a requirement and a development object first'); return; }
+        H.post({ type: 'open-chat', agent: 'dewa-abap', prompt: M.chatPrompt(s) });
+        toast('Copilot Chat opens with dewa-abap and the specification — review it and press Enter', 6000);
+        return;
+      }
       if (V.checkMandatory(s).length) { toast('Add a requirement and a development object first'); return; }
       const copied = X.copyNow(M.chatPrompt(s));
       X.launchVscode();
@@ -908,7 +918,7 @@
       { g: 'Create', i: '+', t: 'New requirement', run: actions.new },
       { g: 'Create', i: '⬇', t: 'Download file', run: actions.download },
       { g: 'Create', i: '⧉', t: 'Copy Markdown', run: actions.copy },
-      { g: 'Create', i: '›', t: 'Open in VS Code (copy prompt for Copilot Chat)', run: actions.vscode },
+      { g: 'Create', i: '›', t: H.isVscode ? 'Open in Copilot Chat (dewa-abap)' : 'Open in VS Code (copy prompt for Copilot Chat)', run: actions.vscode },
       { g: 'Share', i: '🔗', t: 'Copy share link', run: actions.share },
       { g: 'Drafts', i: '☰', t: 'Saved drafts', run: openDrafts },
       { g: 'Info', i: 'ℹ', t: 'Agent workflows (dewa-abap, dewa-codereview, dewa-fs-discovery)', run: actions.agents },
@@ -925,7 +935,7 @@
 
   function renderPalette() {
     const q = $('#palette-input').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
-    palItems = commands().filter(function (c) { const h = (c.t + ' ' + c.g).toLowerCase(); return q.every(function (w) { return h.indexOf(w) >= 0; }); }).slice(0, 40);
+    palItems = commands().filter(function (c) { return !(H.isVscode && c.run === actions.share); }).filter(function (c) { const h = (c.t + ' ' + c.g).toLowerCase(); return q.every(function (w) { return h.indexOf(w) >= 0; }); }).slice(0, 40);
     palIndex = Math.min(palIndex, Math.max(0, palItems.length - 1));
     $('#palette-list').innerHTML = palItems.length ? palItems.map(function (c, i) {
       return '<li role="option" id="pal-' + i + '" data-pal="' + i + '" aria-selected="' + (i === palIndex) + '"><span class="p-ico" aria-hidden="true">' + esc(c.i) + '</span><span>' + esc(c.t) + '</span><span class="p-group">' + esc(c.g) + '</span></li>';
@@ -1070,12 +1080,13 @@
   APB.ui = {
     ui: ui, esc: esc, toast: toast, nav: nav, stat: stat, statusHtml: statusHtml, detailsAttrs: detailsAttrs,
     fieldsBlock: fieldsBlock, fieldHtml: fieldHtml, renderMain: renderMain, updateSteps: updateSteps, loadState: loadState,
-    renderDatalists: renderDatalists
+    renderDatalists: renderDatalists, savedMsg: savedMsg
   };
 
   async function init() {
+    document.body.classList.toggle('host-vscode', H.isVscode);
     devHero = $('#hero').innerHTML;
-    devPvActions = $('.pv-actions').innerHTML;
+    devPvActions = $('.pv-actions').innerHTML.replace('Open in VS Code', VS_LABEL);
     renderDatalists();
     $('#designer-count').textContent = D.objectTypes.filter(function (t) { return D.objectDef(t).fields.length; }).length;
     document.documentElement.dataset.theme = ST.getTheme();

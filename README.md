@@ -48,7 +48,15 @@ The browser never connects to SAP. DEWA's VS Code already has GitHub Copilot wit
 
 The FS then shows a *Current SAP System Context* section, a **reference check** (✓ in system · ✗ not found · ⚠ proposed name already exists · – not checked), discovered names as suggestions in the grids, and a warning when the pack is older than 30 days. *Try a sample pack* shows the flow without a system ([`docs/samples/fs-context-pack-sample.json`](docs/samples/fs-context-pack-sample.json), clearly marked as sample).
 
-**VS Code extension add-on** – [`vscode-extension-addon/`](vscode-extension-addon/INSTALL.md): a `/discover` URI handler (`vscode://<publisher>.<name>/discover?src=clipboard&v=1`) to merge into DEWA's extension, the agent file, install steps and unit tests (`node --test vscode-extension-addon/test/*.test.js`). Without the add-on choose *Plain VS Code (copy & paste)* in step 4 → *VS Code launch settings*.
+### Inside VS Code (one window)
+
+With the add-on in DEWA's VS Code extension, **DEWA: Open SAP Spec Builder** opens this same app as a tab inside VS Code:
+
+- sign in to **GitHub Copilot** in VS Code (button in step 4 or the Accounts menu);
+- **Discover automatically** reads the system read-only with the Copilot model and only the *read* tools of the SAP MCP servers (write tools are filtered out), with live progress and automatic import — or **Run in Copilot Chat** beside the panel, where the agent sends the pack back with the `dewa_submitContextPack` tool;
+- Word / Markdown are saved through VS Code's save dialog; in Technical mode **Open in Copilot Chat** hands the spec to `dewa-abap`.
+
+**VS Code extension add-on** – [`vscode-extension-addon/`](vscode-extension-addon/INSTALL.md): the panel, the automatic discovery runner, the submit tool, the `/builder` and `/discover` URI handlers, the agent file, install steps and unit tests (`node --test vscode-extension-addon/test/*.test.js`). In the browser without the add-on, choose *Plain VS Code (copy & paste)* in step 4 → *VS Code launch settings*.
 
 ## How developers use it (Technical mode)
 
@@ -138,9 +146,10 @@ js/
   fs-completeness.js    "Ready for sign-off", open questions
   fs-generator.js       functional spec Markdown
   docx.js               dependency-free Word writer (OOXML + ZIP)
+  host.js               browser vs. VS Code panel (storage, save dialog, clipboard, messages)
   fs-app.js             functional spec wizard, discovery panel, hand-off to a development spec
   app.js                UI shell (both modes)
-vscode-extension-addon/ URI handler + dewa-fs-discovery agent for the DEWA VS Code extension
+vscode-extension-addon/ SAP Spec Builder panel, read-only discovery runner, submit tool, URI handlers, dewa-fs-discovery agent
 scripts/build-config.js
 assets/morohub-logo.png
 ```
