@@ -166,7 +166,16 @@ The model in `state.js` does not depend on Copilot; Copilot is just an **output 
 2. Run `node scripts/build-config.js` to regenerate `js/config-bundle.js` (`--check` verifies it is current).
 3. Reload. No UI code changes are needed; `section` decides where the value lands in the Markdown.
 
-## Walkthrough video
+## Walkthrough videos
+
+[`docs/media/FS-Builder-Story.mp4`](docs/media/FS-Builder-Story.mp4) (6:25, 1080p, voice-over) tells one FI-AP requirement as a story in four chapters:
+1. **The requirement:** month-end vendor ageing in Excel.
+2. **Option A, without discovery:** the functional spec in the browser, from context and AS-IS / TO-BE to MoSCoW, fit-gap, RICEFW and UAT, ending in a Word file.
+3. **Option B, with Discover in SAP:** the builder as a VS Code tab, with Copilot sign-in, read-only discovery, the reference check and the Word file saved to the workspace. The two Word outputs are then compared.
+4. **From functional to technical:** the RICEFW item is handed off to a pre-filled development spec, the developer adds the selection screen, saves `BUSINESS_REQUIREMENTS.md` and opens Copilot Chat for `dewa-abap`.
+
+The browser scenes and the VS Code workbench are real. In the VS Code scenes, the Copilot sign-in and the SAP answers are simulated from the sample "DEMO" system, as the on-screen tag says. The characters are fictional.
+
 
 [`docs/media/SAP-Spec-Builder-Walkthrough.mp4`](docs/media/SAP-Spec-Builder-Walkthrough.mp4) (2:56, 1080p, voice-over): a single ABAP artifact from the builder to VS Code with the SAP ABAP ADT MCP server and the `dewa-abap` agent — specify the class, generate, Open in VS Code, confirm target, class + ABAP Unit test, evidence, `CONFIRM ARTEFACT`. The builder scenes are real; the VS Code / Copilot scenes are illustrations (marked in the video) and their evidence values are examples.
 
