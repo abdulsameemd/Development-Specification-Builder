@@ -1,0 +1,32 @@
+{
+  "//": "Base manifest. scripts/build-vsix.js merges vscode-extension-addon/package.contributes.json into it.",
+  "name": "dewa-sap-spec-builder",
+  "displayName": "DEWA SAP Spec Builder",
+  "description": "Functional and development specifications for SAP, inside VS Code – with read-only SAP system discovery through GitHub Copilot and the SAP MCP servers.",
+  "version": "1.0.0",
+  "publisher": "dewa",
+  "license": "UNLICENSED",
+  "private": true,
+  "icon": "icon.png",
+  "repository": { "type": "git", "url": "https://github.com/abdulsameemd/Development-Specification-Builder.git" },
+  "engines": { "vscode": "^1.95.0" },
+  "categories": ["AI", "Other"],
+  "keywords": ["SAP", "ABAP", "functional specification", "Copilot", "MCP", "Fiori", "CAP", "DEWA"],
+  "main": "./extension.js",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "commands": [
+      { "command": "dewa.specBuilder.installAgent", "title": "Reinstall dewa-fs-discovery agent", "category": "DEWA" }
+    ],
+    "configuration": {
+      "title": "DEWA SAP Spec Builder",
+      "properties": {
+        "dewaSpecBuilder.installAgent": {
+          "type": "boolean",
+          "default": true,
+          "description": "Install the dewa-fs-discovery agent into the VS Code prompts folder on start-up (an edited copy is never replaced)."
+        }
+      }
+    }
+  }
+}

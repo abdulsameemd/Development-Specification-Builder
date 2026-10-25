@@ -272,3 +272,49 @@ test('activate registers command, serializer, tool, status bar and URI routes', 
   await vs.calls.panel.receive({ type: 'auth-status' });
   assert.strictEqual(vs.calls.panel.webview.posted.pop().account, 'consultant@dewa');
 });
+
+/* ----------------------------------------------------------- agent install */
+const installer = require('../src/agentInstaller');
+function installCtx() {
+  const user = fs.mkdtempSync(path.join(os.tmpdir(), 'User-'));
+  const ext = fs.mkdtempSync(path.join(os.tmpdir(), 'ext-'));
+  fs.mkdirSync(path.join(ext, 'agents'));
+  fs.writeFileSync(path.join(ext, 'agents', installer.FILE), 'v1');
+  const ctx = fakeContext(ext);
+  ctx.globalStorageUri = { fsPath: path.join(user, 'globalStorage', 'dewa.dewa-sap-spec-builder') };
+  return { ctx: ctx, ext: ext, dest: path.join(user, 'prompts', installer.FILE) };
+}
+
+test('agent is installed into User/prompts and refreshed on update', async () => {
+  const t = installCtx();
+  assert.strictEqual(installer.promptsDir(t.ctx.globalStorageUri.fsPath), path.dirname(t.dest));
+  assert.strictEqual(await installer.install(fakeVscode(), t.ctx), 'installed');
+  assert.strictEqual(fs.readFileSync(t.dest, 'utf8'), 'v1');
+  assert.strictEqual(await installer.install(fakeVscode(), t.ctx), 'current');
+  fs.writeFileSync(path.join(t.ext, 'agents', installer.FILE), 'v2');
+  assert.strictEqual(await installer.install(fakeVscode(), t.ctx), 'updated');
+  assert.strictEqual(fs.readFileSync(t.dest, 'utf8'), 'v2');
+});
+
+test('an agent file the user edited is not replaced without asking', async () => {
+  const t = installCtx();
+  await installer.install(fakeVscode(), t.ctx);
+  fs.writeFileSync(t.dest, 'my edits');
+  fs.writeFileSync(path.join(t.ext, 'agents', installer.FILE), 'v2');
+  assert.strictEqual(await installer.install(fakeVscode(), t.ctx), 'modified');
+  assert.strictEqual(fs.readFileSync(t.dest, 'utf8'), 'my edits');
+  assert.strictEqual(await installer.install(fakeVscode(), t.ctx, { force: true }), 'updated');
+});
+
+test('the VSIX manifest carries the add-on contributions and the builder extension ID', () => {
+  const stage = path.join(__dirname, '../../build/vsix/package.json');
+  if (!fs.existsSync(stage)) return; // run scripts/build-vsix.js first
+  const m = JSON.parse(fs.readFileSync(stage, 'utf8'));
+  const cfg = require('../../config/fs-definitions.json').discovery;
+  assert.strictEqual(m.publisher + '.' + m.name, cfg.extensionId);
+  const cmds = m.contributes.commands.map((x) => x.command);
+  assert.ok(cmds.includes('dewa.specBuilder.open') && cmds.includes('dewa.specBuilder.installAgent'));
+  assert.strictEqual(m.contributes.languageModelTools[0].name, submitTool.TOOL_NAME);
+  assert.ok(['dewaSpecBuilder.discoveryTools', 'dewaSpecBuilder.maxToolRounds', 'dewaSpecBuilder.installAgent'].every((k) => m.contributes.configuration.properties[k]));
+  assert.ok(m.activationEvents.includes('onUri') && m.activationEvents.includes('onWebviewPanel:dewaSpecBuilder'));
+});

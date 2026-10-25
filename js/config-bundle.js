@@ -8193,7 +8193,7 @@ window.APB_CONFIG = {
    "packVersion": 1,
    "marker": "DEWA-FS-DISCOVERY v1",
    "agent": "dewa-fs-discovery",
-   "extensionId": "dewa.dewa-sap-agents",
+   "extensionId": "dewa.dewa-sap-spec-builder",
    "staleDays": 30,
    "mcpServers": [
     "SAP ABAP ADT",

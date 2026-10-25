@@ -50,7 +50,9 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-With the add-on in DEWA's VS Code extension, **DEWA: Open SAP Spec Builder** opens this same app as a tab inside VS Code:
+**Install:** [`dist/dewa-sap-spec-builder-1.0.0.vsix`](dist/dewa-sap-spec-builder-1.0.0.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.0.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+
+**DEWA: Open SAP Spec Builder** (command palette or *Spec Builder* in the status bar) opens this same app as a tab inside VS Code:
 
 - sign in to **GitHub Copilot** in VS Code (button in step 4 or the Accounts menu);
 - **Discover automatically** reads the system read-only with the Copilot model and only the *read* tools of the SAP MCP servers (write tools are filtered out), with live progress and automatic import — or **Run in Copilot Chat** beside the panel, where the agent sends the pack back with the `dewa_submitContextPack` tool;

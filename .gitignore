@@ -3,3 +3,4 @@ node_modules/
 *-source.zip
 *.mp4
 !docs/media/*.mp4
+build/
