@@ -51,6 +51,9 @@
     return lines.join('\n');
   }
 
+  /* RAP draft tables are generated from the behavior definition – nothing to specify. */
+  function isGenerated(state, o) { return !!(APB.rap && APB.rap.isDraftTable(state, o)); }
+
   function detailFilled(o) {
     return Object.keys(o.detail || {}).some(function (k) { return k !== 'used' && V.isFilled(o.detail[k]); });
   }
@@ -59,7 +62,7 @@
     const c = { existing: 0, new: 0, change: 0, tbc: 0, dependencies: state.objects.length, specified: 0, toSpecify: 0 };
     state.objects.forEach(function (o) {
       c[o.status] = (c[o.status] || 0) + 1;
-      if (D.hasBuilder(o)) { c.toSpecify++; if (detailFilled(o)) c.specified++; }
+      if (D.hasBuilder(o) && !isGenerated(state, o)) { c.toSpecify++; if (detailFilled(o)) c.specified++; }
     });
     return c;
   }
@@ -71,7 +74,7 @@
   /* anyOf tokens: a state path, "object:<Type>.<field>" (any object of that type) or "specs:all". */
   function tokenFilled(state, token) {
     if (token === 'specs:all') {
-      return state.objects.filter(D.hasBuilder).every(detailFilled);
+      return state.objects.filter(function (o) { return D.hasBuilder(o) && !isGenerated(state, o); }).every(detailFilled);
     }
     const m = /^object:(.+)\.([^.]+)$/.exec(token);
     if (m) return state.objects.some(function (o) { return o.type === m[1] && V.isFilled((o.detail || {})[m[2]]); });
@@ -103,7 +106,7 @@
       const label = objectLabel(o);
       if (o.status === 'tbc') q.push('Confirm whether ' + o.type + (name ? ' ' + name : ' (unnamed)') + ' already exists in the system.');
       else if (!name) q.push(o.status === 'new' ? 'Proposed name for the new ' + o.type + (o.purpose ? ' (' + o.purpose + ')' : '') + '.' : 'Name of the ' + o.type + (o.purpose ? ' (' + o.purpose + ')' : '') + '.');
-      if (!D.hasBuilder(o)) return;
+      if (!D.hasBuilder(o) || (APB.rap && APB.rap.isDraftTable(state, o))) return;
       D.objectDef(o.type).fields.forEach(function (f) {
         if (f.ask && D.isVisible(f, o.detail) && !V.isFilled(o.detail[f.id])) q.push(label + ': ' + f.ask + '.');
       });
@@ -111,6 +114,8 @@
         if ((f.kind === 'radio' || f.kind === 'select') && v === 'tbc') q.push(label + ': ' + f.label + '.');
       });
     });
+
+    if (APB.rap) APB.rap.checks(state).forEach(function (c) { q.push(c.text); });
 
     const qa = state.quality;
     if (qa.authorization === 'tbc') q.push('Whether authority checks are required.');

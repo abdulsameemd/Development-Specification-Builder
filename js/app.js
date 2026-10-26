@@ -295,22 +295,38 @@
       nav(true, 'Continue');
   }
 
+  /* RAP readiness: what would break activation, with one-click fixes (js/rap-blueprint.js). */
+  const RAP_FIX = { 'admin-fields': '+ Add RAP admin fields to table & CDS', 'draft-table': '+ Add draft table' };
+  function rapFindings(s, i) {
+    const list = APB.rap.checks(s).filter(function (c) { return c.i === i; });
+    if (!list.length) return '<p class="rap-ok">✓ RAP readiness: no findings. The specification includes the full RAP blueprint (artifacts, activation groups, behavior definition and behavior pool skeletons).</p>';
+    const fixes = list.map(function (c) { return c.fix; }).filter(function (f, k, a) { return f && a.indexOf(f) === k; });
+    return '<div class="refs rap-check" role="note"><strong>RAP readiness – ' + list.length + ' finding' + (list.length > 1 ? 's' : '') + '</strong> <span class="muted small">(each one would cost an activation round in ADT)</span><ul>' +
+      list.map(function (c) { return '<li class="' + c.level + '">' + esc(c.text.replace(/^RAP [^:]+: /, '')) + '</li>'; }).join('') + '</ul>' +
+      fixes.map(function (f) { return '<button type="button" class="chip" data-action="rap-fix" data-fix="' + f + '" data-i="' + i + '">' + RAP_FIX[f] + '</button>'; }).join(' ') + '</div>';
+  }
+
   function artifactCard(o, i) {
     const def = D.objectDef(o.type);
-    const builder = D.hasBuilder(o);
-    const done = builder ? C.detailFilled(o) : V.isFilled(o.detail.used);
+    const draftTable = APB.rap.isDraftTable(S.get(), o);
+    const builder = D.hasBuilder(o) && !draftTable;
+    const done = draftTable || (builder ? C.detailFilled(o) : V.isFilled(o.detail.used));
     const base = 'objects.' + i + '.detail';
     let body;
-    if (builder) {
-      body = (o.status === 'change' ? '<p class="note">Describe only what changes (new fields, new parameters, changed logic).</p>' : '') + fieldsBlock(def.fields, o.detail, base);
+    if (draftTable) {
+      body = '<p class="rap-draft">Draft table of a RAP business object: it is generated from the behavior definition (ADT quick fix on <code>draft table</code>) with one field per CDS element plus <code>"%admin" : include sych_bdl_draft_admin_inc</code>. Only the name is needed — set it in step 3.</p>';
+    } else if (builder) {
+      body = (o.status === 'change' ? '<p class="note">Describe only what changes (new fields, new parameters, changed logic).</p>' : '') +
+        (o.type === 'RAP' ? rapFindings(S.get(), i) : '') + fieldsBlock(def.fields, o.detail, base);
     } else {
       body = '<div class="form-grid">' + fieldHtml({ id: 'used', label: o.status === 'tbc' ? 'What would you need from it?' : 'What do you need from it?', kind: 'textarea', placeholder: def.usedHint }, o.detail, base, []) + '</div>' +
         (def.fields.length ? '<p class="muted small">Set the status to <strong>New</strong> or <strong>Existing – change</strong> in step 3 to get the full ' + esc(o.type) + ' designer.</p>' : '');
     }
-    return '<details class="artifact" id="obj-' + o.id + '"' + detailsAttrs('obj:' + o.id, builder && !done) + '>' +
+    const rapIssues = builder && o.type === 'RAP' ? APB.rap.checks(S.get()).filter(function (c) { return c.i === i; }).length : 0;
+    return '<details class="artifact" id="obj-' + o.id + '"' + detailsAttrs('obj:' + o.id, builder && (!done || rapIssues > 0)) + '>' +
       '<summary><span class="badge s-' + o.status + '">' + esc(D.statusLabel(o.status)) + '</span> <span class="a-type">' + esc(o.type) + (def.tcode ? ' <span class="tcode">' + esc(def.tcode) + '</span>' : '') + '</span> ' +
       '<span class="a-name">' + esc(o.name || '(no name yet)') + '</span>' + (o.purpose ? ' <span class="muted small a-purpose">' + esc(o.purpose) + '</span>' : '') +
-      '<span class="a-state ' + (done ? 'ok' : 'todo') + '">' + (done ? '✓ specified' : builder ? 'to specify' : 'optional') + '</span></summary>' +
+      '<span class="a-state ' + (done && !rapIssues ? 'ok' : 'todo') + '">' + (rapIssues ? '⚠ ' + rapIssues + ' RAP finding' + (rapIssues > 1 ? 's' : '') : done ? '✓ specified' : builder ? 'to specify' : 'optional') + '</span></summary>' +
       '<div class="artifact-body">' + body + '</div></details>';
   }
 
@@ -320,7 +336,7 @@
     // performance questions only where they matter (or when already answered)
     const quality = D.quality.filter(function (f) { return !f.perfOnly || perfRelevant || V.isFilled(s.quality[f.id]); });
     const index = s.objects.length ? '<nav class="obj-index" aria-label="Objects">' + s.objects.map(function (o) {
-      const done = D.hasBuilder(o) ? C.detailFilled(o) : true;
+      const done = APB.rap.isDraftTable(s, o) || (D.hasBuilder(o) ? C.detailFilled(o) : true);
       return '<a href="#obj-' + o.id + '" data-action="jump" data-id="' + o.id + '" class="' + (done ? 'ok' : 'todo') + '">' + esc(o.name || o.type) + '</a>';
     }).join('') + '</nav>' : '';
     return '<h2 class="step-title">' + STEPS[3].title + '</h2>' +
@@ -746,6 +762,11 @@
       const i = Number(el.dataset.i);
       if (!window.confirm('Delete this entry and everything in it?')) return;
       updateSteps(function (s) { arrayAt(s, el.dataset.path).splice(i, 1); });
+    },
+    'rap-fix': function (el) {
+      let n = 0;
+      updateSteps(function (s) { n = APB.rap.fix(s, Number(el.dataset.i), el.dataset.fix); });
+      toast(n ? 'RAP fix applied (' + n + ' change' + (n > 1 ? 's' : '') + ') – review the table and CDS objects' : 'Nothing to add');
     },
     'add-rule': function () { updateSteps(function (s) { s.rules.push({ id: S.uid(), condition: '', behavior: '' }); }); focusLast('[data-bind$=".condition"]'); },
     'remove-rule': function (el) { updateSteps(function (s) { s.rules.splice(Number(el.dataset.i), 1); }); },

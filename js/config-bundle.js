@@ -5992,7 +5992,50 @@ window.APB_CONFIG = {
       "type": "Table",
       "name": "",
       "status": "new",
-      "purpose": "Persistent table"
+      "purpose": "Persistent table",
+      "detail": {
+       "deliveryClass": "A",
+       "clientDependent": "yes",
+       "fields": [
+        {
+         "name": "CLIENT",
+         "key": true,
+         "dataElement": "MANDT"
+        },
+        {
+         "name": "KEY_UUID",
+         "key": true,
+         "dataElement": "SYSUUID_X16"
+        },
+        {
+         "name": "CREATED_BY",
+         "dataElement": "ABP_CREATION_USER"
+        },
+        {
+         "name": "CREATED_AT",
+         "dataElement": "ABP_CREATION_TSTMPL"
+        },
+        {
+         "name": "LAST_CHANGED_BY",
+         "dataElement": "ABP_LASTCHANGE_USER"
+        },
+        {
+         "name": "LAST_CHANGED_AT",
+         "dataElement": "ABP_LASTCHANGE_TSTMPL"
+        },
+        {
+         "name": "LOCAL_LAST_CHANGED_AT",
+         "dataElement": "ABP_LOCINST_LASTCHANGE_TSTMPL"
+        }
+       ]
+      }
+     },
+     {
+      "type": "Table",
+      "name": "",
+      "status": "new",
+      "purpose": "Draft table (generated from the behavior definition)",
+      "detail": {}
      },
      {
       "type": "CDS",
@@ -6000,7 +6043,51 @@ window.APB_CONFIG = {
       "status": "new",
       "purpose": "Root view entity",
       "detail": {
-       "entityKind": "define root view entity"
+       "entityKind": "define root view entity",
+       "vdm": "Restricted / transactional (R_ / ZR_)",
+       "elements": [
+        {
+         "expression": "key_uuid",
+         "alias": "KeyUuid",
+         "key": true
+        },
+        {
+         "expression": "created_by",
+         "alias": "CreatedBy",
+         "annotations": "@Semantics.user.createdBy: true"
+        },
+        {
+         "expression": "created_at",
+         "alias": "CreatedAt",
+         "annotations": "@Semantics.systemDateTime.createdAt: true"
+        },
+        {
+         "expression": "last_changed_by",
+         "alias": "LastChangedBy",
+         "annotations": "@Semantics.user.lastChangedBy: true"
+        },
+        {
+         "expression": "last_changed_at",
+         "alias": "LastChangedAt",
+         "annotations": "@Semantics.systemDateTime.lastChangedAt: true"
+        },
+        {
+         "expression": "local_last_changed_at",
+         "alias": "LocalLastChangedAt",
+         "annotations": "@Semantics.systemDateTime.localInstanceLastChangedAt: true"
+        }
+       ],
+       "accessControl": "#CHECK"
+      }
+     },
+     {
+      "type": "CDS",
+      "name": "",
+      "status": "new",
+      "purpose": "Projection view (UI)",
+      "detail": {
+       "entityKind": "define view entity … as projection on",
+       "vdm": "Consumption (C_ / ZC_)"
       }
      },
      {
@@ -6016,9 +6103,22 @@ window.APB_CONFIG = {
        ],
        "entities": [
         {
-         "role": "root"
+         "role": "root",
+         "operations": [
+          "create",
+          "update",
+          "delete"
+         ],
+         "masters": [
+          "lock master",
+          "authorization master (instance)",
+          "etag master"
+         ],
+         "etag": "LocalLastChangedAt"
         }
-       ]
+       ],
+       "binding": "OData V4 – UI",
+       "ui": "Fiori elements – List Report / Object Page"
       }
      },
      {
@@ -6597,6 +6697,22 @@ window.APB_CONFIG = {
          {
           "name": "LOCAL_LAST_CHANGED_AT",
           "dataElement": "ABP_LOCINST_LASTCHANGE_TSTMPL"
+         },
+         {
+          "name": "CREATED_BY",
+          "dataElement": "ABP_CREATION_USER"
+         },
+         {
+          "name": "CREATED_AT",
+          "dataElement": "ABP_CREATION_TSTMPL"
+         },
+         {
+          "name": "LAST_CHANGED_BY",
+          "dataElement": "ABP_LASTCHANGE_USER"
+         },
+         {
+          "name": "LAST_CHANGED_AT",
+          "dataElement": "ABP_LASTCHANGE_TSTMPL"
          }
         ]
        }
@@ -6605,7 +6721,10 @@ window.APB_CONFIG = {
        "type": "Table",
        "name": "ZSD_BILL_BLOCK_D",
        "status": "new",
-       "purpose": "Draft table"
+       "purpose": "Draft table (generated from the behavior definition)",
+       "detail": {
+        "description": "Draft table for billing block rules"
+       }
       },
       {
        "type": "CDS",
@@ -6637,6 +6756,86 @@ window.APB_CONFIG = {
          {
           "expression": "active",
           "alias": "IsActive"
+         },
+         {
+          "expression": "created_by",
+          "alias": "CreatedBy",
+          "annotations": "@Semantics.user.createdBy: true"
+         },
+         {
+          "expression": "created_at",
+          "alias": "CreatedAt",
+          "annotations": "@Semantics.systemDateTime.createdAt: true"
+         },
+         {
+          "expression": "last_changed_by",
+          "alias": "LastChangedBy",
+          "annotations": "@Semantics.user.lastChangedBy: true"
+         },
+         {
+          "expression": "last_changed_at",
+          "alias": "LastChangedAt",
+          "annotations": "@Semantics.systemDateTime.lastChangedAt: true"
+         },
+         {
+          "expression": "local_last_changed_at",
+          "alias": "LocalLastChangedAt",
+          "annotations": "@Semantics.systemDateTime.localInstanceLastChangedAt: true"
+         }
+        ],
+        "accessControl": "#CHECK"
+       }
+      },
+      {
+       "type": "CDS",
+       "name": "ZC_SD_BillBlock",
+       "status": "new",
+       "purpose": "Projection view (UI)",
+       "detail": {
+        "entityKind": "define view entity … as projection on",
+        "vdm": "Consumption (C_ / ZC_)",
+        "source": "ZR_SD_BillBlock",
+        "elements": [
+         {
+          "expression": "RuleUUID",
+          "alias": "RuleUUID",
+          "key": true
+         },
+         {
+          "expression": "SalesOrganization",
+          "alias": "SalesOrganization"
+         },
+         {
+          "expression": "CustomerGroup",
+          "alias": "CustomerGroup"
+         },
+         {
+          "expression": "BillingBlock",
+          "alias": "BillingBlock"
+         },
+         {
+          "expression": "IsActive",
+          "alias": "IsActive"
+         },
+         {
+          "expression": "CreatedBy",
+          "alias": "CreatedBy"
+         },
+         {
+          "expression": "CreatedAt",
+          "alias": "CreatedAt"
+         },
+         {
+          "expression": "LastChangedBy",
+          "alias": "LastChangedBy"
+         },
+         {
+          "expression": "LastChangedAt",
+          "alias": "LastChangedAt"
+         },
+         {
+          "expression": "LocalLastChangedAt",
+          "alias": "LocalLastChangedAt"
          }
         ],
         "accessControl": "#CHECK"
@@ -6692,7 +6891,8 @@ window.APB_CONFIG = {
         ],
         "serviceDefinition": "ZUI_SD_BILLBLOCK",
         "binding": "OData V4 – UI",
-        "ui": "Fiori elements – List Report / Object Page"
+        "ui": "Fiori elements – List Report / Object Page",
+        "projection": "ZC_SD_BillBlock"
        }
       },
       {

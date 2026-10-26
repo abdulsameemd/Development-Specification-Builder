@@ -34,7 +34,8 @@
           any(ABAP) && 'Use the customer namespace (Z/Y or registered /NAMESPACE/) and the specified naming conventions; follow the Clean ABAP style guide.',
           qa.cleanCore !== 'no' && 'Follow SAP Clean Core principles: prefer released APIs, CDS views, BAPIs and extension points over modifications.',
           any(ABAP) && 'Use modern ABAP syntax (inline declarations, constructor expressions, ABAP SQL with host variables) where the release allows.',
-          has(['RAP']) && 'Follow the RAP model: behavior definition and behavior pool as specified; change BO data only through EML.',
+          has(['RAP']) && 'Follow the RAP model: behavior definition and behavior pool as specified; change BO data only through EML.'
+        ].concat(APB.rap.instructions(s)).concat([
           has(['CDS']) && 'Use CDS view entities and provide access control (DCL) where authorization checks are specified.',
           has(['CAPM']) && 'Follow CAP project conventions (db/, srv/, app/); put custom logic in event handlers.',
           bapi && 'Return all messages in RETURN (BAPIRET2); do not send dialog messages (MESSAGE … TYPE E/A) from RFC-enabled modules.',
@@ -43,7 +44,7 @@
           'Keep business logic testable and create appropriate tests (ABAP Unit where applicable).',
           'Identify assumptions instead of silently guessing.',
           hasAc ? 'Validate the implementation against the acceptance criteria.' : 'Validate the implementation against the requirement.'
-        ].filter(Boolean);
+        ]).filter(Boolean);
       },
       closing: 'Implement incrementally and explain significant assumptions or deviations.'
     }
@@ -163,6 +164,8 @@
       const intro = [];
       if (o.purpose.trim()) intro.push('_' + o.purpose.trim() + '_');
       if (o.status === 'change') intro.push('Only the changes are described below; keep everything else as is.');
+      // draft tables are generated from the behavior definition – no hand-written field list
+      if (APB.rap.isDraftTable(s, o)) return [head].concat(intro).concat(['- Draft table: generate it from the behavior definition (ADT quick fix on `draft table`), or one field per CDS element name plus `"%admin" : include sych_bdl_draft_admin_inc;`. See RAP Implementation Blueprint.']).join('\n\n');
       const body = renderFields(def.fields, o.detail, 4);
       return [head].concat(intro).concat([body || '- ' + TBC + ' Technical details not provided.']).join('\n\n');
     }).join('\n\n');
@@ -222,6 +225,7 @@
     }
 
     add('Technical Design', technicalDesign(s));
+    add('RAP Implementation Blueprint', APB.rap.markdown(s));
 
     const rules = s.rules.filter(function (r) { return r.condition.trim() || r.behavior.trim(); });
     add('Business Rules', rules.length ? table(['ID', 'Condition', 'Expected behavior'], rules.map(function (r, i) { return ['BR-' + (i + 1), cell(r.condition), cell(r.behavior)]; })) : '');

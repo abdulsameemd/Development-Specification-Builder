@@ -50,7 +50,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.0.vsix`](dist/dewa-sap-spec-builder-1.0.0.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.0.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.1.vsix`](dist/dewa-sap-spec-builder-1.0.1.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.1.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **DEWA: Open SAP Spec Builder** (command palette or *Spec Builder* in the status bar) opens this same app as a tab inside VS Code:
 
@@ -93,6 +93,29 @@ Business Requirement → Select Object → Add Existing/New Objects → Add Impo
 Grids accept **Paste from Excel** (tab-separated, same column order) and **Enter** moves to the next row (adding one at the end). Customer DDIC objects referenced in grids but not listed (e.g. a Z data element in a table field) are offered as one-click "+ add" chips.
 
 A live Markdown preview sits next to the form (an Edit/Preview tab on small screens).
+
+### RAP: readiness checks and implementation blueprint
+
+RAP builds fail most often on structure that the agent has to guess. The builder now derives that structure from the RAP designer and the Table / CDS objects:
+- **Readiness checks (step 4, RAP card)** flag what would break activation:
+  - an ETag field that is not a CDS element;
+  - a missing total ETag for draft;
+  - missing admin fields (created / changed by and at);
+  - a missing lock or authorization master;
+  - an unnamed draft table.
+
+  One-click fixes add the admin fields to the table and CDS, and add the draft table.
+- **RAP Implementation Blueprint** in `BUSINESS_REQUIREMENTS.md`:
+  - artifacts and **activation groups** (Dictionary → Data model → Behavior → Service);
+  - the behavior definition skeleton for the interface and the projection (draft actions, ETags, mapping);
+  - the **behavior pool skeleton** (`ABSTRACT FINAL FOR BEHAVIOR OF`, a handler class with every method signature);
+  - the admin-field table and the draft-table rule.
+- **Copilot instructions:**
+  - build from the blueprint;
+  - activate group by group, without asking the user for each object;
+  - stop after 3 failed activation rounds and report.
+
+For the agent side, [`docs/agent-kit/dewa-abap-RAP-update.md`](docs/agent-kit/dewa-abap-RAP-update.md) is a drop-in "RAP build mode" section for `dewa-abap.agent.md`. The same content is also a skill: [`docs/agent-kit/skills/rap-build/SKILL.md`](docs/agent-kit/skills/rap-build/SKILL.md).
 
 ## Essential vs. advanced fields
 
