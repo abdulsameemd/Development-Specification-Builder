@@ -105,6 +105,7 @@ function createRouter(vscode, context, deps) {
           instructions: deps.agentInstructions(),
           allowPatterns: cfg.get('discoveryTools', []),
           maxRounds: cfg.get('maxToolRounds', 25),
+          model: cfg.get('model', ''),
           exclude: [submitTool.TOOL_NAME],
           token: cts.token,
           onProgress: function (p) { deps.post(Object.assign({ type: 'discovery-progress' }, p)); }

@@ -134,8 +134,9 @@ test('stops at the round limit and asks for the pack without tools', async () =>
 });
 
 test('reports tool errors to the model and keeps going', async () => {
-  const vs = fakeVscode({ toolError: true, script: [[{ call: ['fiori_search_apps', {}] }], [{ text: 'after error' }]] });
-  assert.strictEqual(await runner.run(vs, { prompt: 'p' }), 'after error');
+  const pack = '```json\n{"kind":"dewa-sap-context-pack","version":1}\n```';
+  const vs = fakeVscode({ toolError: true, script: [[{ call: ['fiori_search_apps', {}] }], [{ text: pack }]] });
+  assert.strictEqual(await runner.run(vs, { prompt: 'p' }), pack);
 });
 
 test('cancellation stops the loop', async () => {
@@ -317,4 +318,44 @@ test('the VSIX manifest carries the add-on contributions and the builder extensi
   assert.strictEqual(m.contributes.languageModelTools[0].name, submitTool.TOOL_NAME);
   assert.ok(['dewaSpecBuilder.discoveryTools', 'dewaSpecBuilder.maxToolRounds', 'dewaSpecBuilder.installAgent'].every((k) => m.contributes.configuration.properties[k]));
   assert.ok(m.activationEvents.includes('onUri') && m.activationEvents.includes('onWebviewPanel:dewaSpecBuilder'));
+});
+
+/* ------------------------------------------- real DEWA tool names (first run) */
+test('DEWA ADT/Fiori tool names: read tools kept, write tools excluded', () => {
+  const keep = ['mcp_adt_mcp_serve_abap_repository_search_object', 'mcp_adt_mcp_serve_abap_destination_list', 'mcp_adt_mcp_serve_abap_transport_get_request', 'mcp_adt_mcp_serve_abap_transport_get_unified_diff', 'mcp_adt_mcp_serve_abap_atc_run_get_result'];
+  const drop = ['mcp_adt_mcp_serve_abap_atc_run_start', 'mcp_adt_mcp_serve_abap_object_activate', 'mcp_adt_mcp_serve_abap_object_create', 'mcp_adt_mcp_serve_abap_object_edit_file', 'mcp_adt_mcp_serve_abap_object_run_action', 'mcp_adt_mcp_serve_abap_objects_generator_run', 'mcp_adt_mcp_serve_abap_transport_create_request', 'mcp_adt_mcp_serve_abap_unit_run_tests', 'mcp_fiori-mcp2_execute_functionality', 'mcp_fiori-mcp2_generate_fiori_app_cap', 'mcp_fiori-mcp2_generate_fiori_app_odata'];
+  keep.forEach((n) => assert.strictEqual(runner.isWriteTool(n), false, n));
+  drop.forEach((n) => assert.strictEqual(runner.isWriteTool(n), true, n));
+});
+
+test('picks the strongest Copilot model, honours the setting', () => {
+  const ms = [{ name: 'Claude Haiku 5.5', family: 'claude-haiku-5.5' }, { name: 'GPT-5 mini', family: 'gpt-5-mini' }, { name: 'Claude Sonnet 5.5', family: 'claude-sonnet-5.5' }, { name: 'GPT-5', family: 'gpt-5' }];
+  assert.strictEqual(runner.pickModel(ms).name, 'Claude Sonnet 5.5');
+  assert.strictEqual(runner.pickModel(ms, 'sonnet').name, 'Claude Sonnet 5.5');
+  assert.strictEqual(runner.pickModel(ms, 'haiku').name, 'Claude Haiku 5.5');
+  assert.strictEqual(runner.pickModel([{ name: 'Claude Haiku 5.5' }]).name, 'Claude Haiku 5.5');
+});
+
+test('repeated identical calls are not executed again', async () => {
+  const same = { call: ['abap_adt_get_object', { name: 'SBE' }] };
+  const vs = fakeVscode({ script: [[same], [same], [same], [{ text: '```json\n{"kind":"dewa-sap-context-pack","version":1}\n```' }]] });
+  const progress = [];
+  await runner.run(vs, { prompt: 'p', onProgress: (p) => progress.push(p) });
+  assert.deepStrictEqual(vs.calls.invoked, ['abap_adt_get_object']);
+  assert.strictEqual(progress.filter((p) => /repeated call skipped/.test(p.text)).length, 2);
+});
+
+test('an answer without a context pack gets one repair turn', async () => {
+  const vs = fakeVscode({ script: [[{ text: 'I looked at things.' }], [{ text: '```json\n{"kind":"dewa-sap-context-pack","version":1}\n```' }]] });
+  const text = await runner.run(vs, { prompt: 'p' });
+  assert.ok(runner.hasPack(text));
+  assert.strictEqual(vs.calls.requests.length, 2);
+  assert.deepStrictEqual(vs.calls.requests[1].tools, []);
+});
+
+test('write tools are reported in one log line', async () => {
+  const vs = fakeVscode({ script: [[{ text: '```json\n{"kind":"dewa-sap-context-pack","version":1}\n```' }]] });
+  const progress = [];
+  await runner.run(vs, { prompt: 'p', onProgress: (p) => progress.push(p) });
+  assert.strictEqual(progress.filter((p) => p.status === 'blocked').length, 1);
 });

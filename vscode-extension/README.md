@@ -26,6 +26,7 @@ The first automatic discovery asks you to allow this extension to use the Copilo
 |---|---|---|
 | `dewaSpecBuilder.discoveryTools` | `*abap*`, `*adt*`, `*fiori*`, `*ui5*`, `*cap*` | Tool-name patterns of your SAP MCP servers that automatic discovery may use |
 | `dewaSpecBuilder.maxToolRounds` | `25` | Maximum tool-calling rounds per automatic discovery |
+| `dewaSpecBuilder.model` | *(empty)* | Copilot model for automatic discovery, e.g. `claude-sonnet` or `gpt-5`. Empty: the strongest available model; Haiku, mini or flash only if nothing else is available |
 | `dewaSpecBuilder.installAgent` | `true` | Install the `dewa-fs-discovery` agent into the prompts folder on start-up |
 
 If the log reports *No read tools of the SAP MCP servers are available*, follow these steps:

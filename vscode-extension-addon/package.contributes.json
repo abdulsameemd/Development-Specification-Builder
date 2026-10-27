@@ -6,15 +6,27 @@
   ],
   "contributes": {
     "commands": [
-      { "command": "dewa.specBuilder.open", "title": "Open SAP Spec Builder", "category": "DEWA" }
+      {
+        "command": "dewa.specBuilder.open",
+        "title": "Open SAP Spec Builder",
+        "category": "DEWA"
+      }
     ],
     "configuration": {
       "title": "DEWA SAP Spec Builder",
       "properties": {
         "dewaSpecBuilder.discoveryTools": {
           "type": "array",
-          "items": { "type": "string" },
-          "default": ["*abap*", "*adt*", "*fiori*", "*ui5*", "*cap*"],
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "*abap*",
+            "*adt*",
+            "*fiori*",
+            "*ui5*",
+            "*cap*"
+          ],
           "markdownDescription": "Tool-name patterns (`*` wildcard) of the SAP MCP servers that **automatic discovery** may use. Tools whose names contain a write verb (create, update, delete, activate, transport, …) are always excluded."
         },
         "dewaSpecBuilder.maxToolRounds": {
@@ -23,6 +35,11 @@
           "minimum": 1,
           "maximum": 60,
           "description": "Maximum number of tool-calling rounds for automatic discovery."
+        },
+        "dewaSpecBuilder.model": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Copilot model for **automatic discovery**, by family or name (e.g. `claude-sonnet`, `gpt-5`). Empty = the strongest available model; small models (Haiku, mini, flash) are used only when nothing else is available."
         }
       }
     },
@@ -37,20 +54,77 @@
         "icon": "$(notebook)",
         "inputSchema": {
           "type": "object",
-          "required": ["kind", "version"],
+          "required": [
+            "kind",
+            "version"
+          ],
           "properties": {
-            "kind": { "type": "string", "enum": ["dewa-sap-context-pack"] },
-            "version": { "type": "number", "enum": [1] },
-            "generatedAt": { "type": "string" },
-            "system": { "type": "object" },
-            "objects": { "type": "array", "items": { "type": "object" } },
-            "transactions": { "type": "array", "items": { "type": "object" } },
-            "fioriApps": { "type": "array", "items": { "type": "object" } },
-            "ui5Apps": { "type": "array", "items": { "type": "object" } },
-            "capServices": { "type": "array", "items": { "type": "object" } },
-            "enhancements": { "type": "array", "items": { "type": "object" } },
-            "customizingHints": { "type": "array", "items": { "type": "object" } },
-            "notFound": { "type": "array", "items": { "type": "object" } }
+            "kind": {
+              "type": "string",
+              "enum": [
+                "dewa-sap-context-pack"
+              ]
+            },
+            "version": {
+              "type": "number",
+              "enum": [
+                1
+              ]
+            },
+            "generatedAt": {
+              "type": "string"
+            },
+            "system": {
+              "type": "object"
+            },
+            "objects": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "transactions": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "fioriApps": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "ui5Apps": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "capServices": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "enhancements": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "customizingHints": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "notFound": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
           }
         }
       }

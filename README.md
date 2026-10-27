@@ -50,7 +50,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.1.vsix`](dist/dewa-sap-spec-builder-1.0.1.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.1.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.2.vsix`](dist/dewa-sap-spec-builder-1.0.2.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.2.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **DEWA: Open SAP Spec Builder** (command palette or *Spec Builder* in the status bar) opens this same app as a tab inside VS Code:
 

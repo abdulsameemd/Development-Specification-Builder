@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.2
+
+Changes from the first run on the DEWA system:
+- **Model:** automatic discovery uses the strongest available Copilot model (Opus, Sonnet or GPT-5 before Haiku, mini or flash). The new setting `dewaSpecBuilder.model` overrides it.
+- **Tool filter:** read tools whose names contain "transport" or "run" (e.g. `transport_get_request`, `atc_run_get_result`) are kept. Create, edit, activate, run-action and generate tools stay excluded, and they are listed on one log line.
+- **Repeated calls:** a call with the same input is not executed again, and there is a tool budget of 30 calls.
+- **Repair turn:** if the answer has no context pack, the model gets one extra turn without tools. If that also fails, the panel shows the model's answer in the paste box.
+
 ## 1.0.1
 
 - RAP: the development spec now contains a **RAP Implementation Blueprint**:

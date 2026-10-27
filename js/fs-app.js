@@ -155,9 +155,13 @@
     });
     H.on('discovery-result', function (m) {
       disc.running = false;
-      if (!importText(String(m.text || ''), disc.mode === 'chat' ? 'Copilot Chat' : 'Copilot')) {
-        disc.error = 'The answer did not contain a valid context pack. Try again, or run it in Copilot Chat.';
+      const answer = String(m.text || '');
+      if (!importText(answer, disc.mode === 'chat' ? 'Copilot Chat' : 'Copilot')) {
+        disc.error = 'The answer did not contain a valid context pack. The model\'s answer is shown below – fix or complete it and click Import pasted pack, try again (setting dewaSpecBuilder.model selects a stronger model), or run it in Copilot Chat.';
+        U().ui.open['fs-paste'] = true;
         rerenderDiscovery();
+        const ta = document.getElementById('fs-pack');
+        if (ta) ta.value = answer;
       }
     });
     H.on('discovery-error', function (m) { disc.running = false; disc.error = String(m.message || 'Discovery failed').slice(0, 400); rerenderDiscovery(); });
