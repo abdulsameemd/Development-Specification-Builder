@@ -68,22 +68,30 @@
     return new Uint8Array(await out.arrayBuffer());
   }
 
-  async function shareLink(state) {
+  /* Compressed state token (share links and the data block of downloaded .md files). */
+  async function encodeState(state) {
     const json = new TextEncoder().encode(JSON.stringify(state));
-    let token;
-    if (typeof CompressionStream === 'function') token = 'z' + toB64Url(await pipe(json, new CompressionStream('deflate-raw')));
-    else token = 'r' + toB64Url(json);
-    return location.href.split('#')[0] + '#s=' + token;
+    if (typeof CompressionStream === 'function') return 'z' + toB64Url(await pipe(json, new CompressionStream('deflate-raw')));
+    return 'r' + toB64Url(json);
   }
 
-  async function readShareLink(hash) {
-    const m = /^#s=([zr])([A-Za-z0-9_-]+)$/.exec(hash || '');
+  async function decodeState(token) {
+    const m = /^([zr])([A-Za-z0-9_-]+)$/.exec(token || '');
     if (!m) return null;
     const bytes = fromB64Url(m[2]);
     const json = m[1] === 'z' ? await pipe(bytes, new DecompressionStream('deflate-raw')) : bytes;
     const s = APB.state.migrate(JSON.parse(new TextDecoder().decode(json)));
     s.id = APB.state.uid();
     return s;
+  }
+
+  async function shareLink(state) {
+    return location.href.split('#')[0] + '#s=' + await encodeState(state);
+  }
+
+  async function readShareLink(hash) {
+    const m = /^#s=([zr][A-Za-z0-9_-]+)$/.exec(hash || '');
+    return m ? decodeState(m[1]) : null;
   }
 
   /* Copy synchronously inside the click, so the same click can still launch VS Code afterwards. */
@@ -99,5 +107,5 @@
      vscode://<extension-id>/discover?… is routed to that extension's URI handler. */
   function launchVscode(url) { window.location.href = url || 'vscode://'; }
 
-  APB.exporter = { copyNow: copyNow, launchVscode: launchVscode, download: download, downloadBytes: downloadBytes, copy: copy, shareLink: shareLink, readShareLink: readShareLink };
+  APB.exporter = { copyNow: copyNow, launchVscode: launchVscode, download: download, downloadBytes: downloadBytes, copy: copy, shareLink: shareLink, readShareLink: readShareLink, encodeState: encodeState, decodeState: decodeState };
 })(window.APB = window.APB || {});

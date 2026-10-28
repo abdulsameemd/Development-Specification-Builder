@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.4
+
+- **Upload a generated .md file.** *Upload* in the header (or *Upload .md file* in the command palette) opens a downloaded `FUNCTIONAL_SPECIFICATION.md` or `BUSINESS_REQUIREMENTS.md` again, in Functional or Technical mode.
+  - Downloaded files now end with one hidden comment holding the builder data, so the spec is restored exactly. The visible content, Copy Markdown, Word and the Copilot Chat prompt are unchanged.
+  - If the file was edited by hand after downloading, the builder restores the generated version and says so.
+  - Older files without the comment are restored partly from their sections and tables.
+
 ## 1.0.3
 
 - **Transactions & Fiori apps from SAP.** Consultants describe process steps in business words; they no longer need the technical names.

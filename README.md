@@ -50,7 +50,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.3.vsix`](dist/dewa-sap-spec-builder-1.0.3.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.3.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.4.vsix`](dist/dewa-sap-spec-builder-1.0.4.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.4.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **DEWA: Open SAP Spec Builder** (command palette or *Spec Builder* in the status bar) opens this same app as a tab inside VS Code:
 
@@ -134,6 +134,7 @@ Rules baked in: nothing is invented, unknown values become `[TO BE CONFIRMED]`, 
 |---|---|
 | **Open in VS Code** | One click copies a ready prompt (one-line instruction + the full specification) to the clipboard and launches VS Code. In VS Code press **Ctrl+Alt+I** (Copilot Chat), **Ctrl+V**, **Enter**. The browser asks once for permission to open VS Code; it cannot type into VS Code itself. |
 | **Download file** / **Copy Markdown** | `BUSINESS_REQUIREMENTS.md` – the specification for Copilot. |
+| **Upload** (header) | Opens a downloaded `FUNCTIONAL_SPECIFICATION.md` or `BUSINESS_REQUIREMENTS.md` again as a new draft, in the right mode. Downloaded files end with one hidden comment (`<!-- spec-builder-state:v1 … -->`, invisible in Markdown previews) that holds the builder data, so the spec comes back exactly. Edits made in the `.md` itself are not taken over (the builder says so). Older files without that comment are read best-effort (requirement, scope, steps, FRs and rules; objects and rules for a development spec). |
 | **Copy share link** (🔗 in the header) | The project is encoded in the URL fragment (`#s=…`). Whoever opens it gets a copy as a new local draft. The fragment is not sent to any server, but anyone you send the link to can read the requirement, so treat it like the file itself. |
 
 ## Local storage
@@ -165,6 +166,7 @@ js/
   templates.js          templates and demo
   storage.js            localStorage drafts
   export.js             download, copy, share link, VS Code hand-off
+  md-import.js          Upload: builder data in downloaded .md files, restore from a .md
   agents-guide.js       Agents info page (from docs/AGENT_WORKFLOWS.md)
   fs-state.js           functional spec model, templates, FR / RICEFW numbering
   discovery.js          discovery prompt, context-pack validation, reference cross-check

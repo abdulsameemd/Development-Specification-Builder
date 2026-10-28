@@ -817,8 +817,17 @@
       const s = S.get();
       if (mandatoryMissing(s).length) { toast(isFs() ? 'Add the business requirement and the module first' : 'Add a requirement and a development object first'); return; }
       const name = isFs() ? FM.filename(s) : M.filename(s);
-      X.download(name, buildMd(s), 'text/markdown');
-      toast(savedMsg(name));
+      // the file carries the builder data (hidden comment at the end), so Upload restores it exactly
+      APB.mdImport.embed(buildMd(s), s).then(function (md) {
+        X.download(name, md, 'text/markdown');
+        toast(savedMsg(name));
+      });
+    },
+    upload: function () {
+      closeDialogs();
+      const inp = $('#md-upload');
+      inp.value = '';
+      inp.click();
     },
     copy: copyMarkdown,
     vscode: function () {
@@ -925,6 +934,7 @@
         modeCmd,
         { g: 'Share', i: '🔗', t: 'Copy share link', run: actions.share },
         { g: 'Drafts', i: '☰', t: 'Saved drafts', run: openDrafts },
+        { g: 'Drafts', i: '⬆', t: 'Upload .md file', run: actions.upload },
         { g: 'Info', i: 'ℹ', t: 'Agent workflows (dewa-fs-discovery, dewa-abap, dewa-codereview)', run: actions.agents },
         { g: 'View', i: '◐', t: 'Toggle light / dark theme', run: actions.theme }
       ]);
@@ -942,6 +952,7 @@
       { g: 'Create', i: '›', t: H.isVscode ? 'Open in Copilot Chat (dewa-abap)' : 'Open in VS Code (copy prompt for Copilot Chat)', run: actions.vscode },
       { g: 'Share', i: '🔗', t: 'Copy share link', run: actions.share },
       { g: 'Drafts', i: '☰', t: 'Saved drafts', run: openDrafts },
+      { g: 'Drafts', i: '⬆', t: 'Upload .md file', run: actions.upload },
       { g: 'Info', i: 'ℹ', t: 'Agent workflows (dewa-abap, dewa-codereview, dewa-fs-discovery)', run: actions.agents },
       { g: 'View', i: '◐', t: 'Toggle light / dark theme', run: actions.theme }
     ];
@@ -1028,8 +1039,19 @@
     }
   });
 
+  function uploadFile(file) {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast('This file is too large for a specification (max 5 MB)'); return; }
+    file.text().then(APB.mdImport.read).then(function (r) {
+      const what = r.state.kind === 'fs' ? 'Functional specification' : 'Technical specification';
+      loadState(r.state, r.mode === 'partial' ? what + ' partly restored from the Markdown – check every step' :
+        r.edited ? what + ' restored as generated – manual edits made in the file are not taken over' : what + ' restored from ' + file.name);
+    }).catch(function (err) { toast((err && err.message) || 'The file could not be read', 7000); });
+  }
+
   document.addEventListener('change', function (e) {
     const t = e.target;
+    if (t.id === 'md-upload') { uploadFile(t.files && t.files[0]); return; }
     if (!t.dataset) return;
     if (t.dataset.bind && (t.type === 'radio' || t.tagName === 'SELECT')) {
       S.set(t.dataset.bind, t.value);

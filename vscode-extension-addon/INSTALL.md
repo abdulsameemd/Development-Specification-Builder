@@ -17,7 +17,7 @@ The standalone browser version keeps working as before (copy & paste or `vscode:
 
 ## Quick path: the standalone VSIX
 
-`dist/dewa-sap-spec-builder-1.0.3.vsix` (built by `node scripts/build-vsix.js` from `vscode-extension/` and this folder)
+`dist/dewa-sap-spec-builder-1.0.4.vsix` (built by `node scripts/build-vsix.js` from `vscode-extension/` and this folder)
 is a ready-to-install extension, `dewa.dewa-sap-spec-builder`, that runs next to DEWA's existing extension. It also
 installs `dewa-fs-discovery.agent.md` into the VS Code prompts folder (setting `dewaSpecBuilder.installAgent`; an edited
 copy is never replaced; *DEWA: Reinstall dewa-fs-discovery agent*). Install it with *Extensions → … → Install from VSIX…*.

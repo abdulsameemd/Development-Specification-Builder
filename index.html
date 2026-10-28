@@ -31,6 +31,7 @@
       <nav class="main-nav" aria-label="Main">
         <button type="button" class="nav-link" data-action="new">New</button>
         <button type="button" class="nav-link" data-action="drafts">Drafts</button>
+        <button type="button" class="nav-link" data-action="upload" title="Open a specification .md file downloaded from the builder">Upload</button>
         <button type="button" class="nav-link" data-action="examples">Examples</button>
         <button type="button" class="nav-link" data-action="agents">Agents</button>
       </nav>
@@ -115,8 +116,9 @@
       <button class="icon-btn" aria-label="Close">✕</button>
     </form>
     <div id="drafts-list"></div>
-    <p class="muted small">Drafts are saved automatically in this browser only. Use the share link (🔗) to hand a spec to a colleague.</p>
+    <p class="muted small">Drafts are saved automatically in this browser only. Use the share link (🔗) to hand a spec to a colleague, or <button type="button" class="link-btn" data-action="upload">Upload</button> a downloaded <code>.md</code> file.</p>
   </dialog>
+  <input type="file" id="md-upload" accept=".md,.markdown,text/markdown,text/plain" hidden>
 
   <dialog id="examples-dialog" aria-labelledby="examples-title">
     <form method="dialog" class="dialog-head">
@@ -156,6 +158,7 @@
   <script src="js/fs-completeness.js"></script>
   <script src="js/fs-generator.js"></script>
   <script src="js/docx.js"></script>
+  <script src="js/md-import.js"></script>
   <script src="js/agents-guide.js"></script>
   <script src="js/fs-app.js"></script>
   <script src="js/app.js"></script>
