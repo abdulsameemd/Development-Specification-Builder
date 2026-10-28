@@ -105,7 +105,7 @@
   <footer class="site-footer">
     <div class="container footer-inner">
       <img src="assets/morohub-logo.png" alt="" width="121" height="40">
-      <p>Everything runs in your browser. Requirements are never sent to a server or an AI service; drafts live in this browser's local storage only.</p>
+      <p>Everything runs in your browser. The builder never sends requirements to a server or an AI service on its own – only when you copy a prompt or start Copilot yourself; drafts live in this browser's local storage only.</p>
       <p class="kbd-hints"><kbd>Ctrl K</kbd> actions · <kbd>Enter</kbd> next grid row · <kbd>Alt</kbd> + <kbd>→</kbd> next step</p>
     </div>
   </footer>
@@ -117,6 +117,15 @@
     </form>
     <div id="drafts-list"></div>
     <p class="muted small">Drafts are saved automatically in this browser only. Use the share link (🔗) to hand a spec to a colleague, or <button type="button" class="link-btn" data-action="upload">Upload</button> a downloaded <code>.md</code> file.</p>
+  </dialog>
+  <dialog id="draft-dialog" aria-labelledby="draft-title">
+    <form method="dialog" class="dialog-head">
+      <h2 id="draft-title">Review the AI draft</h2>
+      <button class="icon-btn" aria-label="Close">✕</button>
+    </form>
+    <p class="muted small">Pick what to add. Only empty fields are filled and new rows are appended – nothing you typed is changed. Check every item afterwards: the AI only knows your requirement.</p>
+    <ul id="draft-list" class="draft-review"></ul>
+    <div class="nav-row"><span class="spacer"></span><button type="button" class="btn btn-primary" data-action="fs-draft-apply">Add to the specification</button></div>
   </dialog>
   <input type="file" id="md-upload" accept=".md,.markdown,text/markdown,text/plain" hidden>
 
@@ -157,6 +166,7 @@
   <script src="js/discovery.js"></script>
   <script src="js/fs-completeness.js"></script>
   <script src="js/fs-generator.js"></script>
+  <script src="js/fs-draft.js"></script>
   <script src="js/docx.js"></script>
   <script src="js/md-import.js"></script>
   <script src="js/agents-guide.js"></script>

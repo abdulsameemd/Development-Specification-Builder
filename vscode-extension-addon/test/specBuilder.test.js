@@ -359,3 +359,34 @@ test('write tools are reported in one log line', async () => {
   await runner.run(vs, { prompt: 'p', onProgress: (p) => progress.push(p) });
   assert.strictEqual(progress.filter((p) => p.status === 'blocked').length, 1);
 });
+
+/* ------------------------------------------------------------------ AI draft */
+const drafter = require('../src/draftRunner');
+const DRAFT_JSON = '```json\n{"kind":"fs-draft","version":1,"frs":[{"title":"Log a complaint"}]}\n```';
+
+test('draft: one request without tools returns the JSON answer', async () => {
+  const vs = fakeVscode({ script: [[{ text: 'Summary\n' + DRAFT_JSON }]] });
+  const { r, posts } = router(vs);
+  await r.handle({ type: 'draft', prompt: drafter.MARKER + '\nrequirement' });
+  assert.strictEqual(vs.calls.requests.length, 1);
+  assert.deepStrictEqual(vs.calls.requests[0].tools, []);
+  assert.strictEqual(vs.calls.invoked.length, 0);
+  assert.ok(posts.some((p) => p.type === 'draft-progress' && /GPT test/.test(p.text)));
+  assert.match(posts.filter((p) => p.type === 'draft-result')[0].text, /Log a complaint/);
+});
+
+test('draft: repair turn when the JSON is missing', async () => {
+  const vs = fakeVscode({ script: [[{ text: 'Here are some ideas in prose.' }], [{ text: DRAFT_JSON }]] });
+  const { r, posts } = router(vs);
+  await r.handle({ type: 'draft', prompt: drafter.MARKER + '\nrequirement' });
+  assert.strictEqual(vs.calls.requests.length, 2);
+  assert.match(posts.filter((p) => p.type === 'draft-result')[0].text, /fs-draft/);
+});
+
+test('draft: rejects prompts without the marker and reports a missing model', async () => {
+  const vs = fakeVscode({ noModel: true });
+  const { r, posts } = router(vs);
+  assert.strictEqual(await r.handle({ type: 'draft', prompt: 'no marker' }), false);
+  await r.handle({ type: 'draft', prompt: drafter.MARKER + '\nx' });
+  assert.strictEqual(posts.filter((p) => p.type === 'draft-error')[0].code, 'NO_MODEL');
+});

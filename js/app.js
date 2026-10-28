@@ -815,7 +815,7 @@
     },
     download: function () {
       const s = S.get();
-      if (mandatoryMissing(s).length) { toast(isFs() ? 'Add the business requirement and the module first' : 'Add a requirement and a development object first'); return; }
+      if (mandatoryMissing(s).length) { toast(isFs() ? (APB.fs.isSap(s) ? 'Add the business requirement and the module first' : 'Describe the business requirement first') : 'Add a requirement and a development object first'); return; }
       const name = isFs() ? FM.filename(s) : M.filename(s);
       // the file carries the builder data (hidden comment at the end), so Upload restores it exactly
       APB.mdImport.embed(buildMd(s), s).then(function (md) {

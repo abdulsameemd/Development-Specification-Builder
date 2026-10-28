@@ -10,6 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const runner = require('./discoveryRunner');
+const drafter = require('./draftRunner');
 const fsDiscovery = require('./fsDiscovery');
 const submitTool = require('./submitPackTool');
 
@@ -113,6 +114,29 @@ function createRouter(vscode, context, deps) {
         deps.post({ type: 'discovery-result', text: text });
       } catch (e) {
         deps.post({ type: 'discovery-error', code: e.code || 'FAILED', message: String(e && e.message || e) });
+      } finally {
+        if (cts) cts.dispose();
+        cts = null;
+      }
+      return true;
+    },
+    draft: async function (m) {
+      if (!str(m.prompt, 200000) || m.prompt.indexOf(drafter.MARKER) !== 0) return false;
+      const auth = await deps.getAuth();
+      if (!auth.copilot) { deps.post({ type: 'draft-error', code: 'NO_COPILOT', message: 'GitHub Copilot Chat is not installed in VS Code.' }); return true; }
+      if (!auth.signedIn) { deps.post({ type: 'draft-error', code: 'SIGNED_OUT', message: 'Sign in to GitHub Copilot first.' }); return true; }
+      if (cts) { deps.post({ type: 'draft-error', code: 'BUSY', message: 'Copilot is already working on a request.' }); return true; }
+      cts = new vscode.CancellationTokenSource();
+      try {
+        const text = await drafter.run(vscode, {
+          prompt: m.prompt,
+          model: deps.config().get('model', ''),
+          token: cts.token,
+          onProgress: function (p) { deps.post({ type: 'draft-progress', text: p.text }); }
+        });
+        deps.post({ type: 'draft-result', text: text });
+      } catch (e) {
+        deps.post({ type: 'draft-error', code: e.code || 'FAILED', message: String(e && e.message || e) });
       } finally {
         if (cts) cts.dispose();
         cts = null;

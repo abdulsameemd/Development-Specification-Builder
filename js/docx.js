@@ -156,7 +156,7 @@
   }
 
   function titlePage(meta, toc) {
-    const rows = [['Document ID', meta.docId || TBC], ['Version', meta.version || TBC], ['Status', meta.status || TBC], ['Module', meta.module || TBC], ['Author', meta.author || TBC], ['Date', meta.date || '']];
+    const rows = [['Document ID', meta.docId || TBC], ['Version', meta.version || TBC], ['Status', meta.status || TBC], [meta.moduleLabel || 'Module', meta.module || TBC], ['Author', meta.author || TBC], ['Date', meta.date || '']];
     const tocBody = toc.map(function (t) {
       return '<w:p><w:pPr><w:pStyle w:val="TOC' + t.level + '"/><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="' + TEXT_W + '"/></w:tabs></w:pPr>' +
         '<w:hyperlink w:anchor="_' + t.id + '" w:history="1">' + run({ t: t.text }) + '</w:hyperlink></w:p>';

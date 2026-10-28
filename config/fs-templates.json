@@ -947,6 +947,207 @@
           "status": "draft"
         }
       }
+    },
+    {
+      "id": "fs-gen-complaints",
+      "module": "Any",
+      "label": "Non-SAP: Customer complaint tracking portal",
+      "state": {
+        "context": {
+          "system": "other",
+          "systemName": "Customer service portal (cloud)",
+          "title": "Customer complaint tracking",
+          "processArea": "Customer service – complaints",
+          "requirement": "Customer service needs one place to log, assign and track customer complaints received by phone, e-mail and the website, so that every complaint is answered within 5 working days and managers see overdue complaints every morning.",
+          "objectives": "Answer every complaint within 5 working days\nNo complaint is lost between e-mail inboxes\nManagers see overdue complaints daily",
+          "kpis": "95 % of complaints closed within 5 working days\nComplaint backlog visible on one dashboard",
+          "inScope": "Complaints by phone, e-mail and the website form\nAll customer service teams",
+          "outOfScope": "Warranty claims\nSocial-media monitoring",
+          "stakeholders": [
+            {
+              "role": "Business process owner",
+              "name": "",
+              "department": "Customer service",
+              "responsibility": "Approves the FS"
+            },
+            {
+              "role": "Team lead",
+              "name": "",
+              "department": "Customer service",
+              "responsibility": "UAT"
+            }
+          ],
+          "otherOrg": "Customer service teams North, South and Online"
+        },
+        "process": {
+          "asIs": [
+            {
+              "step": "Complaint arrives by phone or e-mail",
+              "role": "Agent",
+              "tx": "E-mail, phone",
+              "pain": "Spread over personal inboxes"
+            },
+            {
+              "step": "Agent notes the complaint in a shared Excel list",
+              "role": "Agent",
+              "tx": "Excel",
+              "pain": "Duplicates, no reference number"
+            },
+            {
+              "step": "Team lead checks the list for overdue items",
+              "role": "Team lead",
+              "tx": "Excel",
+              "pain": "Manual, once a week"
+            }
+          ],
+          "toBe": [
+            {
+              "step": "Log the complaint with customer, channel and category",
+              "role": "Agent",
+              "tx": "Complaint form",
+              "change": "new"
+            },
+            {
+              "step": "Assign the complaint to a team member",
+              "role": "Team lead",
+              "tx": "Complaint list",
+              "change": "new"
+            },
+            {
+              "step": "Answer the customer and close the complaint",
+              "role": "Agent",
+              "tx": "Complaint form",
+              "change": "changed"
+            },
+            {
+              "step": "Review overdue complaints every morning",
+              "role": "Team lead",
+              "tx": "Dashboard",
+              "change": "automated"
+            }
+          ]
+        },
+        "reqs": {
+          "frs": [
+            {
+              "title": "Log a complaint",
+              "priority": "must",
+              "fit": "standard",
+              "description": "An agent records the customer, channel, category, priority and description. The system gives the complaint a unique reference number.",
+              "acceptance": "When a complaint is saved, it gets a reference number and the status Open\nWhen the customer has an e-mail address, the customer receives the reference number by e-mail"
+            },
+            {
+              "title": "Assign and track complaints",
+              "priority": "must",
+              "fit": "config",
+              "description": "Team leads assign complaints to agents; each complaint shows its status (Open, In progress, Waiting for customer, Closed) and its due date (5 working days after logging).",
+              "acceptance": "When a team lead assigns a complaint, the agent sees it in My complaints\nWhen a complaint is not closed by its due date, it is shown as overdue"
+            },
+            {
+              "title": "Daily overdue overview",
+              "priority": "should",
+              "fit": "custom",
+              "description": "Every morning team leads get an overview of overdue complaints per team.",
+              "acceptance": "When a working day starts, each team lead receives an e-mail listing the overdue complaints of the team"
+            }
+          ],
+          "rules": [
+            {
+              "rule": "Due date = logging date + 5 working days",
+              "type": "calculation",
+              "outcome": "Due date shown on the complaint",
+              "fr": "FR-02"
+            },
+            {
+              "rule": "A complaint can only be closed with an answer text",
+              "type": "validation",
+              "outcome": "Message: Enter the answer before closing",
+              "fr": "FR-02"
+            }
+          ],
+          "data": [
+            {
+              "field": "Customer",
+              "table": "Customer record",
+              "mandatory": true,
+              "validation": "Must exist",
+              "source": "standard"
+            },
+            {
+              "field": "Complaint category",
+              "table": "",
+              "mandatory": true,
+              "validation": "From the category list",
+              "source": "custom"
+            }
+          ]
+        },
+        "solution": {
+          "roles": [
+            {
+              "role": "Agent",
+              "tx": "Complaint form, My complaints",
+              "scope": "Create and edit own complaints"
+            },
+            {
+              "role": "Team lead",
+              "tx": "Complaint list, Dashboard",
+              "scope": "All complaints of the team"
+            }
+          ],
+          "interfaces": [
+            {
+              "name": "Website complaint form",
+              "direction": "inbound",
+              "partner": "Company website",
+              "tech": "REST",
+              "frequency": "Real time",
+              "volume": "about 50 per day"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "Reference number e-mail",
+              "type": "email",
+              "channel": "E-mail",
+              "trigger": "Complaint saved"
+            }
+          ]
+        },
+        "quality": {
+          "performance": "Complaint form opens in under 2 seconds",
+          "volume": "About 300 complaints per day",
+          "privacy": "Customer contact data only; deleted 3 years after closing",
+          "uat": [
+            {
+              "fr": "FR-01",
+              "scenario": "Log a complaint for an existing customer by e-mail",
+              "type": "positive",
+              "expected": "Reference number shown and sent to the customer"
+            },
+            {
+              "fr": "FR-02",
+              "scenario": "Close a complaint without an answer",
+              "type": "negative",
+              "expected": "Message: Enter the answer before closing"
+            }
+          ],
+          "risks": [
+            {
+              "type": "assumption",
+              "text": "The portal's standard case object can be used for complaints",
+              "owner": "Solution architect",
+              "action": "Confirm in the fit-gap workshop"
+            }
+          ]
+        },
+        "control": {
+          "docId": "FS-CS-0007",
+          "version": "0.1",
+          "status": "draft",
+          "author": ""
+        }
+      }
     }
   ],
   "samplePack": {

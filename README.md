@@ -4,7 +4,7 @@
 
 A small, static web app with two modes (toggle **Functional | Technical** in the header):
 
-- **Functional** – functional consultants write a standard SAP functional specification (FS) in 15–30 minutes, check it against the live DEWA SAP system through a read-only Copilot agent, and download it as **Word** or Markdown. See [Functional specifications](#functional-specifications).
+- **Functional** – functional consultants and business analysts write a functional specification (FS) for **SAP or any other system**, or before the system is decided. A business requirement is enough to start; AI can draft the rest for review. SAP specs can be checked against the live DEWA SAP system through a read-only Copilot agent. Download as **Word** or Markdown. See [Functional specifications](#functional-specifications).
 - **Technical** – an SAP developer gives GitHub Copilot the right context **before** coding starts. Fill in a requirement in 5–10 minutes, download `BUSINESS_REQUIREMENTS.md` (or send it straight to VS Code), and hand it to Copilot (VS Code or Eclipse ADT).
 
 - **No backend, no database, no login, no AI API.** Open `index.html` — that's it.
@@ -28,15 +28,37 @@ Context → AS-IS / TO-BE process → Functional requirements (fit-gap) → Syst
         → Word / Markdown → RICEFW item → Development spec (Technical mode) → dewa-abap
 ```
 
+### SAP or any other system
+
+Step 1 starts with **Where will this run?**
+
+| Choice | What changes |
+|---|---|
+| **SAP** | Everything below: module (mandatory), org units, transactions and Fiori apps, *Suggest from SAP*, RICEFW, SAP discovery, hand-off to a Technical spec. |
+| **Other system** | Optional system name (e.g. "Salesforce", "in-house portal"). SAP-only fields are hidden and the wording is generic: *System / screen* instead of transaction, fit-gap *standard feature / configuration / new development*, step 4 *Solution & integration* (roles & access, interfaces, outputs). The document shows **System** instead of Module and has no SAP sections. |
+| **Not decided yet** | Like *Other system*; the document says *System: To be decided*. Only the business need is asked. |
+
+Only the **business requirement** is mandatory for a non-SAP spec. Drafts from before this choice open as SAP specs.
+
+### Quick start and AI draft
+
+- **Create document now** (step 1) creates the document from what is there. Everything missing is listed under *Open questions*, and the other steps can be filled in later.
+- **✦ Draft the rest with AI** (step 1) proposes title, objectives, KPIs, scope, stakeholders, AS-IS / TO-BE steps, functional requirements with acceptance criteria, business rules, test scenarios and risks from the requirement.
+  - **In VS Code:** *Draft with Copilot* uses the signed-in GitHub Copilot (no tools, no system access).
+  - **In the browser:** *Copy AI prompt*, paste it into an AI chat your organisation allows, and paste the answer back. The builder itself never sends anything.
+  - A **review dialog** shows what would be added per section; pick what to keep. Only empty fields are filled and new rows are appended – nothing typed by hand is changed. Assumptions are marked `[TO BE CONFIRMED]`.
+
+### Steps
+
 | Step | What you do |
 |---|---|
-| 1. Context | Title, **module** and **business requirement** (the two mandatory inputs), objectives, KPIs, scope, stakeholders, org units. *Start from a module template* (FI-AP, MM, SD, IS-U, CRM) pre-fills typical process steps, FR headings and roles. |
+| 1. Context | System choice, title, **business requirement** (and **module** for SAP – the mandatory inputs), objectives, KPIs, scope, stakeholders, org units. *Start from a module template* (FI-AP, MM, SD, IS-U, CRM) pre-fills typical process steps, FR headings and roles. |
 | 2. Process | AS-IS and TO-BE step grids (step, role, transaction / Fiori app *if known*, pain point / change). Describe steps in business words: **Suggest from SAP** finds matching transactions and Fiori apps in the system, and type-ahead searches by description (e.g. "invoice" finds MIRO). The TO-BE flow is drawn as you type; "Start TO-BE from AS-IS" copies the steps. |
 | 3. Requirements | FR-01 … with MoSCoW priority, **fit-gap** (SAP standard / configuration / custom), acceptance criteria; business rules and validations; data requirements (business field → SAP table / field). |
 | 4. Solution | **Current SAP system** (discovery, below), RICEFW items (R-01, E-01, UI-01 … per type) covering the gaps, roles & authorizations, interfaces, outputs, SPRO notes. Each RICEFW item can be handed over as a pre-filled **Development Specification**. |
 | 5. Sign-off | NFRs, UAT scenarios (*Create UAT skeleton from FRs*: one positive + one negative case per FR), risks / assumptions / open points, document control, version history, approvers. "Ready for sign-off" check → **Generate**. |
 
-**Output** – `FS_<Module>_<Title>.docx` (title page with document control, contents, numbered headings, tables, header with document ID and version, *Page X of Y* footer) and `FUNCTIONAL_SPECIFICATION.md`, both from the same content: Business Requirement · Scope · Stakeholders · AS-IS · TO-BE · Functional Requirements · Business Rules · Data Requirements · Current SAP System Context · Fit-Gap · Solution Design (RICEFW) · Roles & Authorizations · Interfaces · Outputs · NFRs · UAT · **Traceability matrix (FR ↔ RICEFW ↔ UAT)** · Risks · Open Questions · Version History & Approvals. Unknown values read `[TO BE CONFIRMED]`; empty sections are left out.
+**Output** – `FS_<Module or system>_<Title>.docx` (title page with document control, contents, numbered headings, tables, header with document ID and version, *Page X of Y* footer) and `FUNCTIONAL_SPECIFICATION.md`, both from the same content: Business Requirement · Scope · Stakeholders · AS-IS · TO-BE · Functional Requirements · Business Rules · Data Requirements · Current SAP System Context · Fit-Gap · Solution Design (RICEFW) · Roles & Authorizations · Interfaces · Outputs · NFRs · UAT · **Traceability matrix (FR ↔ RICEFW ↔ UAT)** · Risks · Open Questions · Version History & Approvals. Unknown values read `[TO BE CONFIRMED]`; empty sections are left out.
 
 ### System discovery (read-only, through Copilot)
 
@@ -50,7 +72,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.4.vsix`](dist/dewa-sap-spec-builder-1.0.4.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.4.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.5.vsix`](dist/dewa-sap-spec-builder-1.0.5.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.5.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **DEWA: Open SAP Spec Builder** (command palette or *Spec Builder* in the status bar) opens this same app as a tab inside VS Code:
 
@@ -172,6 +194,7 @@ js/
   discovery.js          discovery prompt, context-pack validation, reference cross-check
   fs-completeness.js    "Ready for sign-off", open questions
   fs-generator.js       functional spec Markdown
+  fs-draft.js           AI draft: prompt, answer parsing, review and merge
   docx.js               dependency-free Word writer (OOXML + ZIP)
   host.js               browser vs. VS Code panel (storage, save dialog, clipboard, messages)
   fs-app.js             functional spec wizard, discovery panel, hand-off to a development spec
@@ -210,7 +233,7 @@ The **Agents** button (header, or Ctrl K → "Agent workflows") opens an info pa
 
 ## Try it
 
-**Examples** in Functional mode: FI-AP vendor ageing, MM goods receipt from WMS, SD billing block rules, IS-U implausible meter readings, CRM interaction log — each a complete FS. In Technical mode, **Try Example** offers complete worked examples: FI-AP vendor ageing report (Report + Class + DDIC), MM goods receipt RFC for an external WMS, SD billing block rules app (Table + CDS + RAP + Fiori), IS-U meter reading CDS view, CRM interaction log on CAP.
+**Examples** in Functional mode: FI-AP vendor ageing, MM goods receipt from WMS, SD billing block rules, IS-U implausible meter readings, CRM interaction log, and a non-SAP customer complaint tracking portal — each a complete FS. In Technical mode, **Try Example** offers complete worked examples: FI-AP vendor ageing report (Report + Class + DDIC), MM goods receipt RFC for an external WMS, SD billing block rules app (Table + CDS + RAP + Fiori), IS-U meter reading CDS view, CRM interaction log on CAP.
 
 ## Branding assets
 

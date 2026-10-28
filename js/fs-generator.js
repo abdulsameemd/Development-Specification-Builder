@@ -8,9 +8,11 @@
   const TBC = FC.TBC;
   const table = H.table, clean = H.clean, cell = H.cell, splitLines = H.splitLines;
 
+  let cur = null; // the spec being built: field labels follow its system (SAP or generic)
+  function sap() { return F.isSap(cur); }
   function dash(v) { return clean(v) || '–'; }
   function opt(sectionId, fieldId, v, colId) {
-    let f = F.field(sectionId, fieldId);
+    let f = F.view(F.field(sectionId, fieldId), cur);
     if (f && colId) f = (f.columns || f.fields || []).filter(function (c) { return c.id === colId; })[0];
     return v ? (f && f.options ? D.optionLabel(f, v) : v) : '';
   }
@@ -25,8 +27,8 @@
 
   function controlTable(s) {
     const c = s.control;
-    return table(['Document ID', 'Version', 'Status', 'Module', 'Author', 'Date'],
-      [[cell(c.docId), cell(c.version), cell(opt('control', 'status', c.status)), cell(s.context.module), cell(c.author), F.today()]]);
+    return table(['Document ID', 'Version', 'Status', sap() ? 'Module' : 'System', 'Author', 'Date'],
+      [[cell(c.docId), cell(c.version), cell(opt('control', 'status', c.status)), cell(F.systemLabel(s)), cell(c.author), F.today()]]);
   }
 
   function businessRequirement(s) {
@@ -41,7 +43,7 @@
 
   function scope(s) {
     const c = s.context;
-    const org = [['Company codes', c.companyCodes], ['Plants', c.plants], ['Sales organisations', c.salesOrgs], ['Other org units', c.otherOrg]]
+    const org = (sap() ? [['Company codes', c.companyCodes], ['Plants', c.plants], ['Sales organisations', c.salesOrgs], ['Other org units', c.otherOrg]] : [['Organisational scope', c.otherOrg]])
       .filter(function (o) { return (o[1] || '').trim(); }).map(function (o) { return '- **' + o[0] + ':** ' + clean(o[1]); }).join('\n');
     return join([sub('In scope', bullets(c.inScope)), sub('Out of scope', bullets(c.outOfScope)), sub('Organisational scope', org)]);
   }
@@ -49,7 +51,7 @@
   function processTable(list, last, lastLabel, sectionField) {
     list = rows(list);
     if (!list.length) return '';
-    return table(['#', 'Step', 'Role', 'Transaction / app', lastLabel], list.map(function (r, i) {
+    return table(['#', 'Step', 'Role', sap() ? 'Transaction / app' : 'System / screen', lastLabel], list.map(function (r, i) {
       const v = last === 'change' ? opt('process', sectionField, r.change, 'change') : r[last];
       return [String(i + 1), cell(r.step), dash(r.role), dash(r.tx), dash(v)];
     }));
@@ -102,6 +104,11 @@
     if (!l.length) return '';
     const m = checkMap(s);
     const withCheck = !!s.discovery;
+    if (!sap()) {
+      return table(['Business field', 'Stored in', 'Mandatory', 'Validation / format', 'Source'], l.map(function (r) {
+        return [cell(r.field), dash(r.table), r.mandatory ? 'Yes' : 'No', dash(r.validation), dash(opt('reqs', 'data', r.source, 'source'))];
+      }));
+    }
     return table(['Business field', 'SAP table / CDS', 'SAP field', 'Mandatory', 'Validation / format', 'Source'].concat(withCheck ? ['System check'] : []), l.map(function (r) {
       const row = [cell(r.field), cell(r.table), cell(r.sapField), r.mandatory ? 'Yes' : 'No', dash(r.validation), dash(opt('reqs', 'data', r.source, 'source'))];
       if (withCheck) {
@@ -162,8 +169,9 @@
     const list = s.reqs.frs || [];
     const by = coveredBy(s);
     const l = list.map(function (f, i) { return { f: f, id: F.frId(i) }; }).filter(function (x) { return V.isFilled(x.f) && x.f.fit; });
+    const viaRicefw = sap();
     return l.length ? table(['FR', 'Requirement', 'Fit-gap', 'Solution'], l.map(function (x) {
-      const sol = x.f.fit === 'custom' ? (by[x.id] || []).join(', ') : (x.f.approach || '').trim();
+      const sol = x.f.fit === 'custom' && viaRicefw ? (by[x.id] || []).join(', ') : (x.f.approach || '').trim();
       return [x.id, cell(x.f.title), x.f.fit === 'tbc' ? TBC : clean(opt('reqs', 'frs', x.f.fit, 'fit')), x.f.fit === 'custom' ? cell(sol) : dash(sol)];
     })) : '';
   }
@@ -186,7 +194,7 @@
   }
 
   function simpleGrid(sectionId, fieldId, list) {
-    const f = F.field(sectionId, fieldId);
+    const f = F.view(F.field(sectionId, fieldId), cur);
     return f ? H.gridMd(f, list) : '';
   }
 
@@ -211,6 +219,11 @@
     rows(s.quality.uat).forEach(function (r, i) { F.parseFrRefs(r.fr).forEach(function (fr) { (tests[fr] = tests[fr] || []).push('UAT-' + (i < 9 ? '0' : '') + (i + 1)); }); });
     const l = list.map(function (f, i) { return { f: f, id: F.frId(i) }; }).filter(function (x) { return V.isFilled(x.f); });
     if (!l.length) return '';
+    if (!sap()) {
+      return table(['FR', 'Requirement', 'Fit-gap', 'UAT'], l.map(function (x) {
+        return [x.id, cell(x.f.title), dash(x.f.fit === 'tbc' ? TBC : opt('reqs', 'frs', x.f.fit, 'fit')), (tests[x.id] || []).join(', ') || TBC];
+      }));
+    }
     return table(['FR', 'Requirement', 'Fit-gap', 'RICEFW', 'UAT'], l.map(function (x) {
       const std = x.f.fit === 'standard' || x.f.fit === 'config';
       return [x.id, cell(x.f.title), dash(x.f.fit === 'tbc' ? TBC : opt('reqs', 'frs', x.f.fit, 'fit')), (by[x.id] || []).join(', ') || (std ? 'n/a' : TBC), (tests[x.id] || []).join(', ') || TBC];
@@ -218,6 +231,7 @@
   }
 
   function build(s) {
+    cur = s;
     const sections = [];
     function add(t, body) { if (body && body.trim()) sections.push({ title: t, body: body.trim() }); }
     add('Business Requirement', businessRequirement(s));
@@ -228,10 +242,10 @@
     add('Functional Requirements', frSection(s));
     add('Business Rules & Validations', rulesTable(s));
     add('Data Requirements', dataTable(s));
-    add('Current SAP System Context', systemContext(s));
+    if (sap()) add('Current SAP System Context', systemContext(s));
     add('Fit-Gap Analysis', fitGap(s));
-    add('Solution Design (RICEFW)', solution(s));
-    add('Roles & Authorizations', simpleGrid('solution', 'roles', s.solution.roles));
+    if (sap()) add('Solution Design (RICEFW)', solution(s));
+    add(sap() ? 'Roles & Authorizations' : 'Roles & Access', simpleGrid('solution', 'roles', s.solution.roles));
     add('Interfaces', simpleGrid('solution', 'interfaces', s.solution.interfaces));
     add('Outputs & Forms', simpleGrid('solution', 'outputs', s.solution.outputs));
     add('Non-Functional Requirements', nfr(s));
@@ -248,20 +262,22 @@
 
   function mdFilename() { return 'FUNCTIONAL_SPECIFICATION.md'; }
   function docxFilename(s) {
-    const parts = ['FS', H.slug(s.context.module), H.slug(title(s) || s.control.docId || 'Specification')].filter(Boolean);
+    const parts = ['FS', H.slug(F.isSap(s) ? s.context.module : (s.context.system === 'other' ? s.context.systemName : '')), H.slug(title(s) || s.control.docId || 'Specification')].filter(Boolean);
     return parts.join('_').slice(0, 120) + '.docx';
   }
 
   /* Metadata for the Word title page, header and footer. */
   function docMeta(s) {
     const c = s.control;
+    cur = s;
     return {
       title: title(s) || 'Functional Specification',
       kind: 'Functional Specification',
       docId: (c.docId || '').trim(),
       version: (c.version || '').trim(),
       status: opt('control', 'status', c.status),
-      module: s.context.module || '',
+      module: F.systemLabel(s),
+      moduleLabel: sap() ? 'Module' : 'System',
       author: (c.author || '').trim(),
       date: F.today()
     };

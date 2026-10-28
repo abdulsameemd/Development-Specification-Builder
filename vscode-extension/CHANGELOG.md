@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.5
+
+- **Functional specs for any system.** Step 1 asks *Where will this run?*: SAP, Other system or Not decided yet.
+  - For anything but SAP, the module is not needed and SAP-only fields are hidden: org units, transactions, Suggest from SAP, RICEFW, discovery, SPRO and authorization objects. The wording is generic, and the document shows *System* instead of *Module*.
+  - SAP specs are unchanged. Earlier drafts open as SAP specs.
+  - New example: a non-SAP customer complaint tracking portal.
+- **Quick start.** *Create document now* in step 1 creates the document from the requirement alone; what is missing is listed as open questions.
+- **Draft the rest with AI.** From the requirement, Copilot drafts objectives, scope, process steps, FRs with acceptance criteria, rules, test scenarios and risks.
+  - In VS Code it uses *Draft with Copilot*: one request, no tools.
+  - In the browser, copy the prompt into an approved AI chat and paste the answer back.
+  - A review dialog shows each part. Only empty fields are filled and new rows appended.
+
 ## 1.0.4
 
 - **Upload a generated .md file.** *Upload* in the header (or *Upload .md file* in the command palette) opens a downloaded `FUNCTIONAL_SPECIFICATION.md` or `BUSINESS_REQUIREMENTS.md` again, in Functional or Technical mode.

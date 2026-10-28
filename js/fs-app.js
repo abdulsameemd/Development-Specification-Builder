@@ -15,15 +15,15 @@
 
   /* ------------------------------------------------------------------ chrome */
   const HERO = '<div class="hero-copy">' +
-    '<p class="hero-badge"><span class="spark" aria-hidden="true">✦</span> Functional specs checked against your SAP system</p>' +
-    '<h1 id="hero-title">SAP Functional <span class="grad">Specification Builder</span></h1>' +
+    '<p class="hero-badge"><span class="spark" aria-hidden="true">✦</span> Functional specs for SAP and any other system</p>' +
+    '<h1 id="hero-title">Functional <span class="grad">Specification Builder</span></h1>' +
     '<p class="hero-sub">From business requirement to a sign-off-ready FS for ' +
-    '<span class="rotator" aria-hidden="true"><span id="rotator-text">FI-AP processes</span><span class="caret"></span></span><span class="sr-only">FI, MM, SD, IS-U and CRM processes</span></p>' +
-    '<ul class="hero-chips" aria-label="Highlights"><li><strong>5</strong> steps · 15–30 min</li><li><strong>Word</strong> + Markdown</li><li><strong>Read-only</strong> SAP discovery via Copilot</li><li><strong>0</strong> data leaves your machine</li></ul></div>' +
-    '<div class="hero-cta"><button type="button" class="btn btn-primary btn-lg" data-action="start">Start the FS <span aria-hidden="true">→</span></button>' +
+    '<span class="rotator" aria-hidden="true"><span id="rotator-text">FI-AP processes</span><span class="caret"></span></span><span class="sr-only">SAP processes, customer portals, CRM, HR and any other business process</span></p>' +
+    '<ul class="hero-chips" aria-label="Highlights"><li><strong>SAP</strong> or any system</li><li><strong>1</strong> requirement is enough to start</li><li><strong>Word</strong> + Markdown</li><li><strong>AI draft</strong> you review</li></ul></div>' +
+    '<div class="hero-cta"><button type="button" class="btn btn-primary btn-lg" data-action="start">Start — just describe the need <span aria-hidden="true">→</span></button>' +
     '<button type="button" class="btn btn-ghost btn-lg" data-action="examples">See an example</button></div>';
 
-  const ROTATOR = ['FI-AP processes', 'MM procurement', 'SD order-to-cash', 'IS-U meter-to-cash', 'CRM customer service', 'Fiori app rollouts', 'RICEFW inventories'];
+  const ROTATOR = ['FI-AP processes', 'customer portals', 'SD order-to-cash', 'complaint handling', 'IS-U meter-to-cash', 'HR onboarding', 'Fiori app rollouts', 'any business process'];
 
   const DOWNLOAD_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v3h16v-3"/></svg>';
   const PV_ACTIONS = '<button type="button" class="btn btn-primary" data-action="fs-docx">' + DOWNLOAD_ICON + ' Word</button>' +
@@ -32,12 +32,18 @@
 
   /* ------------------------------------------------------------ step helpers */
   function header(n) {
-    const st = F.steps[n - 1];
+    const st = F.stepFor(n, S.get());
     return '<h2 class="step-title">' + esc(st.title) + '</h2><p class="muted">' + esc(st.intro) + '</p>';
   }
 
+  /* Fields as this spec shows them: SAP-only ones dropped and generic labels for other systems; "custom" ones
+     (the system choice) are rendered by the step itself. */
   function fieldsOf(sectionId, ids, exclude) {
-    return F.section(sectionId).fields.filter(function (f) { return ids ? ids.indexOf(f.id) >= 0 : (exclude || []).indexOf(f.id) < 0; });
+    return F.fieldsFor(sectionId, S.get()).filter(function (f) { return !f.custom && (ids ? ids.indexOf(f.id) >= 0 : (exclude || []).indexOf(f.id) < 0); });
+  }
+
+  function mandatoryMsg(s) {
+    return F.isSap(s) ? 'Add the business requirement and the module first (step 1)' : 'Describe the business requirement first (step 1)';
   }
 
   function block(sectionId, ids, exclude, opts) {
@@ -55,24 +61,67 @@
   }
 
   /* ------------------------------------------------------------------- steps */
+  const SYSTEM_ICON = { sap: 'SAP', other: '▣', tbd: '?' };
+
+  function systemCards(s) {
+    const c = s.context;
+    const f = F.field('context', 'system');
+    return '<fieldset class="field wide fs-system"><legend>' + esc(f.label) + ' <span class="hint">pick one – you can change it later</span></legend><div class="type-grid">' +
+      f.options.map(function (o) {
+        return '<button type="button" class="type-card" data-action="fs-system" data-v="' + esc(o.value) + '" aria-pressed="' + (c.system === o.value) + '">' +
+          '<span class="type-ico">' + esc(SYSTEM_ICON[o.value]) + '</span><span class="type-name">' + esc(o.label) + '</span><span class="type-hint">' + esc(o.hint) + '</span></button>';
+      }).join('') + '</div>' +
+      (c.system === 'other' ? '<div class="field narrow"><label for="fs-sysname">' + esc(F.field('context', 'systemName').label) + ' <span class="hint">optional</span></label><input id="fs-sysname" type="text" data-bind="context.systemName" value="' + esc(c.systemName) + '" placeholder="' + esc(F.field('context', 'systemName').placeholder) + '"></div>' : '') +
+      '</fieldset>';
+  }
+
+  /* ------------------------------------------------------------- AI draft */
+  const drf = { running: false, status: '', error: '', pending: null };
+
+  function draftCard(s) {
+    const ready = (s.context.requirement || '').trim().length >= 10;
+    const a = disc.auth;
+    const copilotReady = a && a.copilot && a.signedIn;
+    const vs = H.isVscode ? '<div class="chips fs-copilot">' + copilotStatus() + '</div>' : '';
+    const run = H.isVscode
+      ? (drf.running
+        ? '<button type="button" class="btn btn-ghost" data-action="fs-draft-stop">Stop</button><span class="muted small">' + esc(drf.status || 'Copilot is drafting…') + '</span>'
+        : '<button type="button" class="btn btn-primary" data-action="fs-draft-run"' + (ready && copilotReady ? '' : ' disabled') + '>✦ Draft with Copilot</button>')
+      : '<button type="button" class="btn btn-primary" data-action="fs-draft-copy"' + (ready ? '' : ' disabled') + '>✦ Copy AI prompt</button>';
+    const paste = '<details class="paste"' + U().detailsAttrs('fs-draft-paste', false) + '><summary>' + (H.isVscode ? 'Use another AI chat instead' : 'Paste the AI answer') + '</summary>' +
+      (H.isVscode ? '<p class="small muted"><button type="button" class="link" data-action="fs-draft-copy">Copy the prompt</button>, paste it into an AI chat your organisation allows, then paste the whole answer here.</p>' : '<label for="fs-draft-answer" class="small muted">The whole answer, or only its ```json block.</label>') +
+      '<textarea id="fs-draft-answer" rows="5" spellcheck="false"></textarea>' +
+      '<button type="button" class="btn btn-ghost btn-sm" data-action="fs-draft-review">Review the answer</button></details>';
+    return '<section class="card fs-draft" aria-labelledby="h-draft"><h3 id="h-draft">✦ Draft the rest with AI <span class="hint">optional</span></h3>' +
+      '<p class="muted small">From your requirement, AI proposes objectives, scope, process steps, functional requirements with acceptance criteria, rules, test scenarios and risks. You review it before anything is added, and nothing you typed is overwritten.' +
+      (H.isVscode ? ' Uses your GitHub Copilot in VS Code – no system access.' : ' Copy the prompt, paste it into an AI chat your organisation allows (for example Copilot Chat), then paste the answer below.') + '</p>' +
+      vs + '<div class="gen-actions">' + run + (ready ? '' : '<span class="muted small">Describe the requirement first.</span>') + '</div>' +
+      (drf.error ? '<p class="field-error" role="alert">' + esc(drf.error) + '</p>' : '') + paste + '</section>';
+  }
+
   function step1(s, ui) {
     const missing = ui.showErrors ? FC.checkMandatory(s).map(function (r) { return r.id; }) : [];
     const c = s.context;
+    const sap = F.isSap(s);
     const mod = F.field('context', 'module');
+    const req = F.view(F.field('context', 'requirement'), s);
     const tpls = F.templates.list().map(function (t) {
       return '<button type="button" class="chip" data-action="fs-template" data-id="' + esc(t.id) + '" title="' + esc(t.description) + '">' + esc(t.label) + '</button>';
     }).join('');
-    return header(1) +
-      '<div class="grid-2"><div class="field"><label for="fs-title">Specification title</label><input id="fs-title" type="text" data-bind="context.title" value="' + esc(c.title) + '" placeholder="' + esc(F.field('context', 'title').placeholder) + '"></div>' +
-      '<div class="field"><label for="fs-module">Module <span class="req">required</span></label><select id="fs-module" data-bind="context.module"' + (missing.indexOf('module') >= 0 ? ' aria-invalid="true"' : '') + '>' +
+    return header(1) + systemCards(s) +
+      '<div class="grid-2"><div class="field"><label for="fs-title">Specification title</label><input id="fs-title" type="text" data-bind="context.title" value="' + esc(c.title) + '" placeholder="' + esc(F.view(F.field('context', 'title'), s).placeholder) + '"></div>' +
+      (!sap ? '</div>' : '') + (sap ? '<div class="field"><label for="fs-module">Module <span class="req">required</span></label><select id="fs-module" data-bind="context.module"' + (missing.indexOf('module') >= 0 ? ' aria-invalid="true"' : '') + '>' +
       mod.options.map(function (o) { return '<option value="' + esc(o.value) + '"' + (c.module === o.value ? ' selected' : '') + '>' + esc(o.label) + '</option>'; }).join('') + '</select>' +
-      (missing.indexOf('module') >= 0 ? '<p class="field-error" role="alert">Pick the module.</p>' : '') + '</div></div>' +
+      (missing.indexOf('module') >= 0 ? '<p class="field-error" role="alert">Pick the module.</p>' : '') + '</div></div>' : '') +
       '<div class="field"><label for="fs-req">Business requirement <span class="req">required</span></label>' +
-      '<textarea id="fs-req" class="tall" rows="7" data-bind="context.requirement" placeholder="' + esc(F.field('context', 'requirement').placeholder) + '"' + (missing.indexOf('requirement') >= 0 ? ' aria-invalid="true" aria-describedby="fs-req-err"' : '') + '>' + esc(c.requirement) + '</textarea>' +
+      '<textarea id="fs-req" class="tall" rows="7" data-bind="context.requirement" placeholder="' + esc(req.placeholder) + '"' + (missing.indexOf('requirement') >= 0 ? ' aria-invalid="true" aria-describedby="fs-req-err"' : '') + '>' + esc(c.requirement) + '</textarea>' +
       (missing.indexOf('requirement') >= 0 ? '<p id="fs-req-err" class="field-error" role="alert">Describe the business need (a sentence or two is enough).</p>' : '') + '</div>' +
+      draftCard(s) +
       block('context', null, ['title', 'module', 'requirement']) +
-      '<details class="more"' + U().detailsAttrs('fs-templates', false) + '><summary>Start from a module template</summary><p class="muted small">Adds typical process steps, FR headings and roles for the module — only where you have not typed anything. Want a complete FS? <button type="button" class="link" data-action="examples">Load an example</button>.</p><div class="chips">' + tpls + '</div></details>' +
-      U().nav(false, 'Continue');
+      (!sap ? '' : '<details class="more"' + U().detailsAttrs('fs-templates', false) + '><summary>Start from a module template</summary><p class="muted small">Adds typical process steps, FR headings and roles for the module — only where you have not typed anything. Want a complete FS? <button type="button" class="link" data-action="examples">Load an example</button>.</p><div class="chips">' + tpls + '</div></details>') +
+      '<div class="nav-row"><span class="spacer"></span>' +
+      '<button type="button" class="btn btn-ghost" data-action="fs-quick" title="Create the document from what you have – the rest is listed as open questions">Create document now</button>' +
+      '<button type="button" class="btn btn-primary" data-action="next">Continue <span aria-hidden="true">→</span></button></div>';
   }
 
   /* Suggestions per step: from the SAP system (discovery stepMatches), else from the built-in standard list.
@@ -102,7 +151,7 @@
       block('process', ['asIs']) +
       (asIs.length && !toBe.length ? '<p><button type="button" class="btn btn-ghost btn-sm" data-action="fs-copy-asis">Start TO-BE from the AS-IS steps</button></p>' : '') +
       block('process', null, ['asIs']) +
-      (asIs.length || toBe.length ? stepSuggestions(s) : '') +
+      (F.isSap(s) && (asIs.length || toBe.length) ? stepSuggestions(s) : '') +
       '<h3>TO-BE flow</h3>' + flowHtml(s.process.toBe) +
       U().nav(true, 'Continue');
   }
@@ -192,7 +241,7 @@
 
   function startDiscovery(mode) {
     const s = S.get();
-    if (FC.checkMandatory(s).length) { U().toast('Add the business requirement and the module first (step 1)'); return; }
+    if (FC.checkMandatory(s).length) { U().toast(mandatoryMsg(s)); return; }
     disc.running = true; disc.mode = mode; disc.error = ''; disc.log = [];
     disc.log.push({ text: mode === 'chat' ? 'Opening Copilot Chat with ' + DS.cfg.agent + ' — press Enter there' : 'Starting read-only discovery with GitHub Copilot', status: 'info' });
     H.post({ type: 'discover', mode: mode, prompt: DS.prompt(s) });
@@ -252,6 +301,7 @@
   }
 
   function step4(s) {
+    if (!F.isSap(s)) return header(4) + block('solution') + U().nav(true, 'Continue');
     const gaps = FC.uncoveredGaps(s);
     return header(4) + discoveryPanel(s) +
       (gaps.length ? '<div class="refs" role="note"><strong>Gaps without a RICEFW item:</strong> ' + gaps.map(esc).join(', ') + ' — add an item and list the FR under “Covers FRs”.</div>' : '') +
@@ -266,9 +316,9 @@
     return header(5) + U().statusHtml(ev, true) +
       '<div class="stats">' +
       U().stat('Requirements', c.frs + ' FRs<br>' + c.gaps + ' gaps') +
-      U().stat('RICEFW', String(c.ricefw)) +
+      (F.isSap(s) ? U().stat('RICEFW', String(c.ricefw)) : U().stat('System', esc(F.systemLabel(s)))) +
       U().stat('UAT scenarios', String(c.uat)) +
-      U().stat('System context', s.discovery ? (s.discovery.sample ? 'sample pack' : '✓ discovered') : 'not run') +
+      (F.isSap(s) ? U().stat('System context', s.discovery ? (s.discovery.sample ? 'sample pack' : '✓ discovered') : 'not run') : '') +
       U().stat('Open questions', String(ev.questions.length)) + '</div>' +
       (ev.questions.length ? '<details class="more"' + U().detailsAttrs('fs-questions', false) + '><summary>Open questions (' + ev.questions.length + ')</summary><ol class="small">' + ev.questions.map(function (q) { return '<li>' + esc(q) + '</li>'; }).join('') + '</ol></details>' : '') +
       '<h3>Non-functional requirements</h3>' + block('quality', ['performance', 'volume', 'availability', 'audit', 'privacy']) +
@@ -286,10 +336,12 @@
 
   function generatedView(s, ui) {
     const md = FM.build(s);
-    const ho = handoffHtml(s);
+    const ho = F.isSap(s) ? handoffHtml(s) : '';
+    const qn = FC.openQuestions(s).length;
     return '<div class="gen-head"><h2 class="step-title">Your functional specification is ready</h2>' +
       '<p class="muted">Download it as <strong>Word</strong> for review and sign-off, or as Markdown (<code>' + esc(FM.filename()) + '</code>) for the project repository. ' +
-      (s.discovery ? 'System facts come from the discovery pack of ' + esc((s.discovery.generatedAt || '').slice(0, 10) || 'unknown date') + '.' : 'Tip: run <button type="button" class="link" data-action="goto" data-step="4">system discovery</button> so the FS reflects the current SAP system.') + '</p></div>' +
+      (!F.isSap(s) ? (qn ? qn + ' open question' + (qn > 1 ? 's are' : ' is') + ' listed at the end – <button type="button" class="link" data-action="edit">add the details</button> whenever you have them.' : '')
+        : s.discovery ? 'System facts come from the discovery pack of ' + esc((s.discovery.generatedAt || '').slice(0, 10) || 'unknown date') + '.' : 'Tip: run <button type="button" class="link" data-action="goto" data-step="4">system discovery</button> so the FS reflects the current SAP system.') + '</p></div>' +
       '<div class="gen-actions"><button type="button" class="btn btn-primary btn-lg" data-action="fs-docx">' + DOWNLOAD_ICON + ' Download Word</button>' +
       '<button type="button" class="btn btn-ghost btn-lg" data-action="download">Download Markdown</button>' +
       '<button type="button" class="btn btn-ghost" data-action="copy">Copy Markdown</button>' +
@@ -371,7 +423,94 @@
     return true;
   }
 
+  function rerenderStep1() {
+    if (S.isFs() && !U().ui.generated && U().ui.step === 1 && !U().ui.view) U().renderMain();
+  }
+
+  function reviewDraft(text) {
+    const r = APB.fsDraft.parse(text);
+    if (!r.draft) { drf.error = r.error; rerenderStep1(); U().toast(r.error, 6000); return false; }
+    const parts = APB.fsDraft.preview(S.get(), r.draft);
+    if (!parts.length) { drf.error = ''; rerenderStep1(); U().toast('The draft adds nothing new – everything it proposes is already in the specification', 6000); return false; }
+    drf.error = '';
+    drf.pending = r.draft;
+    document.getElementById('draft-list').innerHTML = parts.map(function (p) {
+      const more = p.items.length > 4 ? '<li class="muted">… and ' + (p.items.length - 4) + ' more</li>' : '';
+      return '<li><label class="check"><input type="checkbox" name="draft-part" value="' + esc(p.id) + '" checked> <strong>' + esc(p.label) + '</strong> <span class="count">' + p.items.length + '</span></label>' +
+        '<ul class="small">' + p.items.slice(0, 4).map(function (i) { return '<li>' + esc(String(i).slice(0, 160)) + '</li>'; }).join('') + more + '</ul></li>';
+    }).join('');
+    const dlg = document.getElementById('draft-dialog');
+    if (typeof dlg.showModal === 'function') { if (!dlg.open) dlg.showModal(); } else dlg.setAttribute('open', '');
+    return true;
+  }
+
+  if (H.isVscode) {
+    H.on('draft-progress', function (m) { drf.status = String(m.text || '').slice(0, 200); const el = document.querySelector('.fs-draft .gen-actions .muted'); if (el) el.textContent = drf.status; });
+    H.on('draft-result', function (m) {
+      drf.running = false; drf.status = '';
+      const answer = String(m.text || '');
+      if (!reviewDraft(answer)) {
+        U().ui.open['fs-draft-paste'] = true; rerenderStep1();
+        const ta = document.getElementById('fs-draft-answer');
+        if (ta) ta.value = answer;
+      } else rerenderStep1();
+    });
+    H.on('draft-error', function (m) { drf.running = false; drf.status = ''; drf.error = String(m.message || 'Drafting failed').slice(0, 400); rerenderStep1(); });
+  }
+
   const actions = {
+    'fs-system': function (el) {
+      const v = el.dataset.v;
+      U().updateSteps(function (st) { st.context.system = st.context.system === v ? '' : v; });
+      const s = S.get();
+      U().toast(F.isSap(s) ? 'SAP – modules, transactions, RICEFW and SAP discovery are available' : s.context.system === 'other' ? 'Other system – SAP-specific fields are hidden' : s.context.system === 'tbd' ? 'Not decided yet – only the business view is asked' : 'No system selected');
+    },
+    'fs-quick': function () {
+      const s = S.get();
+      if (FC.checkMandatory(s).length) {
+        U().ui.showErrors = true;
+        U().renderMain();
+        const bad = document.querySelector('[aria-invalid="true"]');
+        if (bad) bad.focus();
+        U().toast(mandatoryMsg(s));
+        return;
+      }
+      U().ui.generated = true;
+      U().renderMain();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+    'fs-draft-copy': function () {
+      const s = S.get();
+      if ((s.context.requirement || '').trim().length < 10) { U().toast('Describe the business requirement first'); return; }
+      Promise.resolve(APB.exporter.copy(APB.fsDraft.prompt(s))).then(function (ok) {
+        U().ui.open['fs-draft-paste'] = true;
+        rerenderStep1();
+        U().toast(ok ? 'AI prompt copied ✓ Paste it into an AI chat your organisation allows, then paste the answer here' : 'Copy failed', 7000);
+      });
+    },
+    'fs-draft-run': function () {
+      const s = S.get();
+      if ((s.context.requirement || '').trim().length < 10) { U().toast('Describe the business requirement first'); return; }
+      drf.running = true; drf.error = ''; drf.status = 'Copilot is drafting…';
+      H.post({ type: 'draft', prompt: APB.fsDraft.prompt(s) });
+      rerenderStep1();
+    },
+    'fs-draft-stop': function () { H.post({ type: 'stop' }); drf.running = false; drf.status = ''; rerenderStep1(); },
+    'fs-draft-review': function () {
+      const ta = document.getElementById('fs-draft-answer');
+      if (ta && reviewDraft(ta.value)) U().ui.open['fs-draft-paste'] = false;
+    },
+    'fs-draft-apply': function () {
+      const ids = Array.prototype.map.call(document.querySelectorAll('#draft-list input[name="draft-part"]:checked'), function (i) { return i.value; });
+      const dlg = document.getElementById('draft-dialog');
+      if (dlg.close) dlg.close(); else dlg.removeAttribute('open');
+      if (!drf.pending || !ids.length) return;
+      const r = APB.fsDraft.merge(S.get(), drf.pending, ids);
+      drf.pending = null;
+      S.replace(r.state);
+      U().renderMain();
+      U().toast(r.added.length ? 'Added ' + r.added.join(', ') + ' – review them in each step' : 'Nothing new to add', 7000);
+    },
     'fs-template': function (el) {
       const t = F.templates.fromTemplate(el.dataset.id, S.get());
       if (!t) return;
@@ -392,7 +531,7 @@
     'fs-discover': function () {
       if (H.isVscode) { startDiscovery('auto'); return; }
       const s = S.get();
-      if (FC.checkMandatory(s).length) { U().toast('Add the business requirement and the module first (step 1)'); return; }
+      if (FC.checkMandatory(s).length) { U().toast(mandatoryMsg(s)); return; }
       const mode = APB.storage.getPref('vscodeLaunch', 'extension');
       const copied = APB.exporter.copyNow(DS.prompt(s));
       APB.exporter.launchVscode(DS.launchUrl(mode, APB.storage.getPref('extensionId', DS.cfg.extensionId)));
@@ -446,7 +585,7 @@
     },
     'fs-docx': function () {
       const s = S.get();
-      if (FC.checkMandatory(s).length) { U().toast('Add the business requirement and the module first'); return; }
+      if (FC.checkMandatory(s).length) { U().toast(mandatoryMsg(s)); return; }
       const bytes = APB.docx.fromMarkdown(FM.build(s), FM.docMeta(s));
       APB.exporter.downloadBytes(FM.docxFilename(s), bytes, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
       U().toast(U().savedMsg(FM.docxFilename(s)));
@@ -459,18 +598,25 @@
   });
 
   function commands(run) {
-    const list = F.steps.map(function (st) { return { g: 'Navigate', i: String(st.n), t: 'Step ' + st.n + ' · ' + st.title, run: function () { run.setStep(st.n); } }; });
+    const cur = S.get();
+    const list = F.steps.map(function (n) { return F.stepFor(n.n, cur); }).map(function (st) { return { g: 'Navigate', i: String(st.n), t: 'Step ' + st.n + ' · ' + st.title, run: function () { run.setStep(st.n); } }; });
     list.push(
       { g: 'Create', i: '✦', t: 'Generate functional specification', run: function () { run.setStep(5); run.actions.generate(); } },
       { g: 'Create', i: 'W', t: 'Download Word (.docx)', run: actions['fs-docx'] },
       { g: 'Create', i: '⬇', t: 'Download Markdown', run: run.actions.download },
       { g: 'Create', i: '⧉', t: 'Copy Markdown', run: run.actions.copy },
       { g: 'Create', i: '+', t: 'New functional specification', run: run.actions.new },
+      { g: 'Create', i: '✦', t: 'Draft the rest with AI', run: function () { run.setStep(1); actions[H.isVscode ? 'fs-draft-run' : 'fs-draft-copy'](); } },
+      { g: 'Create', i: '⚡', t: 'Create document now (quick start)', run: actions['fs-quick'] }
+    );
+    if (F.isSap(cur)) list.push(
       { g: 'System', i: '›', t: H.isVscode ? 'Discover in SAP (automatic, read-only)' : 'Discover in SAP (open VS Code with ' + DS.cfg.agent + ')', run: function () { run.setStep(4); actions['fs-discover'](); } },
-      { g: 'System', i: '⇩', t: 'Import context pack from clipboard', run: function () { run.setStep(4); actions['fs-import-clip'](); } },
+      { g: 'System', i: '⇩', t: 'Import context pack from clipboard', run: function () { run.setStep(4); actions['fs-import-clip'](); } }
+    );
+    list.push(
       { g: 'Create', i: '✓', t: 'Create UAT skeleton from FRs', run: function () { run.setStep(5); actions['fs-uat'](); } }
     );
-    F.templates.list().forEach(function (t) { list.push({ g: 'Template', i: '◇', t: t.label, run: function () { run.setStep(1); actions['fs-template']({ dataset: { id: t.id } }); } }); });
+    if (F.isSap(cur)) F.templates.list().forEach(function (t) { list.push({ g: 'Template', i: '◇', t: t.label, run: function () { run.setStep(1); actions['fs-template']({ dataset: { id: t.id } }); } }); });
     F.templates.examples().forEach(function (e) { list.push({ g: 'Example', i: e.module, t: e.label, run: function () { run.loadState(F.templates.example(e.id), 'Example loaded'); } }); });
     return list;
   }

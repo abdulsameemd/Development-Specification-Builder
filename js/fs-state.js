@@ -37,6 +37,48 @@
     return f;
   }
 
+  /* ------------------------------------------------- SAP or any other system
+     context.system: 'sap' | 'other' | 'tbd' ('' = not chosen yet, treated like 'tbd'). For anything but SAP the
+     fields marked "sapOnly" are left out and "generic" overrides (label, placeholder, hint, list …) apply. */
+  const SYSTEMS = ['sap', 'other', 'tbd'];
+  function isSap(s) { return !!(s && s.context && s.context.system === 'sap'); }
+
+  const genericCache = new WeakMap();
+  function generic(f) {
+    if (genericCache.has(f)) return genericCache.get(f);
+    const g = Object.assign({}, f, f.generic || {});
+    delete g.generic;
+    if (f.columns) g.columns = f.columns.filter(function (c) { return !c.sapOnly; }).map(generic);
+    if (f.fields) g.fields = f.fields.filter(function (c) { return !c.sapOnly; }).map(generic);
+    if (f.options) g.options = f.options.filter(function (o) { return !o.sapOnly; }).map(function (o) { return o.generic ? Object.assign({}, o, o.generic) : o; });
+    genericCache.set(f, g);
+    return g;
+  }
+  /* The field as the user sees it for this spec (null when it does not apply). */
+  function view(f, s) {
+    if (!f) return null;
+    if (isSap(s)) return f;
+    return f.sapOnly ? null : generic(f);
+  }
+  function fieldsFor(sectionId, s) {
+    return ((sections[sectionId] || {}).fields || []).map(function (f) { return view(f, s); }).filter(Boolean);
+  }
+  function stepFor(n, s) {
+    const st = cfg.steps[n - 1];
+    return isSap(s) || !st.generic ? st : Object.assign({}, st, st.generic);
+  }
+  /* Config rules (mandatory / recommended) that apply to this spec, with generic wording. */
+  function rulesFor(list, s) {
+    const sap = isSap(s);
+    return list.filter(function (r) { return sap || !r.sapOnly; }).map(function (r) { return sap || !r.generic ? r : Object.assign({}, r, r.generic); });
+  }
+  function systemLabel(s) {
+    const c = s.context || {};
+    if (isSap(s)) return c.module || '';
+    if (c.system === 'other') return (c.systemName || '').trim() || 'Other system';
+    return 'To be decided';
+  }
+
   function ricefwType(value) { return cfg.ricefw.filter(function (r) { return r.value === value; })[0] || cfg.ricefw[0]; }
 
   /* ---------------------------------------------------------------- model */
@@ -86,6 +128,8 @@
     s.id = typeof input.id === 'string' && input.id ? input.id : s.id;
     cfg.sections.forEach(function (sec) { Object.assign(s[sec.id], coerce(sec.fields, input[sec.id])); });
     if (!s.control.status) s.control.status = 'draft';
+    // specs from before the system choice were SAP specs whenever a module was set
+    if (SYSTEMS.indexOf(s.context.system) < 0) s.context.system = s.context.module ? 'sap' : '';
     s.discovery = input.discovery && APB.discovery ? APB.discovery.normalize(input.discovery).pack : null;
     if (input.meta && typeof input.meta === 'object') {
       s.meta.created = Number(input.meta.created) || s.meta.created;
@@ -158,6 +202,12 @@
     stepSections: function (n) { return cfg.sections.filter(function (s) { return s.step === n; }); },
     field: field,
     fieldAtPath: fieldAtPath,
+    isSap: isSap,
+    view: view,
+    fieldsFor: fieldsFor,
+    stepFor: stepFor,
+    rulesFor: rulesFor,
+    systemLabel: systemLabel,
     ricefwType: ricefwType,
     frId: frId,
     ricefwIds: ricefwIds,

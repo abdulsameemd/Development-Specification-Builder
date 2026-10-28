@@ -7264,25 +7264,38 @@ window.APB_CONFIG = {
     "n": 1,
     "label": "Context",
     "title": "Business context & scope",
-    "intro": "What the business needs and where it applies. Only the requirement and the module are required."
+    "intro": "What the business needs and where it applies. Only the requirement and the module are required.",
+    "generic": {
+     "intro": "What the business needs and where it applies. Only the business requirement is required – everything else can follow later."
+    }
    },
    {
     "n": 2,
     "label": "Process",
     "title": "Current and future process",
-    "intro": "AS-IS shows today's steps and pain points; TO-BE is the process after the change. Describe each step in business words — Suggest from SAP finds the matching transactions and Fiori apps for you."
+    "intro": "AS-IS shows today's steps and pain points; TO-BE is the process after the change. Describe each step in business words — Suggest from SAP finds the matching transactions and Fiori apps for you.",
+    "generic": {
+     "intro": "AS-IS shows today's steps and pain points; TO-BE is the process after the change. Describe each step in business words."
+    }
    },
    {
     "n": 3,
     "label": "Requirements",
     "title": "Functional requirements",
-    "intro": "One FR per testable need. Fit-gap tells the team whether standard SAP, configuration or custom development covers it."
+    "intro": "One FR per testable need. Fit-gap tells the team whether standard SAP, configuration or custom development covers it.",
+    "generic": {
+     "intro": "One FR per testable need. Fit-gap tells the team whether a standard feature, configuration or new development covers it."
+    }
    },
    {
     "n": 4,
     "label": "Solution",
     "title": "System context & solution",
-    "intro": "Read the current DEWA SAP system first, then list the RICEFW items that close the gaps."
+    "intro": "Read the current DEWA SAP system first, then list the RICEFW items that close the gaps.",
+    "generic": {
+     "title": "Solution & integration",
+     "intro": "Who uses the solution, which other systems it talks to and what it produces."
+    }
    },
    {
     "n": 5,
@@ -7297,52 +7310,104 @@ window.APB_CONFIG = {
     "step": 1,
     "fields": [
      {
+      "id": "system",
+      "label": "Where will this run?",
+      "kind": "radio",
+      "custom": true,
+      "options": [
+       {
+        "value": "sap",
+        "label": "SAP",
+        "hint": "S/4HANA, ECC, IS-U, CRM, BTP … – adds modules, transactions, RICEFW and read-only SAP discovery"
+       },
+       {
+        "value": "other",
+        "label": "Other system",
+        "hint": "Any other application, portal or cloud service – name it if you like"
+       },
+       {
+        "value": "tbd",
+        "label": "Not decided yet",
+        "hint": "Only the business need – the solution is chosen later"
+       }
+      ]
+     },
+     {
+      "id": "systemName",
+      "label": "System name",
+      "kind": "text",
+      "custom": true,
+      "placeholder": "e.g. Salesforce, ServiceNow, in-house customer portal"
+     },
+     {
       "id": "title",
       "label": "Specification title",
       "kind": "text",
-      "placeholder": "e.g. Vendor open items ageing for month-end close"
+      "placeholder": "e.g. Vendor open items ageing for month-end close",
+      "generic": {
+       "placeholder": "e.g. Customer complaint tracking"
+      }
      },
      {
       "id": "module",
       "label": "Module",
       "kind": "select",
-      "optionsRef": "modules"
+      "optionsRef": "modules",
+      "sapOnly": true
      },
      {
       "id": "processArea",
       "label": "Process area",
       "kind": "text",
-      "placeholder": "e.g. Accounts Payable – period-end closing"
+      "placeholder": "e.g. Accounts Payable – period-end closing",
+      "generic": {
+       "placeholder": "e.g. Customer service – complaints"
+      }
      },
      {
       "id": "requirement",
       "label": "Business requirement",
       "kind": "textarea",
-      "placeholder": "Describe the business need in the business's words, e.g.\nAP accountants need to see overdue vendor items per company code grouped into ageing buckets (0-30 / 31-60 / 61-90 / >90 days) for the month-end review."
+      "placeholder": "Describe the business need in the business's words, e.g.\nAP accountants need to see overdue vendor items per company code grouped into ageing buckets (0-30 / 31-60 / 61-90 / >90 days) for the month-end review.",
+      "generic": {
+       "placeholder": "Describe the business need in your own words, e.g.\nCustomer service needs one place to log, assign and track customer complaints so that every complaint is answered within 5 working days."
+      }
      },
      {
       "id": "objectives",
       "label": "Business objectives",
       "kind": "lines",
-      "placeholder": "e.g. Reduce month-end AP review from 2 days to 2 hours\nIdentify overdue vendors before the payment run"
+      "placeholder": "e.g. Reduce month-end AP review from 2 days to 2 hours\nIdentify overdue vendors before the payment run",
+      "generic": {
+       "placeholder": "e.g. Answer every complaint within 5 working days\nNo complaint is lost between e-mail inboxes"
+      }
      },
      {
       "id": "kpis",
       "label": "KPIs / success measures",
       "kind": "lines",
-      "placeholder": "e.g. Ageing available on working day 1 of the close"
+      "placeholder": "e.g. Ageing available on working day 1 of the close",
+      "generic": {
+       "placeholder": "e.g. 95 % of complaints closed within 5 working days"
+      }
      },
      {
       "id": "inScope",
       "label": "In scope",
       "kind": "lines",
-      "placeholder": "e.g. Company codes 1000 and 2000\nVendor open items in local currency"
+      "placeholder": "e.g. Company codes 1000 and 2000\nVendor open items in local currency",
+      "generic": {
+       "placeholder": "e.g. Complaints by phone and e-mail\nAll customer service teams"
+      }
      },
      {
       "id": "outOfScope",
       "label": "Out of scope",
       "kind": "lines",
-      "placeholder": "e.g. Customer ageing (FI-AR)\nForeign-currency revaluation"
+      "placeholder": "e.g. Customer ageing (FI-AR)\nForeign-currency revaluation",
+      "generic": {
+       "placeholder": "e.g. Warranty claims\nSocial-media monitoring"
+      }
      },
      {
       "id": "stakeholders",
@@ -7382,28 +7447,35 @@ window.APB_CONFIG = {
       "label": "Company codes",
       "kind": "text",
       "advanced": true,
-      "placeholder": "e.g. 1000, 2000"
+      "placeholder": "e.g. 1000, 2000",
+      "sapOnly": true
      },
      {
       "id": "plants",
       "label": "Plants",
       "kind": "text",
       "advanced": true,
-      "placeholder": "e.g. 1100"
+      "placeholder": "e.g. 1100",
+      "sapOnly": true
      },
      {
       "id": "salesOrgs",
       "label": "Sales organisations",
       "kind": "text",
       "advanced": true,
-      "placeholder": "e.g. 1000"
+      "placeholder": "e.g. 1000",
+      "sapOnly": true
      },
      {
       "id": "otherOrg",
       "label": "Other org units",
       "kind": "text",
       "advanced": true,
-      "placeholder": "e.g. purchasing org, controlling area, division"
+      "placeholder": "e.g. purchasing org, controlling area, division",
+      "generic": {
+       "label": "Organisational scope",
+       "placeholder": "e.g. departments, regions, branches, customer groups"
+      }
      }
     ]
    },
@@ -7437,7 +7509,13 @@ window.APB_CONFIG = {
         "w": 160,
         "placeholder": "search, e.g. invoice",
         "list": "ds-tx",
-        "check": "tx"
+        "check": "tx",
+        "generic": {
+         "label": "System / screen (if known)",
+         "placeholder": "e.g. e-mail, Excel, CRM",
+         "list": "",
+         "check": ""
+        }
        },
        {
         "id": "pain",
@@ -7473,7 +7551,13 @@ window.APB_CONFIG = {
         "w": 160,
         "placeholder": "search, e.g. payment",
         "list": "ds-tx",
-        "check": "tx"
+        "check": "tx",
+        "generic": {
+         "label": "System / screen (if known)",
+         "placeholder": "e.g. e-mail, Excel, CRM",
+         "list": "",
+         "check": ""
+        }
        },
        {
         "id": "change",
@@ -7510,7 +7594,10 @@ window.APB_CONFIG = {
       "label": "Process variants & exceptions",
       "kind": "lines",
       "advanced": true,
-      "placeholder": "e.g. Blocked vendors are listed separately\nIntercompany vendors are excluded"
+      "placeholder": "e.g. Blocked vendors are listed separately\nIntercompany vendors are excluded",
+      "generic": {
+       "placeholder": "e.g. Urgent complaints go straight to the team lead\nComplaints about invoices are forwarded to Finance"
+      }
      }
     ]
    },
@@ -7530,7 +7617,10 @@ window.APB_CONFIG = {
         "id": "title",
         "label": "Requirement",
         "kind": "text",
-        "placeholder": "e.g. Ageing buckets per vendor"
+        "placeholder": "e.g. Ageing buckets per vendor",
+        "generic": {
+         "placeholder": "e.g. Log a complaint with category and priority"
+        }
        },
        {
         "id": "priority",
@@ -7570,7 +7660,10 @@ window.APB_CONFIG = {
          },
          {
           "value": "standard",
-          "label": "Fit – SAP standard"
+          "label": "Fit – SAP standard",
+          "generic": {
+           "label": "Fit – standard feature"
+          }
          },
          {
           "value": "config",
@@ -7578,7 +7671,10 @@ window.APB_CONFIG = {
          },
          {
           "value": "custom",
-          "label": "Gap – custom development"
+          "label": "Gap – custom development",
+          "generic": {
+           "label": "Gap – new development"
+          }
          },
          {
           "value": "tbc",
@@ -7590,20 +7686,29 @@ window.APB_CONFIG = {
         "id": "description",
         "label": "Description",
         "kind": "textarea",
-        "placeholder": "e.g. Group each vendor's open items by days past net due date into 0-30, 31-60, 61-90 and >90 days."
+        "placeholder": "e.g. Group each vendor's open items by days past net due date into 0-30, 31-60, 61-90 and >90 days.",
+        "generic": {
+         "placeholder": "e.g. An agent records the customer, channel, category and description; the system assigns a reference number."
+        }
        },
        {
         "id": "acceptance",
         "label": "Acceptance criteria",
         "kind": "lines",
-        "placeholder": "e.g. When the key date is 31.01., an item due 15.12. appears in 31-60 days"
+        "placeholder": "e.g. When the key date is 31.01., an item due 15.12. appears in 31-60 days",
+        "generic": {
+         "placeholder": "e.g. When a complaint is saved, the customer receives the reference number by e-mail"
+        }
        },
        {
         "id": "approach",
         "label": "Standard / configuration approach",
         "kind": "textarea",
         "advanced": true,
-        "placeholder": "e.g. Standard FBL1N layout covers drill-down; SPRO path for payment terms"
+        "placeholder": "e.g. Standard FBL1N layout covers drill-down; SPRO path for payment terms",
+        "generic": {
+         "placeholder": "e.g. Standard case form covers this; configure the categories"
+        }
        }
       ]
      },
@@ -7686,13 +7791,20 @@ window.APB_CONFIG = {
         "w": 140,
         "placeholder": "e.g. LFA1",
         "list": "ds-obj",
-        "check": "obj"
+        "check": "obj",
+        "generic": {
+         "label": "Stored in (if known)",
+         "placeholder": "e.g. customer record",
+         "list": "",
+         "check": ""
+        }
        },
        {
         "id": "sapField",
         "label": "SAP field",
         "w": 110,
-        "placeholder": "e.g. LIFNR"
+        "placeholder": "e.g. LIFNR",
+        "sapOnly": true
        },
        {
         "id": "mandatory",
@@ -7718,11 +7830,17 @@ window.APB_CONFIG = {
          },
          {
           "value": "standard",
-          "label": "SAP standard"
+          "label": "SAP standard",
+          "generic": {
+           "label": "Existing system data"
+          }
          },
          {
           "value": "custom",
-          "label": "Custom (Z)"
+          "label": "Custom (Z)",
+          "generic": {
+           "label": "New field"
+          }
          },
          {
           "value": "external",
@@ -7734,7 +7852,10 @@ window.APB_CONFIG = {
          }
         ]
        }
-      ]
+      ],
+      "generic": {
+       "hint": "The information the solution needs. Where it is stored is optional – the solution team confirms it."
+      }
      }
     ]
    },
@@ -7803,7 +7924,8 @@ window.APB_CONFIG = {
         "list": "ds-obj",
         "placeholder": "e.g. BSIK, LFA1, BAdI FI_ITEMS_CH_DATA"
        }
-      ]
+      ],
+      "sapOnly": true
      },
      {
       "id": "roles",
@@ -7824,21 +7946,35 @@ window.APB_CONFIG = {
         "w": 140,
         "placeholder": "e.g. ZFI_AGEING",
         "list": "ds-tx",
-        "check": "tx"
+        "check": "tx",
+        "generic": {
+         "label": "Screens / functions",
+         "placeholder": "e.g. complaint list",
+         "list": "",
+         "check": ""
+        }
        },
        {
         "id": "authObj",
         "label": "Authorization object",
         "w": 150,
-        "placeholder": "e.g. F_BKPF_BUK"
+        "placeholder": "e.g. F_BKPF_BUK",
+        "sapOnly": true
        },
        {
         "id": "scope",
         "label": "Activities / org levels",
         "w": 200,
-        "placeholder": "e.g. ACTVT 03 · BUKRS 1000"
+        "placeholder": "e.g. ACTVT 03 · BUKRS 1000",
+        "generic": {
+         "label": "Access",
+         "placeholder": "e.g. read and edit own team's complaints"
+        }
        }
-      ]
+      ],
+      "generic": {
+       "label": "Roles & access"
+      }
      },
      {
       "id": "interfaces",
@@ -7896,7 +8032,8 @@ window.APB_CONFIG = {
          },
          {
           "value": "RFC/BAPI",
-          "label": "RFC / BAPI"
+          "label": "RFC / BAPI",
+          "sapOnly": true
          },
          {
           "value": "OData",
@@ -7916,7 +8053,10 @@ window.APB_CONFIG = {
          },
          {
           "value": "CPI",
-          "label": "Integration Suite (CPI)"
+          "label": "Integration Suite (CPI)",
+          "generic": {
+           "label": "Integration platform"
+          }
          },
          {
           "value": "Other",
@@ -7972,7 +8112,10 @@ window.APB_CONFIG = {
          },
          {
           "value": "report",
-          "label": "Report / ALV"
+          "label": "Report / ALV",
+          "generic": {
+           "label": "Report"
+          }
          },
          {
           "value": "file",
@@ -8003,7 +8146,8 @@ window.APB_CONFIG = {
       "label": "Configuration (SPRO) notes",
       "kind": "lines",
       "advanced": true,
-      "placeholder": "e.g. Payment terms per vendor group: SPRO → Financial Accounting → AP → Payment terms"
+      "placeholder": "e.g. Payment terms per vendor group: SPRO → Financial Accounting → AP → Payment terms",
+      "sapOnly": true
      }
     ]
    },
@@ -8278,7 +8422,8 @@ window.APB_CONFIG = {
     "id": "module",
     "label": "Module",
     "step": 1,
-    "path": "context.module"
+    "path": "context.module",
+    "sapOnly": true
    }
   ],
   "recommended": [
@@ -8290,7 +8435,10 @@ window.APB_CONFIG = {
     "anyOf": [
      "process.toBe"
     ],
-    "question": "The TO-BE process steps (who does what, in which transaction or app)."
+    "question": "The TO-BE process steps (who does what, in which transaction or app).",
+    "generic": {
+     "question": "The TO-BE process steps (who does what, in which system or screen)."
+    }
    },
    {
     "id": "frs",
@@ -8326,7 +8474,8 @@ window.APB_CONFIG = {
     "important": true,
     "anyOf": [
      "discovery"
-    ]
+    ],
+    "sapOnly": true
    },
    {
     "id": "ricefw",
@@ -8337,7 +8486,8 @@ window.APB_CONFIG = {
     "anyOf": [
      "solution.ricefw"
     ],
-    "question": "Which RICEFW objects close the custom-development gaps."
+    "question": "Which RICEFW objects close the custom-development gaps.",
+    "sapOnly": true
    },
    {
     "id": "roles",
@@ -8346,7 +8496,11 @@ window.APB_CONFIG = {
     "anyOf": [
      "solution.roles"
     ],
-    "question": "Business roles and the authorizations they need."
+    "question": "Business roles and the authorizations they need.",
+    "generic": {
+     "label": "Roles & access",
+     "question": "Business roles and what they may see and do."
+    }
    },
    {
     "id": "data",
@@ -9381,6 +9535,207 @@ window.APB_CONFIG = {
       "docId": "FS-CRM-0008",
       "version": "0.1",
       "status": "draft"
+     }
+    }
+   },
+   {
+    "id": "fs-gen-complaints",
+    "module": "Any",
+    "label": "Non-SAP: Customer complaint tracking portal",
+    "state": {
+     "context": {
+      "system": "other",
+      "systemName": "Customer service portal (cloud)",
+      "title": "Customer complaint tracking",
+      "processArea": "Customer service – complaints",
+      "requirement": "Customer service needs one place to log, assign and track customer complaints received by phone, e-mail and the website, so that every complaint is answered within 5 working days and managers see overdue complaints every morning.",
+      "objectives": "Answer every complaint within 5 working days\nNo complaint is lost between e-mail inboxes\nManagers see overdue complaints daily",
+      "kpis": "95 % of complaints closed within 5 working days\nComplaint backlog visible on one dashboard",
+      "inScope": "Complaints by phone, e-mail and the website form\nAll customer service teams",
+      "outOfScope": "Warranty claims\nSocial-media monitoring",
+      "stakeholders": [
+       {
+        "role": "Business process owner",
+        "name": "",
+        "department": "Customer service",
+        "responsibility": "Approves the FS"
+       },
+       {
+        "role": "Team lead",
+        "name": "",
+        "department": "Customer service",
+        "responsibility": "UAT"
+       }
+      ],
+      "otherOrg": "Customer service teams North, South and Online"
+     },
+     "process": {
+      "asIs": [
+       {
+        "step": "Complaint arrives by phone or e-mail",
+        "role": "Agent",
+        "tx": "E-mail, phone",
+        "pain": "Spread over personal inboxes"
+       },
+       {
+        "step": "Agent notes the complaint in a shared Excel list",
+        "role": "Agent",
+        "tx": "Excel",
+        "pain": "Duplicates, no reference number"
+       },
+       {
+        "step": "Team lead checks the list for overdue items",
+        "role": "Team lead",
+        "tx": "Excel",
+        "pain": "Manual, once a week"
+       }
+      ],
+      "toBe": [
+       {
+        "step": "Log the complaint with customer, channel and category",
+        "role": "Agent",
+        "tx": "Complaint form",
+        "change": "new"
+       },
+       {
+        "step": "Assign the complaint to a team member",
+        "role": "Team lead",
+        "tx": "Complaint list",
+        "change": "new"
+       },
+       {
+        "step": "Answer the customer and close the complaint",
+        "role": "Agent",
+        "tx": "Complaint form",
+        "change": "changed"
+       },
+       {
+        "step": "Review overdue complaints every morning",
+        "role": "Team lead",
+        "tx": "Dashboard",
+        "change": "automated"
+       }
+      ]
+     },
+     "reqs": {
+      "frs": [
+       {
+        "title": "Log a complaint",
+        "priority": "must",
+        "fit": "standard",
+        "description": "An agent records the customer, channel, category, priority and description. The system gives the complaint a unique reference number.",
+        "acceptance": "When a complaint is saved, it gets a reference number and the status Open\nWhen the customer has an e-mail address, the customer receives the reference number by e-mail"
+       },
+       {
+        "title": "Assign and track complaints",
+        "priority": "must",
+        "fit": "config",
+        "description": "Team leads assign complaints to agents; each complaint shows its status (Open, In progress, Waiting for customer, Closed) and its due date (5 working days after logging).",
+        "acceptance": "When a team lead assigns a complaint, the agent sees it in My complaints\nWhen a complaint is not closed by its due date, it is shown as overdue"
+       },
+       {
+        "title": "Daily overdue overview",
+        "priority": "should",
+        "fit": "custom",
+        "description": "Every morning team leads get an overview of overdue complaints per team.",
+        "acceptance": "When a working day starts, each team lead receives an e-mail listing the overdue complaints of the team"
+       }
+      ],
+      "rules": [
+       {
+        "rule": "Due date = logging date + 5 working days",
+        "type": "calculation",
+        "outcome": "Due date shown on the complaint",
+        "fr": "FR-02"
+       },
+       {
+        "rule": "A complaint can only be closed with an answer text",
+        "type": "validation",
+        "outcome": "Message: Enter the answer before closing",
+        "fr": "FR-02"
+       }
+      ],
+      "data": [
+       {
+        "field": "Customer",
+        "table": "Customer record",
+        "mandatory": true,
+        "validation": "Must exist",
+        "source": "standard"
+       },
+       {
+        "field": "Complaint category",
+        "table": "",
+        "mandatory": true,
+        "validation": "From the category list",
+        "source": "custom"
+       }
+      ]
+     },
+     "solution": {
+      "roles": [
+       {
+        "role": "Agent",
+        "tx": "Complaint form, My complaints",
+        "scope": "Create and edit own complaints"
+       },
+       {
+        "role": "Team lead",
+        "tx": "Complaint list, Dashboard",
+        "scope": "All complaints of the team"
+       }
+      ],
+      "interfaces": [
+       {
+        "name": "Website complaint form",
+        "direction": "inbound",
+        "partner": "Company website",
+        "tech": "REST",
+        "frequency": "Real time",
+        "volume": "about 50 per day"
+       }
+      ],
+      "outputs": [
+       {
+        "name": "Reference number e-mail",
+        "type": "email",
+        "channel": "E-mail",
+        "trigger": "Complaint saved"
+       }
+      ]
+     },
+     "quality": {
+      "performance": "Complaint form opens in under 2 seconds",
+      "volume": "About 300 complaints per day",
+      "privacy": "Customer contact data only; deleted 3 years after closing",
+      "uat": [
+       {
+        "fr": "FR-01",
+        "scenario": "Log a complaint for an existing customer by e-mail",
+        "type": "positive",
+        "expected": "Reference number shown and sent to the customer"
+       },
+       {
+        "fr": "FR-02",
+        "scenario": "Close a complaint without an answer",
+        "type": "negative",
+        "expected": "Message: Enter the answer before closing"
+       }
+      ],
+      "risks": [
+       {
+        "type": "assumption",
+        "text": "The portal's standard case object can be used for complaints",
+        "owner": "Solution architect",
+        "action": "Confirm in the fit-gap workshop"
+       }
+      ]
+     },
+     "control": {
+      "docId": "FS-CS-0007",
+      "version": "0.1",
+      "status": "draft",
+      "author": ""
      }
     }
    }

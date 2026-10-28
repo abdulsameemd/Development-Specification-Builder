@@ -74,7 +74,11 @@
     const h1 = /^#\s+Functional Specification(?::\s*(.+))?$/m.exec(md);
     if (h1 && h1[1]) s.context.title = h1[1].trim();
     const ctl = table(md.split(/^##\s/m)[0])[0] || {};
-    if (ctl.Module) s.context.module = ctl.Module;
+    if (ctl.Module) { s.context.module = ctl.Module; s.context.system = 'sap'; }
+    if (ctl.System) {
+      s.context.system = ctl.System === 'To be decided' ? 'tbd' : 'other';
+      if (ctl.System !== 'To be decided' && ctl.System !== 'Other system') s.context.systemName = ctl.System;
+    }
     if (ctl['Document ID']) s.control.docId = ctl['Document ID'];
     if (ctl.Version) s.control.version = ctl.Version;
     const br = sec['Business Requirement'] || '';

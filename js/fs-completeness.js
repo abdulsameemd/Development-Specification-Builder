@@ -9,7 +9,7 @@
   function ricefw(s) { return (s.solution.ricefw || []).filter(V.isFilled); }
 
   function checkMandatory(s) {
-    return F.cfg.mandatory.filter(function (r) {
+    return F.rulesFor(F.cfg.mandatory, s).filter(function (r) {
       const v = S.getPath(s, r.path);
       if (r.minLength) return !(typeof v === 'string' && v.trim().length >= r.minLength);
       return !V.isFilled(v);
@@ -27,7 +27,7 @@
   }
 
   function missingRecommended(s) {
-    return F.cfg.recommended.filter(function (r) {
+    return F.rulesFor(F.cfg.recommended, s).filter(function (r) {
       if (r.when && !token(s, r.when)) return false;
       return !r.anyOf.some(function (t) { return token(s, t); });
     });
@@ -44,12 +44,14 @@
 
   function openQuestions(s) {
     const q = [];
+    const sap = F.isSap(s);
     (s.reqs.frs || []).forEach(function (f, i) {
       if (!V.isFilled(f)) return;
       const id = F.frId(i) + (f.title ? ' (' + f.title.trim() + ')' : '');
       if (!V.isFilled(f.acceptance)) q.push(id + ': acceptance criteria.');
-      if (!f.fit || f.fit === 'tbc') q.push(id + ': fit-gap – SAP standard, configuration or custom development?');
+      if (!f.fit || f.fit === 'tbc') q.push(id + (sap ? ': fit-gap – SAP standard, configuration or custom development?' : ': fit-gap – standard feature, configuration or new development?'));
     });
+    if (!sap) { missingRecommended(s).forEach(function (r) { if (r.question) q.push(r.question); }); return q; }
     uncoveredGaps(s).forEach(function (id) { q.push(id + ' is a gap, but no RICEFW item covers it yet.'); });
     const ids = F.ricefwIds(s.solution.ricefw);
     (s.solution.ricefw || []).forEach(function (r, i) {
@@ -86,9 +88,10 @@
     const mandatory = checkMandatory(s);
     const missing = missingRecommended(s);
     const important = missing.filter(function (r) { return r.important; });
-    const applicable = F.cfg.recommended.filter(function (r) { return !r.when || token(s, r.when); }).length;
-    const total = F.cfg.mandatory.length * 2 + applicable;
-    const done = (F.cfg.mandatory.length - mandatory.length) * 2 + (applicable - missing.length);
+    const applicable = F.rulesFor(F.cfg.recommended, s).filter(function (r) { return !r.when || token(s, r.when); }).length;
+    const nMandatory = F.rulesFor(F.cfg.mandatory, s).length;
+    const total = nMandatory * 2 + applicable;
+    const done = (nMandatory - mandatory.length) * 2 + (applicable - missing.length);
     return {
       level: mandatory.length ? 'blocked' : important.length ? 'almost' : 'ready',
       progress: total ? done / total : 0,
