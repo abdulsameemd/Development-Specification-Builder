@@ -28,7 +28,7 @@
   ],
   "steps": [
     { "n": 1, "label": "Context", "title": "Business context & scope", "intro": "What the business needs and where it applies. Only the requirement and the module are required." },
-    { "n": 2, "label": "Process", "title": "Current and future process", "intro": "AS-IS shows today's steps and pain points; TO-BE is the process after the change. Name the transaction or Fiori app per step — discovery checks them in the system." },
+    { "n": 2, "label": "Process", "title": "Current and future process", "intro": "AS-IS shows today's steps and pain points; TO-BE is the process after the change. Describe each step in business words — Suggest from SAP finds the matching transactions and Fiori apps for you." },
     { "n": 3, "label": "Requirements", "title": "Functional requirements", "intro": "One FR per testable need. Fit-gap tells the team whether standard SAP, configuration or custom development covers it." },
     { "n": 4, "label": "Solution", "title": "System context & solution", "intro": "Read the current DEWA SAP system first, then list the RICEFW items that close the gaps." },
     { "n": 5, "label": "Sign-off", "title": "Quality, testing & sign-off", "intro": "Non-functional requirements, UAT scenarios, risks and approvals." }
@@ -58,13 +58,13 @@
       { "id": "asIs", "label": "AS-IS process", "kind": "grid", "addLabel": "+ Step", "paste": true, "hint": "Today's steps, including manual work and Excel.", "columns": [
         { "id": "step", "label": "Step", "w": 220, "placeholder": "e.g. Download open items to Excel" },
         { "id": "role", "label": "Role", "w": 140, "placeholder": "e.g. AP accountant" },
-        { "id": "tx", "label": "Transaction / app", "w": 140, "placeholder": "e.g. FBL1N", "list": "ds-tx", "check": "tx" },
+        { "id": "tx", "label": "Transaction / app (if known)", "w": 160, "placeholder": "search, e.g. invoice", "list": "ds-tx", "check": "tx" },
         { "id": "pain", "label": "Pain point", "w": 220, "placeholder": "e.g. Manual bucketing, 2 days" }
       ] },
       { "id": "toBe", "label": "TO-BE process", "kind": "grid", "addLabel": "+ Step", "paste": true, "hint": "The process after the change. Drawn as a flow below.", "columns": [
         { "id": "step", "label": "Step", "w": 220, "placeholder": "e.g. Run the ageing report" },
         { "id": "role", "label": "Role", "w": 140, "placeholder": "e.g. AP accountant" },
-        { "id": "tx", "label": "Transaction / app", "w": 140, "placeholder": "e.g. ZFI_AGEING", "list": "ds-tx", "check": "tx" },
+        { "id": "tx", "label": "Transaction / app (if known)", "w": 160, "placeholder": "search, e.g. payment", "list": "ds-tx", "check": "tx" },
         { "id": "change", "label": "Change", "kind": "select", "w": 130, "options": [
           { "value": "", "label": "" }, { "value": "unchanged", "label": "Unchanged" }, { "value": "changed", "label": "Changed" }, { "value": "new", "label": "New" }, { "value": "automated", "label": "Automated" }
         ] }

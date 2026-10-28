@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.3
+
+- **Transactions & Fiori apps from SAP.** Consultants describe process steps in business words; they no longer need the technical names.
+  - **Suggest from SAP** asks discovery to find matching transactions and Fiori apps per step, standard and custom, read-only. One click on a suggestion uses it.
+  - Until discovery runs, well-known SAP standard transactions are suggested, marked "standard".
+  - The Transaction / app cell has type-ahead by description: typing "invoice" finds MIRO and FB60, and apps found by discovery are included.
+  - The discovery prompt lists the steps that have no code yet. The context pack returns `stepMatches`.
+
 ## 1.0.2
 
 Changes from the first run on the DEWA system:

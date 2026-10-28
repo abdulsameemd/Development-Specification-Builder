@@ -1075,7 +1075,9 @@
   function renderDatalists() {
     const lists = Object.assign({}, D.datalists, APB.discovery.datalists(isFs() ? S.get().discovery : null));
     $('#datalists').innerHTML = Object.keys(lists).map(function (id) {
-      return '<datalist id="' + id + '">' + lists[id].map(function (v) { return '<option value="' + esc(v) + '">'; }).join('') + '</datalist>';
+      return '<datalist id="' + id + '">' + lists[id].map(function (v) {
+        return typeof v === 'object' ? '<option value="' + esc(v.v) + '" label="' + esc(v.l) + '">' : '<option value="' + esc(v) + '">';
+      }).join('') + '</datalist>';
     }).join('');
   }
 

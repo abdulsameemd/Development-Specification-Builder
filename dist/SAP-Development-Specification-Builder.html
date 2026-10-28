@@ -488,6 +488,15 @@ table.fs-check td { padding: 6px 8px; font-size: .84rem; vertical-align: top; }
 .rap-check li.error { color: var(--danger); font-weight: 600; }
 .rap-ok, .rap-draft { background: var(--ok-bg); border: 1px solid rgba(163, 230, 53, .35); border-radius: 10px; padding: 8px 12px; font-size: .86rem; color: var(--accent-text); }
 
+.sg-list { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 8px; }
+.sg-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--input); }
+.sg-step { flex: 1 1 260px; min-width: 0; font-size: .88rem; }
+.sg-list .chips { margin: 0; }
+.sg-list .chip { font-family: var(--mono); font-size: .78rem; }
+.sg-list .chip small { font-family: var(--font); color: var(--muted); font-weight: 500; }
+.sg-system { border-color: rgba(163, 230, 53, .6); }
+.sg-standard { border-style: dashed; }
+
 /* ---------- footer, dialogs, palette, toast ---------- */
 .site-footer { border-top: 1px solid var(--line); padding: 30px 0; margin-top: 24px; background: var(--panel); backdrop-filter: blur(12px); }
 .footer-inner { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
@@ -8035,7 +8044,7 @@ window.APB_CONFIG = {
     "n": 2,
     "label": "Process",
     "title": "Current and future process",
-    "intro": "AS-IS shows today's steps and pain points; TO-BE is the process after the change. Name the transaction or Fiori app per step — discovery checks them in the system."
+    "intro": "AS-IS shows today's steps and pain points; TO-BE is the process after the change. Describe each step in business words — Suggest from SAP finds the matching transactions and Fiori apps for you."
    },
    {
     "n": 3,
@@ -8198,9 +8207,9 @@ window.APB_CONFIG = {
        },
        {
         "id": "tx",
-        "label": "Transaction / app",
-        "w": 140,
-        "placeholder": "e.g. FBL1N",
+        "label": "Transaction / app (if known)",
+        "w": 160,
+        "placeholder": "search, e.g. invoice",
         "list": "ds-tx",
         "check": "tx"
        },
@@ -8234,9 +8243,9 @@ window.APB_CONFIG = {
        },
        {
         "id": "tx",
-        "label": "Transaction / app",
-        "w": 140,
-        "placeholder": "e.g. ZFI_AGEING",
+        "label": "Transaction / app (if known)",
+        "w": 160,
+        "placeholder": "search, e.g. payment",
         "list": "ds-tx",
         "check": "tx"
        },
@@ -10279,8 +10288,535 @@ window.APB_CONFIG = {
      "name": "ZFI_AP_AGEING",
      "reason": "No object with this name"
     }
+   ],
+   "stepMatches": [
+    {
+     "step": "asIs.0",
+     "candidates": [
+      {
+       "kind": "transaction",
+       "id": "FBL1N",
+       "title": "Supplier line items"
+      },
+      {
+       "kind": "fioriApp",
+       "id": "F0712",
+       "title": "Manage Supplier Line Items"
+      }
+     ]
+    },
+    {
+     "step": "toBe.1",
+     "candidates": [
+      {
+       "kind": "transaction",
+       "id": "FBL1N",
+       "title": "Supplier line items"
+      },
+      {
+       "kind": "fioriApp",
+       "id": "F0712",
+       "title": "Manage Supplier Line Items"
+      }
+     ]
+    }
    ]
   }
+ },
+ "sapCatalog": {
+  "version": 1,
+  "note": "Well-known SAP standard transactions for type-ahead and step suggestions. Not system-specific: availability differs by release (e.g. S/4HANA replaces vendor/customer masters with BP). Discovery verifies every choice.",
+  "transactions": [
+   {
+    "code": "FB60",
+    "text": "Enter incoming invoices (vendor)",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "FB70",
+    "text": "Enter outgoing invoices (customer)",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "FB50",
+    "text": "Enter G/L account document",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "FB01",
+    "text": "Post document",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "FB02",
+    "text": "Change accounting document",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "FB03",
+    "text": "Display accounting document",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "FBL1N",
+    "text": "Vendor (supplier) line items, open and cleared items",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "FBL3N",
+    "text": "G/L account line items",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "FBL5N",
+    "text": "Customer line items, open and cleared items",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "F110",
+    "text": "Automatic payment run (payment proposal and payment)",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "F-53",
+    "text": "Post outgoing payment",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "F-28",
+    "text": "Post incoming payment",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "F.13",
+    "text": "Automatic clearing",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "FBRA",
+    "text": "Reset cleared items",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "FS00",
+    "text": "G/L account master data",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "S_ALR_87012078",
+    "text": "Due date analysis for vendor open items (ageing)",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "KS01",
+    "text": "Create cost center",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "KSB1",
+    "text": "Cost centers: actual line items",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "AS01",
+    "text": "Create asset master record",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "AW01N",
+    "text": "Asset explorer",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "BP",
+    "text": "Maintain business partner (customer, vendor / supplier)",
+    "modules": [
+     "FI/CO",
+     "MM",
+     "SD",
+     "IS-U",
+     "CRM"
+    ]
+   },
+   {
+    "code": "ME51N",
+    "text": "Create purchase requisition",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "ME21N",
+    "text": "Create purchase order",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "ME22N",
+    "text": "Change purchase order",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "ME23N",
+    "text": "Display purchase order",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "ME2M",
+    "text": "Purchase orders by material (list)",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "ME31K",
+    "text": "Create purchasing contract",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "ME11",
+    "text": "Create purchasing info record",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "MIGO",
+    "text": "Goods movement: goods receipt, goods issue, transfer posting",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "MIRO",
+    "text": "Enter incoming invoice (logistics invoice verification)",
+    "modules": [
+     "MM",
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "MRBR",
+    "text": "Release blocked invoices",
+    "modules": [
+     "MM",
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "MMBE",
+    "text": "Stock overview",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "MB52",
+    "text": "Warehouse stocks on hand (list)",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "MB51",
+    "text": "Material document list",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "MM01",
+    "text": "Create material master",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "MM03",
+    "text": "Display material master",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "VA01",
+    "text": "Create sales order",
+    "modules": [
+     "SD"
+    ]
+   },
+   {
+    "code": "VA02",
+    "text": "Change sales order",
+    "modules": [
+     "SD"
+    ]
+   },
+   {
+    "code": "VA03",
+    "text": "Display sales order",
+    "modules": [
+     "SD"
+    ]
+   },
+   {
+    "code": "VA05",
+    "text": "List of sales orders",
+    "modules": [
+     "SD"
+    ]
+   },
+   {
+    "code": "VL01N",
+    "text": "Create outbound delivery with order reference",
+    "modules": [
+     "SD"
+    ]
+   },
+   {
+    "code": "VL02N",
+    "text": "Change outbound delivery, post goods issue",
+    "modules": [
+     "SD"
+    ]
+   },
+   {
+    "code": "VF01",
+    "text": "Create billing document",
+    "modules": [
+     "SD"
+    ]
+   },
+   {
+    "code": "VF03",
+    "text": "Display billing document",
+    "modules": [
+     "SD"
+    ]
+   },
+   {
+    "code": "VF04",
+    "text": "Maintain billing due list",
+    "modules": [
+     "SD"
+    ]
+   },
+   {
+    "code": "V.23",
+    "text": "Release sales orders for billing (billing block)",
+    "modules": [
+     "SD"
+    ]
+   },
+   {
+    "code": "VKM1",
+    "text": "Blocked SD documents (credit management)",
+    "modules": [
+     "SD"
+    ]
+   },
+   {
+    "code": "VK11",
+    "text": "Create pricing condition record",
+    "modules": [
+     "SD"
+    ]
+   },
+   {
+    "code": "EL01",
+    "text": "Create meter reading orders",
+    "modules": [
+     "IS-U"
+    ]
+   },
+   {
+    "code": "EL28",
+    "text": "Enter meter reading results (single entry)",
+    "modules": [
+     "IS-U"
+    ]
+   },
+   {
+    "code": "EL31",
+    "text": "Monitoring of meter reading data (implausible readings)",
+    "modules": [
+     "IS-U"
+    ]
+   },
+   {
+    "code": "EA00",
+    "text": "Bill a contract (individual billing)",
+    "modules": [
+     "IS-U"
+    ]
+   },
+   {
+    "code": "EA19",
+    "text": "Bill printout (individual invoicing)",
+    "modules": [
+     "IS-U"
+    ]
+   },
+   {
+    "code": "EC50E",
+    "text": "Move-in",
+    "modules": [
+     "IS-U"
+    ]
+   },
+   {
+    "code": "EC55",
+    "text": "Move-out",
+    "modules": [
+     "IS-U"
+    ]
+   },
+   {
+    "code": "CAA1",
+    "text": "Create contract account",
+    "modules": [
+     "IS-U"
+    ]
+   },
+   {
+    "code": "FPL9",
+    "text": "Account balance display (contract accounting)",
+    "modules": [
+     "IS-U"
+    ]
+   },
+   {
+    "code": "CRMD_ORDER",
+    "text": "Maintain CRM transactions (service request, activity)",
+    "modules": [
+     "CRM"
+    ]
+   },
+   {
+    "code": "CRM_UI",
+    "text": "CRM Web UI (interaction center)",
+    "modules": [
+     "CRM"
+    ]
+   },
+   {
+    "code": "IW21",
+    "text": "Create maintenance notification",
+    "modules": [
+     "PS/PM"
+    ]
+   },
+   {
+    "code": "IW31",
+    "text": "Create maintenance order",
+    "modules": [
+     "PS/PM"
+    ]
+   },
+   {
+    "code": "IW32",
+    "text": "Change maintenance order",
+    "modules": [
+     "PS/PM"
+    ]
+   },
+   {
+    "code": "IE01",
+    "text": "Create equipment",
+    "modules": [
+     "PS/PM"
+    ]
+   },
+   {
+    "code": "IL01",
+    "text": "Create functional location",
+    "modules": [
+     "PS/PM"
+    ]
+   },
+   {
+    "code": "IP10",
+    "text": "Schedule maintenance plan",
+    "modules": [
+     "PS/PM"
+    ]
+   },
+   {
+    "code": "CJ20N",
+    "text": "Project builder",
+    "modules": [
+     "PS/PM"
+    ]
+   },
+   {
+    "code": "PA30",
+    "text": "Maintain HR master data",
+    "modules": [
+     "HCM"
+    ]
+   },
+   {
+    "code": "PA40",
+    "text": "Personnel actions (hire, transfer, leave)",
+    "modules": [
+     "HCM"
+    ]
+   },
+   {
+    "code": "PT60",
+    "text": "Time evaluation",
+    "modules": [
+     "HCM"
+    ]
+   }
+  ]
  }
 };
 
@@ -11894,7 +12430,13 @@ window.APB_CONFIG = {
       capServices: list(raw.capServices, function (c) { return { name: pick(c, ['name', 'service']), description: pick(c, ['description']), entities: (Array.isArray(c && c.entities) ? c.entities : []).slice(0, 50).map(s).filter(Boolean).join(', ') }; }),
       enhancements: list(raw.enhancements, function (e) { return { type: pick(e, ['type']), name: pick(e, ['name']).toUpperCase(), description: pick(e, ['description']), implemented: bool(e && e.implemented) }; }),
       customizingHints: list(raw.customizingHints, function (h) { return typeof h === 'string' ? { path: '', note: s(h) } : { path: pick(h, ['path', 'node']), note: pick(h, ['note', 'description']) }; }),
-      notFound: list(raw.notFound, function (n) { return typeof n === 'string' ? { name: s(n).toUpperCase(), reason: '' } : { name: pick(n, ['name']).toUpperCase(), reason: pick(n, ['reason', 'note']) }; })
+      notFound: list(raw.notFound, function (n) { return typeof n === 'string' ? { name: s(n).toUpperCase(), reason: '' } : { name: pick(n, ['name']).toUpperCase(), reason: pick(n, ['reason', 'note']) }; }),
+      // candidates per process step (asIs.N / toBe.N), found in the system by description
+      stepMatches: list(raw.stepMatches, function (m) {
+        return { step: pick(m, ['step', 'key']), candidates: (Array.isArray(m && m.candidates) ? m.candidates : []).slice(0, 5).map(function (c) {
+          return { kind: /fiori|app/i.test(pick(c, ['kind', 'type'])) ? 'fioriApp' : 'transaction', id: pick(c, ['id', 'code', 'appId']).toUpperCase(), title: pick(c, ['title', 'description', 'text']) };
+        }).filter(function (c) { return c.id; }) };
+      }).filter(function (m) { return /^(asIs|toBe)\.\d+$/.test(m.step) && m.candidates.length; })
     };
     if (!pack.generatedAt || isNaN(Date.parse(pack.generatedAt))) warnings.push('The pack has no valid "generatedAt" date, so its age is unknown.');
     if (!pack.system.sid) warnings.push('The pack does not name the SAP system (system.sid).');
@@ -12000,7 +12542,8 @@ window.APB_CONFIG = {
       capServices: [{ name: '', description: '', entities: [] }],
       enhancements: [{ type: 'BAdI|Enhancement spot|User exit', name: '', description: '', implemented: false }],
       customizingHints: [{ path: '<SPRO path or view>', note: '' }],
-      notFound: [{ name: '<NAME>', reason: '' }]
+      notFound: [{ name: '<NAME>', reason: '' }],
+      stepMatches: [{ step: '<step key, e.g. toBe.1>', candidates: [{ kind: 'transaction|fioriApp', id: '<TCODE or app ID>', title: '' }] }]
     };
     const lines = [
       cfg.marker,
@@ -12020,6 +12563,11 @@ window.APB_CONFIG = {
     const r = pick2('ref'), n = pick2('new');
     lines.push('', 'Check each of these references (exists? description, package, released?):', r.length ? '- ' + r.join(', ') : '- (none named yet)');
     if (n.length) lines.push('', 'Proposed NEW object names – report any that already exist:', '- ' + n.join(', '));
+    const steps = processSteps(st).filter(function (p) { return !p.tx; });
+    if (steps.length) {
+      lines.push('', 'Process steps without a transaction or app – find up to 3 candidates per step in the system (standard and custom transactions by description, Fiori apps by title) and return them in "stepMatches" with the step key:');
+      steps.forEach(function (p) { lines.push('- ' + p.key + ': ' + p.text + (p.role ? ' (role: ' + p.role + ')' : '')); });
+    }
     lines.push('',
       'Also find, for this process area:',
       '- the system ID, client, release and main software components;',
@@ -12035,10 +12583,51 @@ window.APB_CONFIG = {
     return lines.join('\n');
   }
 
+  /* Steps of the AS-IS / TO-BE grids: { key: 'toBe.1', label: 'TO-BE 2', text, role, tx } */
+  function processSteps(st) {
+    const out = [];
+    [['asIs', 'AS-IS'], ['toBe', 'TO-BE']].forEach(function (g) {
+      (st.process[g[0]] || []).forEach(function (r, i) {
+        if (r && (r.step || '').trim()) out.push({ key: g[0] + '.' + i, label: g[1] + ' ' + (i + 1), text: r.step.trim(), role: (r.role || '').trim(), tx: (r.tx || '').trim() });
+      });
+    });
+    return out;
+  }
+
+  /* Built-in list of well-known standard transactions (config/sap-catalog.json), matched by words. */
+  const CATALOG = (APB.config.sapCatalog || { transactions: [] }).transactions;
+  function stem(w) { return w.replace(/(ies)$/, 'y').replace(/(ing|ed|es|s)$/, ''); }
+  function wordsOf(t) { return String(t || '').toLowerCase().split(/[^a-z0-9]+/).filter(function (w) { return w.length > 2 && ['the', 'and', 'for', 'with', 'per', 'from', 'all', 'list'].indexOf(w) < 0; }).map(stem); }
+  function catalogMatches(text, module) {
+    const want = wordsOf(text);
+    if (!want.length) return [];
+    return CATALOG.map(function (t) {
+      const have = wordsOf(t.text + ' ' + t.code);
+      let score = want.filter(function (w) { return have.indexOf(w) >= 0; }).length;
+      if (module && t.modules.indexOf(module) >= 0) score += 0.5;
+      return { t: t, score: score };
+    }).filter(function (x) { return x.score >= 1; }).sort(function (a, b) { return b.score - a.score; }).slice(0, 3)
+      .map(function (x) { return { kind: 'transaction', id: x.t.code, title: x.t.text, source: 'standard' }; });
+  }
+
+  /* Candidates for one step: from the system (discovery) first, else from the built-in list. */
+  function suggestions(st, step) {
+    const pack = st.discovery;
+    const m = pack && pack.stepMatches.filter(function (x) { return x.step === step.key; })[0];
+    if (m) return m.candidates.map(function (c) { return Object.assign({ source: 'system' }, c); });
+    return catalogMatches(step.text, st.context.module);
+  }
+
+  /* Type-ahead lists: value = technical name, label = description, so typing "invoice" finds MIRO. */
   function datalists(pack) {
-    if (!pack) return { 'ds-tx': [], 'ds-obj': [] };
+    const tx = CATALOG.map(function (t) { return { v: t.code, l: t.text + ' · standard' }; });
+    if (!pack) return { 'ds-tx': tx, 'ds-obj': [] };
+    const sys = pack.transactions.map(function (t) { return { v: t.code, l: (t.description || 'Transaction') + ' · in system' }; })
+      .concat(pack.fioriApps.map(function (a) { return { v: a.appId, l: (a.title || 'Fiori app') + ' · Fiori app in system' }; }));
+    const seen = {};
+    sys.forEach(function (x) { seen[x.v] = true; });
     return {
-      'ds-tx': pack.transactions.map(function (t) { return t.code; }).concat(pack.fioriApps.map(function (a) { return a.appId; })).filter(Boolean),
+      'ds-tx': sys.concat(tx.filter(function (x) { return !seen[x.v]; })).filter(function (x) { return x.v; }),
       'ds-obj': pack.objects.map(function (o) { return o.name; }).concat(pack.enhancements.map(function (e) { return e.name; })).filter(Boolean)
     };
   }
@@ -12048,7 +12637,7 @@ window.APB_CONFIG = {
     return mode === 'plain' ? 'vscode://' : 'vscode://' + (extensionId || cfg.extensionId) + '/discover?src=clipboard&v=' + cfg.packVersion;
   }
 
-  APB.discovery = { cfg: cfg, normalize: normalize, parse: parse, ageDays: ageDays, isStale: isStale, index: index, names: names, references: references, crossCheck: crossCheck, prompt: prompt, datalists: datalists, launchUrl: launchUrl };
+  APB.discovery = { cfg: cfg, normalize: normalize, parse: parse, ageDays: ageDays, isStale: isStale, index: index, names: names, references: references, crossCheck: crossCheck, prompt: prompt, datalists: datalists, launchUrl: launchUrl, processSteps: processSteps, suggestions: suggestions, catalogMatches: catalogMatches };
 })(window.APB = window.APB || {});
 
 </script>
@@ -13010,6 +13599,26 @@ window.APB_CONFIG = {
       U().nav(false, 'Continue');
   }
 
+  /* Suggestions per step: from the SAP system (discovery stepMatches), else from the built-in standard list.
+     A functional consultant describes the step; the technical name is picked, not remembered. */
+  function stepSuggestions(s) {
+    const open = DS.processSteps(s).filter(function (p) { return !p.tx; });
+    const fromSystem = !!(s.discovery && s.discovery.stepMatches.length);
+    const rowsHtml = open.map(function (p) {
+      const c = DS.suggestions(s, p);
+      return '<li><span class="sg-step"><b>' + esc(p.label) + '</b> ' + esc(p.text) + '</span><span class="chips">' +
+        (c.length ? c.map(function (x) {
+          return '<button type="button" class="chip sg-' + x.source + '" data-action="fs-pick-tx" data-key="' + esc(p.key) + '" data-v="' + esc(x.id) + '" title="' + esc(x.source === 'system' ? 'Found in the SAP system' : 'SAP standard – check with discovery') + '">' +
+            esc(x.id) + ' <small>' + esc(x.title || '') + '</small></button>';
+        }).join('') : '<span class="muted small">no suggestion yet</span>') + '</span></li>';
+    }).join('');
+    const btn = '<button type="button" class="btn btn-primary btn-sm" data-action="fs-suggest">✦ Suggest from SAP</button>';
+    return '<section class="card fs-suggest" aria-labelledby="h-sg"><h3 id="h-sg">Transactions &amp; Fiori apps</h3>' +
+      '<p class="muted small">Describe each step in business words – no technical names needed. <strong>Suggest from SAP</strong> asks discovery to find the matching transactions and Fiori apps in your system (read-only); until then, well-known SAP standard transactions are suggested. Click a suggestion to use it, or type in the cell to search by description.</p>' +
+      (open.length ? '<ul class="sg-list">' + rowsHtml + '</ul>' : '<p class="muted small">Every step has a transaction or app.</p>') +
+      '<div class="gen-actions">' + btn + (fromSystem ? '<span class="chk ok">✓ suggestions from ' + esc(s.discovery.system.sid || 'the system') + '</span>' : '<span class="muted small">Showing SAP standard suggestions</span>') + '</div></section>';
+  }
+
   function step2(s) {
     const asIs = (s.process.asIs || []).filter(V.isFilled);
     const toBe = (s.process.toBe || []).filter(V.isFilled);
@@ -13017,6 +13626,7 @@ window.APB_CONFIG = {
       block('process', ['asIs']) +
       (asIs.length && !toBe.length ? '<p><button type="button" class="btn btn-ghost btn-sm" data-action="fs-copy-asis">Start TO-BE from the AS-IS steps</button></p>' : '') +
       block('process', null, ['asIs']) +
+      (asIs.length || toBe.length ? stepSuggestions(s) : '') +
       '<h3>TO-BE flow</h3>' + flowHtml(s.process.toBe) +
       U().nav(true, 'Continue');
   }
@@ -13316,6 +13926,16 @@ window.APB_CONFIG = {
     },
     'fs-copy-prompt': function () {
       Promise.resolve(APB.exporter.copy(DS.prompt(S.get()))).then(function (ok) { U().toast(ok ? 'Discovery prompt copied' : 'Copy failed'); });
+    },
+    'fs-pick-tx': function (el) {
+      const m = /^(asIs|toBe)\.(\d+)$/.exec(el.dataset.key || '');
+      if (!m) return;
+      U().updateSteps(function (st) { const r = (st.process[m[1]] || [])[Number(m[2])]; if (r) r.tx = el.dataset.v; });
+      U().toast(el.dataset.v + ' set for ' + (m[1] === 'asIs' ? 'AS-IS' : 'TO-BE') + ' step ' + (Number(m[2]) + 1));
+    },
+    'fs-suggest': function () {
+      if (H.isVscode) { startDiscovery('auto'); U().toast('Discovery is reading the system – suggestions appear here when it is done', 6000); return; }
+      actions['fs-discover']();
     },
     'fs-signin': function () { H.post({ type: 'sign-in' }); },
     'fs-auto': function () { startDiscovery('auto'); },
@@ -14472,7 +15092,9 @@ window.APB_CONFIG = {
   function renderDatalists() {
     const lists = Object.assign({}, D.datalists, APB.discovery.datalists(isFs() ? S.get().discovery : null));
     $('#datalists').innerHTML = Object.keys(lists).map(function (id) {
-      return '<datalist id="' + id + '">' + lists[id].map(function (v) { return '<option value="' + esc(v) + '">'; }).join('') + '</datalist>';
+      return '<datalist id="' + id + '">' + lists[id].map(function (v) {
+        return typeof v === 'object' ? '<option value="' + esc(v.v) + '" label="' + esc(v.l) + '">' : '<option value="' + esc(v) + '">';
+      }).join('') + '</datalist>';
     }).join('');
   }
 

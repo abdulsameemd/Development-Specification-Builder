@@ -36,7 +36,13 @@
       capServices: list(raw.capServices, function (c) { return { name: pick(c, ['name', 'service']), description: pick(c, ['description']), entities: (Array.isArray(c && c.entities) ? c.entities : []).slice(0, 50).map(s).filter(Boolean).join(', ') }; }),
       enhancements: list(raw.enhancements, function (e) { return { type: pick(e, ['type']), name: pick(e, ['name']).toUpperCase(), description: pick(e, ['description']), implemented: bool(e && e.implemented) }; }),
       customizingHints: list(raw.customizingHints, function (h) { return typeof h === 'string' ? { path: '', note: s(h) } : { path: pick(h, ['path', 'node']), note: pick(h, ['note', 'description']) }; }),
-      notFound: list(raw.notFound, function (n) { return typeof n === 'string' ? { name: s(n).toUpperCase(), reason: '' } : { name: pick(n, ['name']).toUpperCase(), reason: pick(n, ['reason', 'note']) }; })
+      notFound: list(raw.notFound, function (n) { return typeof n === 'string' ? { name: s(n).toUpperCase(), reason: '' } : { name: pick(n, ['name']).toUpperCase(), reason: pick(n, ['reason', 'note']) }; }),
+      // candidates per process step (asIs.N / toBe.N), found in the system by description
+      stepMatches: list(raw.stepMatches, function (m) {
+        return { step: pick(m, ['step', 'key']), candidates: (Array.isArray(m && m.candidates) ? m.candidates : []).slice(0, 5).map(function (c) {
+          return { kind: /fiori|app/i.test(pick(c, ['kind', 'type'])) ? 'fioriApp' : 'transaction', id: pick(c, ['id', 'code', 'appId']).toUpperCase(), title: pick(c, ['title', 'description', 'text']) };
+        }).filter(function (c) { return c.id; }) };
+      }).filter(function (m) { return /^(asIs|toBe)\.\d+$/.test(m.step) && m.candidates.length; })
     };
     if (!pack.generatedAt || isNaN(Date.parse(pack.generatedAt))) warnings.push('The pack has no valid "generatedAt" date, so its age is unknown.');
     if (!pack.system.sid) warnings.push('The pack does not name the SAP system (system.sid).');
@@ -142,7 +148,8 @@
       capServices: [{ name: '', description: '', entities: [] }],
       enhancements: [{ type: 'BAdI|Enhancement spot|User exit', name: '', description: '', implemented: false }],
       customizingHints: [{ path: '<SPRO path or view>', note: '' }],
-      notFound: [{ name: '<NAME>', reason: '' }]
+      notFound: [{ name: '<NAME>', reason: '' }],
+      stepMatches: [{ step: '<step key, e.g. toBe.1>', candidates: [{ kind: 'transaction|fioriApp', id: '<TCODE or app ID>', title: '' }] }]
     };
     const lines = [
       cfg.marker,
@@ -162,6 +169,11 @@
     const r = pick2('ref'), n = pick2('new');
     lines.push('', 'Check each of these references (exists? description, package, released?):', r.length ? '- ' + r.join(', ') : '- (none named yet)');
     if (n.length) lines.push('', 'Proposed NEW object names – report any that already exist:', '- ' + n.join(', '));
+    const steps = processSteps(st).filter(function (p) { return !p.tx; });
+    if (steps.length) {
+      lines.push('', 'Process steps without a transaction or app – find up to 3 candidates per step in the system (standard and custom transactions by description, Fiori apps by title) and return them in "stepMatches" with the step key:');
+      steps.forEach(function (p) { lines.push('- ' + p.key + ': ' + p.text + (p.role ? ' (role: ' + p.role + ')' : '')); });
+    }
     lines.push('',
       'Also find, for this process area:',
       '- the system ID, client, release and main software components;',
@@ -177,10 +189,51 @@
     return lines.join('\n');
   }
 
+  /* Steps of the AS-IS / TO-BE grids: { key: 'toBe.1', label: 'TO-BE 2', text, role, tx } */
+  function processSteps(st) {
+    const out = [];
+    [['asIs', 'AS-IS'], ['toBe', 'TO-BE']].forEach(function (g) {
+      (st.process[g[0]] || []).forEach(function (r, i) {
+        if (r && (r.step || '').trim()) out.push({ key: g[0] + '.' + i, label: g[1] + ' ' + (i + 1), text: r.step.trim(), role: (r.role || '').trim(), tx: (r.tx || '').trim() });
+      });
+    });
+    return out;
+  }
+
+  /* Built-in list of well-known standard transactions (config/sap-catalog.json), matched by words. */
+  const CATALOG = (APB.config.sapCatalog || { transactions: [] }).transactions;
+  function stem(w) { return w.replace(/(ies)$/, 'y').replace(/(ing|ed|es|s)$/, ''); }
+  function wordsOf(t) { return String(t || '').toLowerCase().split(/[^a-z0-9]+/).filter(function (w) { return w.length > 2 && ['the', 'and', 'for', 'with', 'per', 'from', 'all', 'list'].indexOf(w) < 0; }).map(stem); }
+  function catalogMatches(text, module) {
+    const want = wordsOf(text);
+    if (!want.length) return [];
+    return CATALOG.map(function (t) {
+      const have = wordsOf(t.text + ' ' + t.code);
+      let score = want.filter(function (w) { return have.indexOf(w) >= 0; }).length;
+      if (module && t.modules.indexOf(module) >= 0) score += 0.5;
+      return { t: t, score: score };
+    }).filter(function (x) { return x.score >= 1; }).sort(function (a, b) { return b.score - a.score; }).slice(0, 3)
+      .map(function (x) { return { kind: 'transaction', id: x.t.code, title: x.t.text, source: 'standard' }; });
+  }
+
+  /* Candidates for one step: from the system (discovery) first, else from the built-in list. */
+  function suggestions(st, step) {
+    const pack = st.discovery;
+    const m = pack && pack.stepMatches.filter(function (x) { return x.step === step.key; })[0];
+    if (m) return m.candidates.map(function (c) { return Object.assign({ source: 'system' }, c); });
+    return catalogMatches(step.text, st.context.module);
+  }
+
+  /* Type-ahead lists: value = technical name, label = description, so typing "invoice" finds MIRO. */
   function datalists(pack) {
-    if (!pack) return { 'ds-tx': [], 'ds-obj': [] };
+    const tx = CATALOG.map(function (t) { return { v: t.code, l: t.text + ' · standard' }; });
+    if (!pack) return { 'ds-tx': tx, 'ds-obj': [] };
+    const sys = pack.transactions.map(function (t) { return { v: t.code, l: (t.description || 'Transaction') + ' · in system' }; })
+      .concat(pack.fioriApps.map(function (a) { return { v: a.appId, l: (a.title || 'Fiori app') + ' · Fiori app in system' }; }));
+    const seen = {};
+    sys.forEach(function (x) { seen[x.v] = true; });
     return {
-      'ds-tx': pack.transactions.map(function (t) { return t.code; }).concat(pack.fioriApps.map(function (a) { return a.appId; })).filter(Boolean),
+      'ds-tx': sys.concat(tx.filter(function (x) { return !seen[x.v]; })).filter(function (x) { return x.v; }),
       'ds-obj': pack.objects.map(function (o) { return o.name; }).concat(pack.enhancements.map(function (e) { return e.name; })).filter(Boolean)
     };
   }
@@ -190,5 +243,5 @@
     return mode === 'plain' ? 'vscode://' : 'vscode://' + (extensionId || cfg.extensionId) + '/discover?src=clipboard&v=' + cfg.packVersion;
   }
 
-  APB.discovery = { cfg: cfg, normalize: normalize, parse: parse, ageDays: ageDays, isStale: isStale, index: index, names: names, references: references, crossCheck: crossCheck, prompt: prompt, datalists: datalists, launchUrl: launchUrl };
+  APB.discovery = { cfg: cfg, normalize: normalize, parse: parse, ageDays: ageDays, isStale: isStale, index: index, names: names, references: references, crossCheck: crossCheck, prompt: prompt, datalists: datalists, launchUrl: launchUrl, processSteps: processSteps, suggestions: suggestions, catalogMatches: catalogMatches };
 })(window.APB = window.APB || {});

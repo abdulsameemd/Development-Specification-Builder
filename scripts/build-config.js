@@ -11,7 +11,8 @@ const files = {
   validation: 'config/validation-rules.json',
   templates: 'config/templates.json',
   fsDefinitions: 'config/fs-definitions.json',
-  fsTemplates: 'config/fs-templates.json'
+  fsTemplates: 'config/fs-templates.json',
+  sapCatalog: 'config/sap-catalog.json'
 };
 
 const bundle = {};

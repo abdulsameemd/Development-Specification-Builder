@@ -38,6 +38,10 @@ scope, business requirement, functional requirements, the references to check an
 - Relevant BAdIs / enhancement spots and whether they are already implemented.
 - CAP services if the requirement involves BTP.
 - Customizing (SPRO) nodes the consultant should check.
+- **Process steps without a transaction or app** (listed in the prompt with a key such as `toBe.1`): the consultant
+  describes the step in business words. Find up to 3 candidates per step in the system – standard and custom
+  transactions by their description, and Fiori apps by title / semantic object – and return them in `stepMatches`.
+  Only list candidates a tool returned; leave the step out when nothing fits.
 
 ## Answer format
 
@@ -57,7 +61,8 @@ objects or existing implementations). Then return **exactly one** fenced `json` 
   "capServices": [{ "name": "", "description": "", "entities": [] }],
   "enhancements": [{ "type": "BAdI|Enhancement spot|User exit", "name": "", "description": "", "implemented": false }],
   "customizingHints": [{ "path": "", "note": "" }],
-  "notFound": [{ "name": "", "reason": "" }]
+  "notFound": [{ "name": "", "reason": "" }],
+  "stepMatches": [{ "step": "toBe.1", "candidates": [{ "kind": "transaction|fioriApp", "id": "", "title": "" }] }]
 }
 ```
 

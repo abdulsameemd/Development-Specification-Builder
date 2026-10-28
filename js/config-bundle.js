@@ -7270,7 +7270,7 @@ window.APB_CONFIG = {
     "n": 2,
     "label": "Process",
     "title": "Current and future process",
-    "intro": "AS-IS shows today's steps and pain points; TO-BE is the process after the change. Name the transaction or Fiori app per step — discovery checks them in the system."
+    "intro": "AS-IS shows today's steps and pain points; TO-BE is the process after the change. Describe each step in business words — Suggest from SAP finds the matching transactions and Fiori apps for you."
    },
    {
     "n": 3,
@@ -7433,9 +7433,9 @@ window.APB_CONFIG = {
        },
        {
         "id": "tx",
-        "label": "Transaction / app",
-        "w": 140,
-        "placeholder": "e.g. FBL1N",
+        "label": "Transaction / app (if known)",
+        "w": 160,
+        "placeholder": "search, e.g. invoice",
         "list": "ds-tx",
         "check": "tx"
        },
@@ -7469,9 +7469,9 @@ window.APB_CONFIG = {
        },
        {
         "id": "tx",
-        "label": "Transaction / app",
-        "w": 140,
-        "placeholder": "e.g. ZFI_AGEING",
+        "label": "Transaction / app (if known)",
+        "w": 160,
+        "placeholder": "search, e.g. payment",
         "list": "ds-tx",
         "check": "tx"
        },
@@ -9514,7 +9514,534 @@ window.APB_CONFIG = {
      "name": "ZFI_AP_AGEING",
      "reason": "No object with this name"
     }
+   ],
+   "stepMatches": [
+    {
+     "step": "asIs.0",
+     "candidates": [
+      {
+       "kind": "transaction",
+       "id": "FBL1N",
+       "title": "Supplier line items"
+      },
+      {
+       "kind": "fioriApp",
+       "id": "F0712",
+       "title": "Manage Supplier Line Items"
+      }
+     ]
+    },
+    {
+     "step": "toBe.1",
+     "candidates": [
+      {
+       "kind": "transaction",
+       "id": "FBL1N",
+       "title": "Supplier line items"
+      },
+      {
+       "kind": "fioriApp",
+       "id": "F0712",
+       "title": "Manage Supplier Line Items"
+      }
+     ]
+    }
    ]
   }
+ },
+ "sapCatalog": {
+  "version": 1,
+  "note": "Well-known SAP standard transactions for type-ahead and step suggestions. Not system-specific: availability differs by release (e.g. S/4HANA replaces vendor/customer masters with BP). Discovery verifies every choice.",
+  "transactions": [
+   {
+    "code": "FB60",
+    "text": "Enter incoming invoices (vendor)",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "FB70",
+    "text": "Enter outgoing invoices (customer)",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "FB50",
+    "text": "Enter G/L account document",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "FB01",
+    "text": "Post document",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "FB02",
+    "text": "Change accounting document",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "FB03",
+    "text": "Display accounting document",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "FBL1N",
+    "text": "Vendor (supplier) line items, open and cleared items",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "FBL3N",
+    "text": "G/L account line items",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "FBL5N",
+    "text": "Customer line items, open and cleared items",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "F110",
+    "text": "Automatic payment run (payment proposal and payment)",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "F-53",
+    "text": "Post outgoing payment",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "F-28",
+    "text": "Post incoming payment",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "F.13",
+    "text": "Automatic clearing",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "FBRA",
+    "text": "Reset cleared items",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "FS00",
+    "text": "G/L account master data",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "S_ALR_87012078",
+    "text": "Due date analysis for vendor open items (ageing)",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "KS01",
+    "text": "Create cost center",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "KSB1",
+    "text": "Cost centers: actual line items",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "AS01",
+    "text": "Create asset master record",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "AW01N",
+    "text": "Asset explorer",
+    "modules": [
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "BP",
+    "text": "Maintain business partner (customer, vendor / supplier)",
+    "modules": [
+     "FI/CO",
+     "MM",
+     "SD",
+     "IS-U",
+     "CRM"
+    ]
+   },
+   {
+    "code": "ME51N",
+    "text": "Create purchase requisition",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "ME21N",
+    "text": "Create purchase order",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "ME22N",
+    "text": "Change purchase order",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "ME23N",
+    "text": "Display purchase order",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "ME2M",
+    "text": "Purchase orders by material (list)",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "ME31K",
+    "text": "Create purchasing contract",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "ME11",
+    "text": "Create purchasing info record",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "MIGO",
+    "text": "Goods movement: goods receipt, goods issue, transfer posting",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "MIRO",
+    "text": "Enter incoming invoice (logistics invoice verification)",
+    "modules": [
+     "MM",
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "MRBR",
+    "text": "Release blocked invoices",
+    "modules": [
+     "MM",
+     "FI/CO"
+    ]
+   },
+   {
+    "code": "MMBE",
+    "text": "Stock overview",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "MB52",
+    "text": "Warehouse stocks on hand (list)",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "MB51",
+    "text": "Material document list",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "MM01",
+    "text": "Create material master",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "MM03",
+    "text": "Display material master",
+    "modules": [
+     "MM"
+    ]
+   },
+   {
+    "code": "VA01",
+    "text": "Create sales order",
+    "modules": [
+     "SD"
+    ]
+   },
+   {
+    "code": "VA02",
+    "text": "Change sales order",
+    "modules": [
+     "SD"
+    ]
+   },
+   {
+    "code": "VA03",
+    "text": "Display sales order",
+    "modules": [
+     "SD"
+    ]
+   },
+   {
+    "code": "VA05",
+    "text": "List of sales orders",
+    "modules": [
+     "SD"
+    ]
+   },
+   {
+    "code": "VL01N",
+    "text": "Create outbound delivery with order reference",
+    "modules": [
+     "SD"
+    ]
+   },
+   {
+    "code": "VL02N",
+    "text": "Change outbound delivery, post goods issue",
+    "modules": [
+     "SD"
+    ]
+   },
+   {
+    "code": "VF01",
+    "text": "Create billing document",
+    "modules": [
+     "SD"
+    ]
+   },
+   {
+    "code": "VF03",
+    "text": "Display billing document",
+    "modules": [
+     "SD"
+    ]
+   },
+   {
+    "code": "VF04",
+    "text": "Maintain billing due list",
+    "modules": [
+     "SD"
+    ]
+   },
+   {
+    "code": "V.23",
+    "text": "Release sales orders for billing (billing block)",
+    "modules": [
+     "SD"
+    ]
+   },
+   {
+    "code": "VKM1",
+    "text": "Blocked SD documents (credit management)",
+    "modules": [
+     "SD"
+    ]
+   },
+   {
+    "code": "VK11",
+    "text": "Create pricing condition record",
+    "modules": [
+     "SD"
+    ]
+   },
+   {
+    "code": "EL01",
+    "text": "Create meter reading orders",
+    "modules": [
+     "IS-U"
+    ]
+   },
+   {
+    "code": "EL28",
+    "text": "Enter meter reading results (single entry)",
+    "modules": [
+     "IS-U"
+    ]
+   },
+   {
+    "code": "EL31",
+    "text": "Monitoring of meter reading data (implausible readings)",
+    "modules": [
+     "IS-U"
+    ]
+   },
+   {
+    "code": "EA00",
+    "text": "Bill a contract (individual billing)",
+    "modules": [
+     "IS-U"
+    ]
+   },
+   {
+    "code": "EA19",
+    "text": "Bill printout (individual invoicing)",
+    "modules": [
+     "IS-U"
+    ]
+   },
+   {
+    "code": "EC50E",
+    "text": "Move-in",
+    "modules": [
+     "IS-U"
+    ]
+   },
+   {
+    "code": "EC55",
+    "text": "Move-out",
+    "modules": [
+     "IS-U"
+    ]
+   },
+   {
+    "code": "CAA1",
+    "text": "Create contract account",
+    "modules": [
+     "IS-U"
+    ]
+   },
+   {
+    "code": "FPL9",
+    "text": "Account balance display (contract accounting)",
+    "modules": [
+     "IS-U"
+    ]
+   },
+   {
+    "code": "CRMD_ORDER",
+    "text": "Maintain CRM transactions (service request, activity)",
+    "modules": [
+     "CRM"
+    ]
+   },
+   {
+    "code": "CRM_UI",
+    "text": "CRM Web UI (interaction center)",
+    "modules": [
+     "CRM"
+    ]
+   },
+   {
+    "code": "IW21",
+    "text": "Create maintenance notification",
+    "modules": [
+     "PS/PM"
+    ]
+   },
+   {
+    "code": "IW31",
+    "text": "Create maintenance order",
+    "modules": [
+     "PS/PM"
+    ]
+   },
+   {
+    "code": "IW32",
+    "text": "Change maintenance order",
+    "modules": [
+     "PS/PM"
+    ]
+   },
+   {
+    "code": "IE01",
+    "text": "Create equipment",
+    "modules": [
+     "PS/PM"
+    ]
+   },
+   {
+    "code": "IL01",
+    "text": "Create functional location",
+    "modules": [
+     "PS/PM"
+    ]
+   },
+   {
+    "code": "IP10",
+    "text": "Schedule maintenance plan",
+    "modules": [
+     "PS/PM"
+    ]
+   },
+   {
+    "code": "CJ20N",
+    "text": "Project builder",
+    "modules": [
+     "PS/PM"
+    ]
+   },
+   {
+    "code": "PA30",
+    "text": "Maintain HR master data",
+    "modules": [
+     "HCM"
+    ]
+   },
+   {
+    "code": "PA40",
+    "text": "Personnel actions (hire, transfer, leave)",
+    "modules": [
+     "HCM"
+    ]
+   },
+   {
+    "code": "PT60",
+    "text": "Time evaluation",
+    "modules": [
+     "HCM"
+    ]
+   }
+  ]
  }
 };

@@ -1078,6 +1078,38 @@
         "name": "ZFI_AP_AGEING",
         "reason": "No object with this name"
       }
+    ],
+    "stepMatches": [
+      {
+        "step": "asIs.0",
+        "candidates": [
+          {
+            "kind": "transaction",
+            "id": "FBL1N",
+            "title": "Supplier line items"
+          },
+          {
+            "kind": "fioriApp",
+            "id": "F0712",
+            "title": "Manage Supplier Line Items"
+          }
+        ]
+      },
+      {
+        "step": "toBe.1",
+        "candidates": [
+          {
+            "kind": "transaction",
+            "id": "FBL1N",
+            "title": "Supplier line items"
+          },
+          {
+            "kind": "fioriApp",
+            "id": "F0712",
+            "title": "Manage Supplier Line Items"
+          }
+        ]
+      }
     ]
   }
 }

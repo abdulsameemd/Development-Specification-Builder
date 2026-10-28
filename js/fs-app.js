@@ -75,6 +75,26 @@
       U().nav(false, 'Continue');
   }
 
+  /* Suggestions per step: from the SAP system (discovery stepMatches), else from the built-in standard list.
+     A functional consultant describes the step; the technical name is picked, not remembered. */
+  function stepSuggestions(s) {
+    const open = DS.processSteps(s).filter(function (p) { return !p.tx; });
+    const fromSystem = !!(s.discovery && s.discovery.stepMatches.length);
+    const rowsHtml = open.map(function (p) {
+      const c = DS.suggestions(s, p);
+      return '<li><span class="sg-step"><b>' + esc(p.label) + '</b> ' + esc(p.text) + '</span><span class="chips">' +
+        (c.length ? c.map(function (x) {
+          return '<button type="button" class="chip sg-' + x.source + '" data-action="fs-pick-tx" data-key="' + esc(p.key) + '" data-v="' + esc(x.id) + '" title="' + esc(x.source === 'system' ? 'Found in the SAP system' : 'SAP standard – check with discovery') + '">' +
+            esc(x.id) + ' <small>' + esc(x.title || '') + '</small></button>';
+        }).join('') : '<span class="muted small">no suggestion yet</span>') + '</span></li>';
+    }).join('');
+    const btn = '<button type="button" class="btn btn-primary btn-sm" data-action="fs-suggest">✦ Suggest from SAP</button>';
+    return '<section class="card fs-suggest" aria-labelledby="h-sg"><h3 id="h-sg">Transactions &amp; Fiori apps</h3>' +
+      '<p class="muted small">Describe each step in business words – no technical names needed. <strong>Suggest from SAP</strong> asks discovery to find the matching transactions and Fiori apps in your system (read-only); until then, well-known SAP standard transactions are suggested. Click a suggestion to use it, or type in the cell to search by description.</p>' +
+      (open.length ? '<ul class="sg-list">' + rowsHtml + '</ul>' : '<p class="muted small">Every step has a transaction or app.</p>') +
+      '<div class="gen-actions">' + btn + (fromSystem ? '<span class="chk ok">✓ suggestions from ' + esc(s.discovery.system.sid || 'the system') + '</span>' : '<span class="muted small">Showing SAP standard suggestions</span>') + '</div></section>';
+  }
+
   function step2(s) {
     const asIs = (s.process.asIs || []).filter(V.isFilled);
     const toBe = (s.process.toBe || []).filter(V.isFilled);
@@ -82,6 +102,7 @@
       block('process', ['asIs']) +
       (asIs.length && !toBe.length ? '<p><button type="button" class="btn btn-ghost btn-sm" data-action="fs-copy-asis">Start TO-BE from the AS-IS steps</button></p>' : '') +
       block('process', null, ['asIs']) +
+      (asIs.length || toBe.length ? stepSuggestions(s) : '') +
       '<h3>TO-BE flow</h3>' + flowHtml(s.process.toBe) +
       U().nav(true, 'Continue');
   }
@@ -381,6 +402,16 @@
     },
     'fs-copy-prompt': function () {
       Promise.resolve(APB.exporter.copy(DS.prompt(S.get()))).then(function (ok) { U().toast(ok ? 'Discovery prompt copied' : 'Copy failed'); });
+    },
+    'fs-pick-tx': function (el) {
+      const m = /^(asIs|toBe)\.(\d+)$/.exec(el.dataset.key || '');
+      if (!m) return;
+      U().updateSteps(function (st) { const r = (st.process[m[1]] || [])[Number(m[2])]; if (r) r.tx = el.dataset.v; });
+      U().toast(el.dataset.v + ' set for ' + (m[1] === 'asIs' ? 'AS-IS' : 'TO-BE') + ' step ' + (Number(m[2]) + 1));
+    },
+    'fs-suggest': function () {
+      if (H.isVscode) { startDiscovery('auto'); U().toast('Discovery is reading the system – suggestions appear here when it is done', 6000); return; }
+      actions['fs-discover']();
     },
     'fs-signin': function () { H.post({ type: 'sign-in' }); },
     'fs-auto': function () { startDiscovery('auto'); },

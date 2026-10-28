@@ -31,7 +31,7 @@ Context → AS-IS / TO-BE process → Functional requirements (fit-gap) → Syst
 | Step | What you do |
 |---|---|
 | 1. Context | Title, **module** and **business requirement** (the two mandatory inputs), objectives, KPIs, scope, stakeholders, org units. *Start from a module template* (FI-AP, MM, SD, IS-U, CRM) pre-fills typical process steps, FR headings and roles. |
-| 2. Process | AS-IS and TO-BE step grids (step, role, transaction / Fiori app, pain point / change). The TO-BE flow is drawn as you type; "Start TO-BE from AS-IS" copies the steps. |
+| 2. Process | AS-IS and TO-BE step grids (step, role, transaction / Fiori app *if known*, pain point / change). Describe steps in business words: **Suggest from SAP** finds matching transactions and Fiori apps in the system, and type-ahead searches by description (e.g. "invoice" finds MIRO). The TO-BE flow is drawn as you type; "Start TO-BE from AS-IS" copies the steps. |
 | 3. Requirements | FR-01 … with MoSCoW priority, **fit-gap** (SAP standard / configuration / custom), acceptance criteria; business rules and validations; data requirements (business field → SAP table / field). |
 | 4. Solution | **Current SAP system** (discovery, below), RICEFW items (R-01, E-01, UI-01 … per type) covering the gaps, roles & authorizations, interfaces, outputs, SPRO notes. Each RICEFW item can be handed over as a pre-filled **Development Specification**. |
 | 5. Sign-off | NFRs, UAT scenarios (*Create UAT skeleton from FRs*: one positive + one negative case per FR), risks / assumptions / open points, document control, version history, approvers. "Ready for sign-off" check → **Generate**. |
@@ -50,7 +50,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.2.vsix`](dist/dewa-sap-spec-builder-1.0.2.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.2.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.3.vsix`](dist/dewa-sap-spec-builder-1.0.3.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.3.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **DEWA: Open SAP Spec Builder** (command palette or *Spec Builder* in the status bar) opens this same app as a tab inside VS Code:
 
