@@ -390,3 +390,60 @@ test('draft: rejects prompts without the marker and reports a missing model', as
   await r.handle({ type: 'draft', prompt: drafter.MARKER + '\nx' });
   assert.strictEqual(posts.filter((p) => p.type === 'draft-error')[0].code, 'NO_MODEL');
 });
+
+/* ------------------------------------------------------ Copilot Chat buttons */
+test('open-chat sends automatically unless chatAutoSend is off; ask mode for FS review', async () => {
+  let vs = fakeVscode();
+  let { r } = router(vs);
+  await r.handle({ type: 'open-chat', agent: 'dewa-abap', prompt: 'Implement …' });
+  assert.strictEqual(vs.calls.commands[0].args.isPartialQuery, false);
+  assert.strictEqual(vs.calls.commands[0].args.mode, 'dewa-abap');
+  await r.handle({ type: 'open-chat', agent: 'ask', prompt: 'Review this functional specification …' });
+  assert.strictEqual(vs.calls.commands[1].args.mode, 'ask');
+  assert.strictEqual(await r.handle({ type: 'open-chat', agent: 'some-other-agent', prompt: 'x' }), false);
+  vs = fakeVscode({ config: { chatAutoSend: false } });
+  ({ r } = router(vs));
+  await r.handle({ type: 'open-chat', agent: 'dewa-abap', prompt: 'Implement …' });
+  assert.strictEqual(vs.calls.commands[0].args.isPartialQuery, true);
+});
+
+test('draft in Copilot Chat opens agent mode with the submit-draft hint', async () => {
+  const vs = fakeVscode();
+  const { r, posts } = router(vs);
+  await r.handle({ type: 'draft', mode: 'chat', prompt: drafter.MARKER + '\nrequirement' });
+  const open = vs.calls.commands.find((c) => c.id === 'workbench.action.chat.open');
+  assert.strictEqual(open.args.mode, 'agent');
+  assert.strictEqual(open.args.isPartialQuery, false);
+  assert.match(open.args.query, /^FS-DRAFT v1[\s\S]*dewa_submitFsDraft/);
+  assert.strictEqual(vs.calls.requests.length, 0);
+  assert.ok(posts.some((p) => p.type === 'draft-progress' && /Copilot Chat is drafting/.test(p.text)));
+  assert.strictEqual(await r.handle({ type: 'draft', mode: 'other', prompt: drafter.MARKER }), false);
+});
+
+test('submit-draft tool delivers a valid draft and refuses anything else', async () => {
+  const vs = fakeVscode();
+  const got = [];
+  let open = true;
+  submitTool.registerDraft(vs, async (d) => { if (open) got.push(d); return open; });
+  const tool = vs.calls.registered[submitTool.DRAFT_TOOL_NAME];
+  const text = async (input) => (await tool.invoke({ input: input })).content[0].value;
+  assert.match(await text({ kind: 'fs-draft', version: 1, frs: [{ title: 'Log a complaint' }] }), /sent to the Spec Builder/);
+  assert.strictEqual(got.length, 1);
+  assert.match(await text({ kind: 'dewa-sap-context-pack' }), /^Not sent/);
+  assert.match(await text({ kind: 'fs-draft', version: 1, frs: [{ title: 'x'.repeat(250000) }] }), /too large/);
+  open = false;
+  assert.match(await text({ kind: 'fs-draft', version: 1 }), /panel is not open/);
+  assert.strictEqual(got.length, 1);
+});
+
+test('deliverDraft posts the draft to the open panel as a draft-result', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sb-'));
+  const vs = fakeVscode();
+  const b = panel.createSpecBuilder(vs, fakeContext(dir), {});
+  assert.strictEqual(await b.deliverDraft({ kind: 'fs-draft' }), false);
+  b.open();
+  assert.strictEqual(await b.deliverDraft({ kind: 'fs-draft', version: 1 }), true);
+  const m = vs.calls.panel.webview.posted.pop();
+  assert.strictEqual(m.type, 'draft-result');
+  assert.match(m.text, /```json\n\{"kind":"fs-draft"/);
+});

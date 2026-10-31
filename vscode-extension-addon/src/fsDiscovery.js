@@ -4,7 +4,8 @@
      vscode://<publisher.extension>/discover?src=clipboard&v=1
    This URI handler takes the prompt from the clipboard, makes sure GitHub Copilot Chat is installed and the
    user is signed in (VS Code's own sign-in – no token ever passes through the builder), and opens Copilot Chat
-   with the dewa-fs-discovery agent and the prompt pre-filled. The user reviews it and presses Enter.
+   with the dewa-fs-discovery agent and the prompt. With dewaSpecBuilder.chatAutoSend (default) Chat sends it right
+   away; otherwise the user reviews it and presses Enter.
    Registered by index.js, which also routes /builder to the SAP Spec Builder panel.
 
    The prompt travels via the clipboard, not the URL: no length limit and nothing in OS / browser history. */
@@ -28,14 +29,25 @@ function create(vscode) {
     return !!session;
   }
 
-  /* Open Copilot Chat with the custom agent selected. Older VS Code builds do not accept a custom agent as
-     "mode": then open agent mode and tell Copilot which agent instructions to follow. */
-  async function openChat(prompt) {
+  function autoSend() {
+    const ws = vscode.workspace;
+    return !(ws && ws.getConfiguration && ws.getConfiguration('dewaSpecBuilder').get('chatAutoSend', true) === false);
+  }
+
+  /* Open Copilot Chat in a mode: a custom agent (default dewa-fs-discovery) or the built-in 'agent' / 'ask'.
+     Older VS Code builds do not accept a custom agent as "mode": then open agent mode and tell Copilot which
+     agent instructions to follow. o: { mode, autoSend } – autoSend defaults to the chatAutoSend setting. */
+  async function openChat(prompt, o) {
+    o = o || {};
+    const mode = o.mode || AGENT;
+    const partial = !(o.autoSend === undefined ? autoSend() : o.autoSend);
     try {
-      await vscode.commands.executeCommand('workbench.action.chat.open', { query: prompt, isPartialQuery: true, mode: AGENT });
+      await vscode.commands.executeCommand('workbench.action.chat.open', { query: prompt, isPartialQuery: partial, mode: mode });
       return 'agent';
     } catch (e) {
-      await vscode.commands.executeCommand('workbench.action.chat.open', { query: FALLBACK_PREFIX + prompt, isPartialQuery: true, mode: 'agent' });
+      const builtIn = mode === 'agent' || mode === 'ask';
+      const prefix = builtIn ? '' : mode === AGENT ? FALLBACK_PREFIX : 'Act as the ' + mode + ' agent and follow its instructions.\n\n';
+      await vscode.commands.executeCommand('workbench.action.chat.open', builtIn ? { query: prompt, isPartialQuery: partial } : { query: prefix + prompt, isPartialQuery: partial, mode: 'agent' });
       return 'fallback';
     }
   }
@@ -62,14 +74,15 @@ function create(vscode) {
     }
     if (!(await ensureSignedIn())) return { status: 'not-signed-in' };
 
+    const sent = autoSend();
     const how = await openChat(text);
     win.showInformationMessage(how === 'agent'
-      ? 'Discovery prompt is ready in Copilot Chat – review it and press Enter. The agent only reads the SAP system.'
-      : 'Discovery prompt is ready in Copilot Chat (agent mode) – select "' + AGENT + '" if it is available, then press Enter.');
+      ? (sent ? 'Copilot Chat is running the SAP discovery. The agent only reads the SAP system.' : 'Discovery prompt is ready in Copilot Chat – review it and press Enter. The agent only reads the SAP system.')
+      : (sent ? 'Copilot Chat is running the SAP discovery in agent mode, following the ' + AGENT + ' instructions.' : 'Discovery prompt is ready in Copilot Chat (agent mode) – select "' + AGENT + '" if it is available, then press Enter.'));
     return { status: 'opened', how: how };
   }
 
-  return { handleUri: handleUri, ensureSignedIn: ensureSignedIn, openChat: openChat };
+  return { handleUri: handleUri, ensureSignedIn: ensureSignedIn, openChat: openChat, autoSend: autoSend };
 }
 
 module.exports = { create: create, MARKER: MARKER, AGENT: AGENT, COPILOT_CHAT: COPILOT_CHAT };

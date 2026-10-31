@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.6
+
+- **Copilot Chat sends the prompt itself.** Builder buttons that open Copilot Chat no longer wait for you to press Enter: the development spec to `dewa-abap`, discovery in Chat, and the new chat buttons below. Turn it off with `dewaSpecBuilder.chatAutoSend`.
+- **Draft in Copilot Chat** (Functional, step 1): the AI draft runs visibly in Chat, so you can steer it. Chat sends the result back with the new `dewa_submitFsDraft` tool, and the builder opens its review dialog.
+- **Open in Copilot Chat** for functional specs, in the preview and on the finished document. Copilot reviews the FS for gaps, contradictions, untestable requirements and open questions, then answers your questions about it.
+
 ## 1.0.5
 
 - **Functional specs for any system.** Step 1 asks *Where will this run?*: SAP, Other system or Not decided yet.

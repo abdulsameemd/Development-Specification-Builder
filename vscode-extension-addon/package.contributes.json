@@ -40,6 +40,11 @@
           "type": "string",
           "default": "",
           "markdownDescription": "Copilot model for **automatic discovery**, by family or name (e.g. `claude-sonnet`, `gpt-5`). Empty = the strongest available model; small models (Haiku, mini, flash) are used only when nothing else is available."
+        },
+        "dewaSpecBuilder.chatAutoSend": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Send the prompt in Copilot Chat right away when a Spec Builder button opens Chat (development spec to `dewa-abap`, discovery in Chat, draft in Chat, review of a functional spec). Off: the prompt is only filled in and you press Enter."
         }
       }
     },
@@ -120,6 +125,105 @@
               }
             },
             "notFound": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "dewa_submitFsDraft",
+        "toolReferenceName": "dewa_submitFsDraft",
+        "displayName": "Send draft to SAP Spec Builder",
+        "userDescription": "Sends an AI draft of a functional specification to the open SAP Spec Builder for review.",
+        "modelDescription": "Call this once at the end of a functional-specification draft with the complete fs-draft JSON object (kind \"fs-draft\", version 1). The SAP Spec Builder shows it to the user for review; nothing is added without the user's choice. It does not change any files or systems.",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(edit)",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "kind",
+            "version"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "fs-draft"
+              ]
+            },
+            "version": {
+              "type": "number",
+              "enum": [
+                1
+              ]
+            },
+            "title": {
+              "type": "string"
+            },
+            "objectives": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "kpis": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "inScope": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "outOfScope": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "stakeholders": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "asIs": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "toBe": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "frs": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "rules": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "uat": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "risks": {
               "type": "array",
               "items": {
                 "type": "object"

@@ -260,6 +260,18 @@
     return lines.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd() + '\n';
   }
 
+  /* Prompt for Copilot Chat (VS Code panel): review the FS, then answer questions about it. */
+  function chatPrompt(s) {
+    const ask = ['Review this functional specification for a business audience. List briefly, by section:',
+      '- gaps and missing information',
+      '- contradictions',
+      '- requirements that cannot be tested, and missing acceptance criteria',
+      '- open questions to ask the business'];
+    if (F.isSap(s)) ask.push('- where SAP standard or configuration could replace a custom-development gap');
+    ask.push('Then answer my questions about it. Do not change any files.');
+    return ask.join('\n') + '\n\n---\n\n' + build(s);
+  }
+
   function mdFilename() { return 'FUNCTIONAL_SPECIFICATION.md'; }
   function docxFilename(s) {
     const parts = ['FS', H.slug(F.isSap(s) ? s.context.module : (s.context.system === 'other' ? s.context.systemName : '')), H.slug(title(s) || s.control.docId || 'Specification')].filter(Boolean);
@@ -283,5 +295,5 @@
     };
   }
 
-  APB.fsMarkdown = { build: build, filename: mdFilename, docxFilename: docxFilename, docMeta: docMeta, crossCheckLabel: CHECK_LABEL };
+  APB.fsMarkdown = { build: build, chatPrompt: chatPrompt, filename: mdFilename, docxFilename: docxFilename, docMeta: docMeta, crossCheckLabel: CHECK_LABEL };
 })(window.APB = window.APB || {});

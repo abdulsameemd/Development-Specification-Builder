@@ -45,15 +45,25 @@ test('marker and agent name match the builder configuration', () => {
   assert.strictEqual(addon.AGENT, builderCfg.agent);
 });
 
-test('opens Copilot Chat with the agent and the prompt pre-filled (not sent)', async () => {
+test('opens Copilot Chat with the agent and sends the prompt (chatAutoSend default)', async () => {
   const vs = mockVscode({ signedIn: true });
   const r = await addon.create(vs).handleUri(uri());
   assert.deepStrictEqual(r, { status: 'opened', how: 'agent' });
   const open = vs.calls.commands.find((c) => c.id === 'workbench.action.chat.open');
   assert.strictEqual(open.args.query, PROMPT);
-  assert.strictEqual(open.args.isPartialQuery, true);
+  assert.strictEqual(open.args.isPartialQuery, false);
+  assert.match(vs.calls.info[0], /running the SAP discovery/);
   assert.strictEqual(open.args.mode, 'dewa-fs-discovery');
   assert.deepStrictEqual(vs.calls.sessions, [{ silent: true }]);
+});
+
+test('with chatAutoSend off the prompt is only filled in', async () => {
+  const vs = mockVscode({ signedIn: true });
+  vs.workspace = { getConfiguration: () => ({ get: (k, d) => (k === 'chatAutoSend' ? false : d) }) };
+  await addon.create(vs).handleUri(uri());
+  const open = vs.calls.commands.find((c) => c.id === 'workbench.action.chat.open');
+  assert.strictEqual(open.args.isPartialQuery, true);
+  assert.match(vs.calls.info[0], /press Enter/);
 });
 
 test('falls back to agent mode when a custom agent cannot be selected', async () => {

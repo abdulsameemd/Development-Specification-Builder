@@ -836,7 +836,7 @@
       if (H.isVscode) {
         if (V.checkMandatory(s).length) { toast('Add a requirement and a development object first'); return; }
         H.post({ type: 'open-chat', agent: 'dewa-abap', prompt: M.chatPrompt(s) });
-        toast('Copilot Chat opens with dewa-abap and the specification — review it and press Enter', 6000);
+        toast(FA.autoSend() ? 'Copilot Chat is running dewa-abap with the specification' : 'Copilot Chat opens with dewa-abap and the specification — review it and press Enter', 6000);
         return;
       }
       if (V.checkMandatory(s).length) { toast('Add a requirement and a development object first'); return; }

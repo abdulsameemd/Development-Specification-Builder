@@ -72,13 +72,16 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.5.vsix`](dist/dewa-sap-spec-builder-1.0.5.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.5.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.6.vsix`](dist/dewa-sap-spec-builder-1.0.6.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.6.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **DEWA: Open SAP Spec Builder** (command palette or *Spec Builder* in the status bar) opens this same app as a tab inside VS Code:
 
 - sign in to **GitHub Copilot** in VS Code (button in step 4 or the Accounts menu);
 - **Discover automatically** reads the system read-only with the Copilot model and only the *read* tools of the SAP MCP servers (write tools are filtered out), with live progress and automatic import — or **Run in Copilot Chat** beside the panel, where the agent sends the pack back with the `dewa_submitContextPack` tool;
-- Word / Markdown are saved through VS Code's save dialog; in Technical mode **Open in Copilot Chat** hands the spec to `dewa-abap`.
+- **Draft with Copilot** (step 1) drafts the missing parts in the background; **Draft in Copilot Chat** runs the same draft visibly in Chat, where you can steer it – Chat sends the result back with the `dewa_submitFsDraft` tool and the builder opens its review dialog;
+- **Open in Copilot Chat** on a functional spec (preview or finished document) asks Copilot to review it – gaps, contradictions, untestable requirements, open questions – and then answer your questions; in Technical mode it hands the spec to `dewa-abap`;
+- Chat **sends the prompt automatically** (setting `dewaSpecBuilder.chatAutoSend`, default on; off = the prompt is only filled in and you press Enter);
+- Word / Markdown are saved through VS Code's save dialog.
 
 **VS Code extension add-on** – [`vscode-extension-addon/`](vscode-extension-addon/INSTALL.md): the panel, the automatic discovery runner, the submit tool, the `/builder` and `/discover` URI handlers, the agent file, install steps and unit tests (`node --test vscode-extension-addon/test/*.test.js`). In the browser without the add-on, choose *Plain VS Code (copy & paste)* in step 4 → *VS Code launch settings*.
 

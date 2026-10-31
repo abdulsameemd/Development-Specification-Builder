@@ -2,7 +2,8 @@
 /* Entry point of the add-on. Call from the DEWA extension's activate():
      require('./specBuilder/index').activate(context, require('vscode'));
    Registers: the SAP Spec Builder panel (+ restore after restart), its commands and status-bar item, the
-   dewa_submitContextPack tool, and the URI handler (/builder opens the panel, /discover opens Copilot Chat). */
+   dewa_submitContextPack and dewa_submitFsDraft tools, and the URI handler (/builder opens the panel, /discover
+   opens Copilot Chat). */
 
 const fsDiscovery = require('./fsDiscovery');
 const panelModule = require('./specBuilderPanel');
@@ -19,7 +20,10 @@ function activate(context, vscode, opts) {
   subs.push(vscode.window.registerWebviewPanelSerializer(panelModule.VIEW_TYPE, {
     deserializeWebviewPanel: async function (panel) { builder.attach(panel); }
   }));
-  if (vscode.lm && typeof vscode.lm.registerTool === 'function') subs.push(submitTool.register(vscode, builder.deliverPack));
+  if (vscode.lm && typeof vscode.lm.registerTool === 'function') {
+    subs.push(submitTool.register(vscode, builder.deliverPack));
+    subs.push(submitTool.registerDraft(vscode, builder.deliverDraft));
+  }
 
   if (opts.statusBar !== false) {
     const item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);

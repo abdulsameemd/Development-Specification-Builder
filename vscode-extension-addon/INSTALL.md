@@ -11,7 +11,10 @@ Adds the **SAP Spec Builder** to DEWA's VS Code extension, so consultants and de
 - **Run in Copilot Chat** opens Copilot Chat beside the panel with `dewa-fs-discovery` and the prompt filled in; the
   agent hands the result back through the `dewa_submitContextPack` tool.
 - **Draft with Copilot** (Functional, step 1) drafts the missing parts of an FS from the business requirement with the
-  Copilot model – one request, no tools – and the builder shows it for review (`src/draftRunner.js`).
+  Copilot model – one request, no tools – and the builder shows it for review (`src/draftRunner.js`). **Draft in
+  Copilot Chat** runs it in Chat (agent mode); Chat hands the draft back with the `dewa_submitFsDraft` tool.
+- **Open in Copilot Chat** on a functional spec opens Chat in *ask* mode with a review prompt and the FS.
+- Chat buttons send the prompt automatically (setting `dewaSpecBuilder.chatAutoSend`, default `true`).
 - Word / Markdown files are saved through a VS Code save dialog (default: the workspace folder). In Technical mode,
   **Open in Copilot Chat** hands the development spec to `dewa-abap`.
 
@@ -19,7 +22,7 @@ The standalone browser version keeps working as before (copy & paste or `vscode:
 
 ## Quick path: the standalone VSIX
 
-`dist/dewa-sap-spec-builder-1.0.5.vsix` (built by `node scripts/build-vsix.js` from `vscode-extension/` and this folder)
+`dist/dewa-sap-spec-builder-1.0.6.vsix` (built by `node scripts/build-vsix.js` from `vscode-extension/` and this folder)
 is a ready-to-install extension, `dewa.dewa-sap-spec-builder`, that runs next to DEWA's existing extension. It also
 installs `dewa-fs-discovery.agent.md` into the VS Code prompts folder (setting `dewaSpecBuilder.installAgent`; an edited
 copy is never replaced; *DEWA: Reinstall dewa-fs-discovery agent*). Install it with *Extensions → … → Install from VSIX…*.
@@ -46,7 +49,7 @@ VS Code ┌───────────────────────
 | `src/specBuilderPanel.js` | Webview panel: loads the builder with a strict CSP + nonce, validated message routing |
 | `src/draftRunner.js` | AI draft of an FS: one Copilot request without tools, one repair turn |
 | `src/discoveryRunner.js` | Automatic discovery: Copilot model + read-only MCP tools, round limit, cancellation |
-| `src/submitPackTool.js` | `dewa_submitContextPack` language-model tool (Copilot Chat → panel) |
+| `src/submitPackTool.js` | `dewa_submitContextPack` and `dewa_submitFsDraft` language-model tools (Copilot Chat → panel) |
 | `src/fsDiscovery.js` | `/discover` URI handler for the browser version, `openChat()` |
 | `agents/dewa-fs-discovery.agent.md` | Read-only discovery agent |
 | `package.contributes.json` | What to merge into the extension's `package.json` |

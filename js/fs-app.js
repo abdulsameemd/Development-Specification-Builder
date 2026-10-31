@@ -3,7 +3,7 @@
    development spec, and the FS flavour of hero, preview actions and command palette. */
 (function (APB) {
   'use strict';
-  const F = APB.fs, FC = APB.fsCompleteness, FM = APB.fsMarkdown, DS = APB.discovery, V = APB.validation, S = APB.state;
+  const F = APB.fs, FC = APB.fsCompleteness, FM = APB.fsMarkdown, DS = APB.discovery, V = APB.validation, S = APB.state, H = APB.host;
 
   function U() { return APB.ui; }
   function esc(t) { return U().esc(t); }
@@ -28,7 +28,8 @@
   const DOWNLOAD_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v3h16v-3"/></svg>';
   const PV_ACTIONS = '<button type="button" class="btn btn-primary" data-action="fs-docx">' + DOWNLOAD_ICON + ' Word</button>' +
     '<button type="button" class="btn btn-ghost" data-action="download">Markdown</button>' +
-    '<button type="button" class="btn btn-ghost" data-action="copy">Copy</button>';
+    '<button type="button" class="btn btn-ghost" data-action="copy">Copy</button>' +
+    (H.isVscode ? '<button type="button" class="btn btn-ghost" data-action="fs-chat-review" title="Open this FS in Copilot Chat to review it and ask questions">Copilot Chat</button>' : '');
 
   /* ------------------------------------------------------------ step helpers */
   function header(n) {
@@ -76,7 +77,9 @@
   }
 
   /* ------------------------------------------------------------- AI draft */
-  const drf = { running: false, status: '', error: '', pending: null };
+  const drf = { running: false, mode: '', status: '', error: '', pending: null };
+  /* Copilot Chat sends prompts itself unless dewaSpecBuilder.chatAutoSend is off (reported with the auth status). */
+  function autoSend() { return !disc.auth || disc.auth.chatAutoSend !== false; }
 
   function draftCard(s) {
     const ready = (s.context.requirement || '').trim().length >= 10;
@@ -85,8 +88,9 @@
     const vs = H.isVscode ? '<div class="chips fs-copilot">' + copilotStatus() + '</div>' : '';
     const run = H.isVscode
       ? (drf.running
-        ? '<button type="button" class="btn btn-ghost" data-action="fs-draft-stop">Stop</button><span class="muted small">' + esc(drf.status || 'Copilot is drafting…') + '</span>'
-        : '<button type="button" class="btn btn-primary" data-action="fs-draft-run"' + (ready && copilotReady ? '' : ' disabled') + '>✦ Draft with Copilot</button>')
+        ? '<button type="button" class="btn btn-ghost" data-action="fs-draft-stop">' + (drf.mode === 'chat' ? 'Stop waiting' : 'Stop') + '</button><span class="muted small">' + esc(drf.status || 'Copilot is drafting…') + '</span>'
+        : '<button type="button" class="btn btn-primary" data-action="fs-draft-run"' + (ready && copilotReady ? '' : ' disabled') + '>✦ Draft with Copilot</button>' +
+          '<button type="button" class="btn btn-ghost" data-action="fs-draft-chat"' + (ready && copilotReady ? '' : ' disabled') + ' title="Watch and steer the draft in Copilot Chat; the result comes back here for review">Draft in Copilot Chat</button>')
       : '<button type="button" class="btn btn-primary" data-action="fs-draft-copy"' + (ready ? '' : ' disabled') + '>✦ Copy AI prompt</button>';
     const paste = '<details class="paste"' + U().detailsAttrs('fs-draft-paste', false) + '><summary>' + (H.isVscode ? 'Use another AI chat instead' : 'Paste the AI answer') + '</summary>' +
       (H.isVscode ? '<p class="small muted"><button type="button" class="link" data-action="fs-draft-copy">Copy the prompt</button>, paste it into an AI chat your organisation allows, then paste the whole answer here.</p>' : '<label for="fs-draft-answer" class="small muted">The whole answer, or only its ```json block.</label>') +
@@ -94,7 +98,7 @@
       '<button type="button" class="btn btn-ghost btn-sm" data-action="fs-draft-review">Review the answer</button></details>';
     return '<section class="card fs-draft" aria-labelledby="h-draft"><h3 id="h-draft">✦ Draft the rest with AI <span class="hint">optional</span></h3>' +
       '<p class="muted small">From your requirement, AI proposes objectives, scope, process steps, functional requirements with acceptance criteria, rules, test scenarios and risks. You review it before anything is added, and nothing you typed is overwritten.' +
-      (H.isVscode ? ' Uses your GitHub Copilot in VS Code – no system access.' : ' Copy the prompt, paste it into an AI chat your organisation allows (for example Copilot Chat), then paste the answer below.') + '</p>' +
+      (H.isVscode ? ' Uses your GitHub Copilot in VS Code – no system access. <strong>Draft in Copilot Chat</strong> lets you watch and steer it.' : ' Copy the prompt, paste it into an AI chat your organisation allows (for example Copilot Chat), then paste the answer below.') + '</p>' +
       vs + '<div class="gen-actions">' + run + (ready ? '' : '<span class="muted small">Describe the requirement first.</span>') + '</div>' +
       (drf.error ? '<p class="field-error" role="alert">' + esc(drf.error) + '</p>' : '') + paste + '</section>';
   }
@@ -169,7 +173,6 @@
   }
 
   /* ---------------------------------------------- discovery inside VS Code */
-  const H = APB.host;
   const disc = { auth: null, running: false, mode: '', log: [], error: '' }; // runtime only, never saved
 
   function copilotStatus() {
@@ -214,7 +217,7 @@
   }
 
   if (H.isVscode) {
-    H.on('auth', function (m) { disc.auth = { signedIn: !!m.signedIn, account: String(m.account || ''), copilot: m.copilot !== false }; rerenderDiscovery(); });
+    H.on('auth', function (m) { disc.auth = { signedIn: !!m.signedIn, account: String(m.account || ''), copilot: m.copilot !== false, chatAutoSend: m.chatAutoSend !== false }; rerenderDiscovery(); rerenderStep1(); });
     H.on('discovery-progress', function (m) {
       const text = String(m.text || '').slice(0, 300);
       const last = disc.log[disc.log.length - 1];
@@ -345,7 +348,7 @@
       '<div class="gen-actions"><button type="button" class="btn btn-primary btn-lg" data-action="fs-docx">' + DOWNLOAD_ICON + ' Download Word</button>' +
       '<button type="button" class="btn btn-ghost btn-lg" data-action="download">Download Markdown</button>' +
       '<button type="button" class="btn btn-ghost" data-action="copy">Copy Markdown</button>' +
-      '<button type="button" class="btn btn-ghost" data-action="share">Copy share link</button>' +
+      (H.isVscode ? '<button type="button" class="btn btn-ghost" data-action="fs-chat-review">Open in Copilot Chat</button>' : '<button type="button" class="btn btn-ghost" data-action="share">Copy share link</button>') +
       '<button type="button" class="btn btn-ghost" data-action="edit">Review Details</button></div>' + ho +
       '<div class="seg gen-seg" role="group" aria-label="Format"><button type="button" data-action="view-rendered" aria-pressed="' + !ui.raw + '">Preview</button><button type="button" data-action="view-raw" aria-pressed="' + ui.raw + '">Markdown</button></div>' +
       '<div class="gen-doc md" tabindex="0" aria-label="Generated specification">' + (ui.raw ? '<pre>' + esc(md) + '</pre>' : APB.markdown.toHtml(md)) + '</div>';
@@ -445,9 +448,13 @@
   }
 
   if (H.isVscode) {
-    H.on('draft-progress', function (m) { drf.status = String(m.text || '').slice(0, 200); const el = document.querySelector('.fs-draft .gen-actions .muted'); if (el) el.textContent = drf.status; });
+    H.on('draft-progress', function (m) {
+      drf.status = String(m.text || '').slice(0, 200);
+      const el = document.querySelector('.fs-draft .gen-actions .muted');
+      if (el && drf.running) el.textContent = drf.status; else rerenderStep1();
+    });
     H.on('draft-result', function (m) {
-      drf.running = false; drf.status = '';
+      drf.running = false; drf.status = ''; drf.mode = '';
       const answer = String(m.text || '');
       if (!reviewDraft(answer)) {
         U().ui.open['fs-draft-paste'] = true; rerenderStep1();
@@ -495,7 +502,20 @@
       H.post({ type: 'draft', prompt: APB.fsDraft.prompt(s) });
       rerenderStep1();
     },
-    'fs-draft-stop': function () { H.post({ type: 'stop' }); drf.running = false; drf.status = ''; rerenderStep1(); },
+    'fs-draft-chat': function () {
+      const s = S.get();
+      if ((s.context.requirement || '').trim().length < 10) { U().toast('Describe the business requirement first'); return; }
+      drf.running = true; drf.mode = 'chat'; drf.error = ''; drf.status = 'Opening Copilot Chat…';
+      H.post({ type: 'draft', mode: 'chat', prompt: APB.fsDraft.prompt(s) });
+      rerenderStep1();
+    },
+    'fs-draft-stop': function () { if (drf.mode !== 'chat') H.post({ type: 'stop' }); drf.running = false; drf.mode = ''; drf.status = ''; rerenderStep1(); },
+    'fs-chat-review': function () {
+      const s = S.get();
+      if (FC.checkMandatory(s).length) { U().toast(mandatoryMsg(s)); return; }
+      H.post({ type: 'open-chat', agent: 'ask', prompt: FM.chatPrompt(s) });
+      U().toast(autoSend() ? 'Copilot Chat is reviewing the specification – ask your questions there' : 'The specification is in Copilot Chat – press Enter to start the review', 6000);
+    },
     'fs-draft-review': function () {
       const ta = document.getElementById('fs-draft-answer');
       if (ta && reviewDraft(ta.value)) U().ui.open['fs-draft-paste'] = false;
@@ -609,6 +629,10 @@
       { g: 'Create', i: '✦', t: 'Draft the rest with AI', run: function () { run.setStep(1); actions[H.isVscode ? 'fs-draft-run' : 'fs-draft-copy'](); } },
       { g: 'Create', i: '⚡', t: 'Create document now (quick start)', run: actions['fs-quick'] }
     );
+    if (H.isVscode) list.push(
+      { g: 'Create', i: '›', t: 'Draft the rest in Copilot Chat', run: function () { run.setStep(1); actions['fs-draft-chat'](); } },
+      { g: 'Create', i: '›', t: 'Open in Copilot Chat (review the FS)', run: actions['fs-chat-review'] }
+    );
     if (F.isSap(cur)) list.push(
       { g: 'System', i: '›', t: H.isVscode ? 'Discover in SAP (automatic, read-only)' : 'Discover in SAP (open VS Code with ' + DS.cfg.agent + ')', run: function () { run.setStep(4); actions['fs-discover'](); } },
       { g: 'System', i: '⇩', t: 'Import context pack from clipboard', run: function () { run.setStep(4); actions['fs-import-clip'](); } }
@@ -631,6 +655,7 @@
     actions: actions,
     commands: commands,
     toDevSpec: toDevSpec,
+    autoSend: function () { return autoSend(); },
     uatSkeleton: uatSkeleton
   };
 })(window.APB = window.APB || {});

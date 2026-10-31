@@ -9,8 +9,9 @@ SAP system, read **read-only** through GitHub Copilot and DEWA's SAP MCP servers
 2. **Sign in to GitHub Copilot.** Use the button in step 4 of a functional spec, or VS Code's Accounts menu. VS Code handles the sign-in; the builder only shows the account name.
 3. **Functional**: fill in context, process and requirements. In step 4, pick one way to read the system:
    - **Discover automatically** reads the SAP system with the Copilot model and only the read tools of the SAP MCP servers. Progress is shown in the panel and the result is imported automatically.
-   - **Run in Copilot Chat** opens Copilot Chat beside the panel with the `dewa-fs-discovery` agent and the prompt filled in. Press Enter; the agent sends the result back to the builder.
-4. **Generate**: download **Word** or Markdown. Both are saved through a VS Code save dialog.
+   - **Run in Copilot Chat** opens Copilot Chat beside the panel with the `dewa-fs-discovery` agent and sends the prompt. The agent sends the result back to the builder.
+   - Not SAP, or only a requirement so far? **Draft with Copilot** or **Draft in Copilot Chat** in step 1 drafts the rest for your review.
+4. **Generate**: download **Word** or Markdown. Both are saved through a VS Code save dialog. **Open in Copilot Chat** asks Copilot to review the FS and answer your questions about it.
 5. **Technical**: use **Open in Copilot Chat** to hand a development spec to `dewa-abap`. You can also hand any RICEFW item from the FS straight to the Technical mode.
 
 The first automatic discovery asks you to allow this extension to use the Copilot language model.
@@ -27,6 +28,7 @@ The first automatic discovery asks you to allow this extension to use the Copilo
 | `dewaSpecBuilder.discoveryTools` | `*abap*`, `*adt*`, `*fiori*`, `*ui5*`, `*cap*` | Tool-name patterns of your SAP MCP servers that automatic discovery may use |
 | `dewaSpecBuilder.maxToolRounds` | `25` | Maximum tool-calling rounds per automatic discovery |
 | `dewaSpecBuilder.model` | *(empty)* | Copilot model for automatic discovery, e.g. `claude-sonnet` or `gpt-5`. Empty: the strongest available model; Haiku, mini or flash only if nothing else is available |
+| `dewaSpecBuilder.chatAutoSend` | `true` | Copilot Chat sends the prompt right away when a builder button opens it. Off: the prompt is only filled in and you press Enter |
 | `dewaSpecBuilder.installAgent` | `true` | Install the `dewa-fs-discovery` agent into the prompts folder on start-up |
 
 If the log reports *No read tools of the SAP MCP servers are available*, follow these steps:

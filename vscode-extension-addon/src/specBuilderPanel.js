@@ -4,7 +4,8 @@
    - persistent storage (globalState), save dialogs and the VS Code clipboard;
    - GitHub sign-in status (VS Code's own GitHub authentication – the panel never receives a token);
    - read-only SAP discovery, automatic (discoveryRunner.js) or in Copilot Chat (fsDiscovery.js + submitPackTool.js);
-   - "Open in Copilot Chat" for the development spec (dewa-abap). */
+   - AI draft of a functional spec, in the background (draftRunner.js) or in Copilot Chat (submitPackTool.js);
+   - "Open in Copilot Chat" for the development spec (dewa-abap) and for reviewing a functional spec (ask mode). */
 
 const fs = require('fs');
 const path = require('path');
@@ -16,10 +17,11 @@ const submitTool = require('./submitPackTool');
 
 const VIEW_TYPE = 'dewaSpecBuilder';
 const STORAGE_KEY = 'dewaSpecBuilder.storage';
-const CHAT_AGENTS = ['dewa-abap', 'dewa-codereview', 'dewa-fs-discovery'];
+const CHAT_AGENTS = ['dewa-abap', 'dewa-codereview', 'dewa-fs-discovery', 'ask'];
 const SAVE_TYPES = { '.md': 'Markdown', '.docx': 'Word document', '.json': 'JSON' };
 const MAX_VALUE = 5 * 1024 * 1024;
 const CHAT_SUFFIX = '\n\nWhen the context pack is ready, call the ' + submitTool.TOOL_NAME + ' tool with it so it is imported into the SAP Spec Builder.';
+const DRAFT_SUFFIX = '\n\nWhen the draft is ready, call the ' + submitTool.DRAFT_TOOL_NAME + ' tool once with the JSON object (kind "fs-draft") so the user can review it in the SAP Spec Builder. Do not edit any files.';
 
 /* Strict CSP + nonce on every <script>, and the host seed (storage, version) before the app scripts. */
 function buildHtml(raw, opts) {
@@ -93,8 +95,11 @@ function createRouter(vscode, context, deps) {
       if (!auth.copilot) { deps.post({ type: 'discovery-error', code: 'NO_COPILOT', message: 'GitHub Copilot Chat is not installed in VS Code.' }); return true; }
       if (!auth.signedIn) { deps.post({ type: 'discovery-error', code: 'SIGNED_OUT', message: 'Sign in to GitHub Copilot first.' }); return true; }
       if (m.mode === 'chat') {
+        const sent = chat.autoSend ? chat.autoSend() : false;
         const how = await chat.openChat(m.prompt + CHAT_SUFFIX);
-        deps.post({ type: 'discovery-progress', key: 'chat', status: 'done', text: how === 'agent' ? 'Copilot Chat is open with dewa-fs-discovery – press Enter there; the pack comes back here automatically' : 'Copilot Chat is open in agent mode – select dewa-fs-discovery if listed, press Enter; the pack comes back here automatically' });
+        deps.post({ type: 'discovery-progress', key: 'chat', status: 'done', text: how === 'agent'
+          ? (sent ? 'Copilot Chat is running dewa-fs-discovery' : 'Copilot Chat is open with dewa-fs-discovery – press Enter there') + '; the pack comes back here automatically'
+          : (sent ? 'Copilot Chat is running the discovery in agent mode' : 'Copilot Chat is open in agent mode – select dewa-fs-discovery if listed, press Enter') + '; the pack comes back here automatically' });
         return true;
       }
       if (cts) { deps.post({ type: 'discovery-error', code: 'BUSY', message: 'A discovery is already running.' }); return true; }
@@ -121,10 +126,16 @@ function createRouter(vscode, context, deps) {
       return true;
     },
     draft: async function (m) {
-      if (!str(m.prompt, 200000) || m.prompt.indexOf(drafter.MARKER) !== 0) return false;
+      if (!str(m.prompt, 200000) || m.prompt.indexOf(drafter.MARKER) !== 0 || [undefined, 'auto', 'chat'].indexOf(m.mode) < 0) return false;
       const auth = await deps.getAuth();
       if (!auth.copilot) { deps.post({ type: 'draft-error', code: 'NO_COPILOT', message: 'GitHub Copilot Chat is not installed in VS Code.' }); return true; }
       if (!auth.signedIn) { deps.post({ type: 'draft-error', code: 'SIGNED_OUT', message: 'Sign in to GitHub Copilot first.' }); return true; }
+      if (m.mode === 'chat') {
+        const sent = chat.autoSend ? chat.autoSend() : false;
+        await chat.openChat(m.prompt + DRAFT_SUFFIX, { mode: 'agent' });
+        deps.post({ type: 'draft-progress', text: (sent ? 'Copilot Chat is drafting' : 'The draft prompt is in Copilot Chat – press Enter there') + '; the result comes back here for review' });
+        return true;
+      }
       if (cts) { deps.post({ type: 'draft-error', code: 'BUSY', message: 'Copilot is already working on a request.' }); return true; }
       cts = new vscode.CancellationTokenSource();
       try {
@@ -146,11 +157,7 @@ function createRouter(vscode, context, deps) {
     stop: function () { if (cts) cts.cancel(); return true; },
     'open-chat': async function (m) {
       if (CHAT_AGENTS.indexOf(m.agent) < 0 || !str(m.prompt, 400000)) return false;
-      try {
-        await vscode.commands.executeCommand('workbench.action.chat.open', { query: m.prompt, isPartialQuery: true, mode: m.agent });
-      } catch (e) {
-        await vscode.commands.executeCommand('workbench.action.chat.open', { query: 'Act as the ' + m.agent + ' agent and follow its instructions.\n\n' + m.prompt, isPartialQuery: true, mode: 'agent' });
-      }
+      await chat.openChat(m.prompt, { mode: m.agent });
       return true;
     }
   };
@@ -182,7 +189,7 @@ function createSpecBuilder(vscode, context, opts) {
     const copilot = !!vscode.extensions.getExtension(fsDiscovery.COPILOT_CHAT);
     let session = null;
     try { session = await vscode.authentication.getSession('github', ['user:email'], { silent: true }); } catch (e) { session = null; }
-    return { copilot: copilot, signedIn: !!session, account: session && session.account ? session.account.label : '' };
+    return { copilot: copilot, signedIn: !!session, account: session && session.account ? session.account.label : '', chatAutoSend: vscode.workspace.getConfiguration('dewaSpecBuilder').get('chatAutoSend', true) !== false };
   }
 
   function attach(panel) {
@@ -207,6 +214,9 @@ function createSpecBuilder(vscode, context, opts) {
       panel.webview.onDidReceiveMessage(router.handle),
       vscode.authentication.onDidChangeSessions(async function (e) { if (e.provider && e.provider.id === 'github') post(Object.assign({ type: 'auth' }, await getAuth())); })
     ];
+    if (vscode.workspace.onDidChangeConfiguration) {
+      subs.push(vscode.workspace.onDidChangeConfiguration(async function (e) { if (e.affectsConfiguration('dewaSpecBuilder.chatAutoSend')) post(Object.assign({ type: 'auth' }, await getAuth())); }));
+    }
     panel.onDidDispose(function () { router.cancel(); subs.forEach(function (d) { d.dispose(); }); if (current && current.panel === panel) current = null; });
     current = { panel: panel, router: router, post: post };
     return current;
@@ -227,7 +237,15 @@ function createSpecBuilder(vscode, context, opts) {
     return true;
   }
 
-  return { open: open, attach: attach, deliverPack: deliverPack, getAuth: getAuth };
+  /* From the dewa_submitFsDraft tool ("Draft in Copilot Chat"): the builder opens its review dialog. */
+  async function deliverDraft(draft) {
+    if (!current) return false;
+    await current.post({ type: 'draft-result', text: '```json\n' + JSON.stringify(draft) + '\n```' });
+    current.panel.reveal(undefined, true);
+    return true;
+  }
+
+  return { open: open, attach: attach, deliverPack: deliverPack, deliverDraft: deliverDraft, getAuth: getAuth };
 }
 
 module.exports = { VIEW_TYPE: VIEW_TYPE, STORAGE_KEY: STORAGE_KEY, buildHtml: buildHtml, createRouter: createRouter, createSpecBuilder: createSpecBuilder, safeName: safeName };
