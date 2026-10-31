@@ -82,7 +82,7 @@ hard rules above apply unchanged (read only, never invent, no table contents).
 - Read the source, includes, selection screen / parameters, and the function modules, classes, BAdIs and CDS views it
   calls; note the tables it reads and writes, its messages and its authorization checks. Stop when the business logic
   is clear – do not read the whole call tree.
-- Describe the logic in business words. Technical names go only into `programs` and the data `table` column.
+- Describe the logic in business words. Technical names go only into `programs` and the data `table` and `sapField` columns.
 - Return **one `fs-draft` JSON block** (not a context pack) with `currentLogic`, `programs`, `asIs`, `rules`, `data`
   and `frs`, exactly as the prompt shows. List objects you could not read under "Not read:" in `currentLogic`.
 - **In Copilot Chat:** then call the `dewa_submitFsDraft` tool once with the same JSON object. The builder shows it to

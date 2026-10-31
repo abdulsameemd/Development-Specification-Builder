@@ -109,7 +109,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.8.vsix`](dist/dewa-sap-spec-builder-1.0.8.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.8.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.9.vsix`](dist/dewa-sap-spec-builder-1.0.9.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.9.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **DEWA: Open SAP Spec Builder** (command palette or *Spec Builder* in the status bar) opens this same app as a tab inside VS Code:
 
@@ -258,14 +258,22 @@ The model in `state.js` does not depend on Copilot; Copilot is just an **output 
 
 ## Walkthrough videos
 
-[`docs/media/SAP-Spec-Builder-Functional-and-Technical.mp4`](docs/media/SAP-Spec-Builder-Functional-and-Technical.mp4) (7:19, 1080p, voice-over) opens by explaining what the builder is. It is one tool for SAP functional specifications (for consultants) and development specifications (for ABAP developers), used in the browser or inside VS Code. Then it follows one FI-AP requirement through four chapters:
-1. **The requirement:** month-end vendor ageing in Excel.
-2. **Option A, without discovery:** the functional spec in the browser, from context and AS-IS / TO-BE to MoSCoW, fit-gap, RICEFW and UAT, ending in a Word file.
-3. **Option B, with Discover in SAP:** the builder as a VS Code tab, with Copilot sign-in, read-only discovery, the reference check and the Word file saved to the workspace. The two Word outputs are then compared.
-4. **From functional to technical:** the RICEFW item is handed off to a pre-filled development spec, the developer adds the selection screen, saves `BUSINESS_REQUIREMENTS.md` and opens Copilot Chat for `dewa-abap`.
+[`docs/media/SAP-Spec-Builder-Functional-and-Technical.mp4`](docs/media/SAP-Spec-Builder-Functional-and-Technical.mp4) (4:13, 1080p, voice-over) shows the whole flow inside VS Code, step by step, from running the extension to handing over to the developer. It follows one FI-AP requirement (vendor open items ageing):
 
-The browser scenes and the VS Code workbench are real. In the VS Code scenes, the Copilot sign-in and the SAP answers are simulated from the sample "DEMO" system, as the on-screen tag says. The people in the example are fictional.
+1. Install the extension (VSIX) – Extensions view.
+2. **DEWA: Open SAP Spec Builder** from the command palette.
+3. Functional mode, sign in to GitHub Copilot.
+4. SAP, module and the business requirement.
+5. **Read an existing program** (`ZFI_AP_OPEN_ITEMS_OLD`) read-only → review → current process, rules and data in the spec.
+6. **Generate the whole spec with Copilot** → review → the document opens.
+7. Review the details: TO-BE process, FRs, priority and fit-gap.
+8. **Discover automatically** → reference check → RICEFW item R-01.
+9. Generate and save the Word file into the project.
+10. Hand over: the RICEFW item becomes a linked Technical spec.
+11. The FS changes → **Update from FS** in the Technical spec.
+12. Save `BUSINESS_REQUIREMENTS.md` and **Open in Copilot Chat** → `dewa-abap`.
 
+The VS Code workbench and the builder are real (code-server with a demo build of the extension). The Copilot sign-in, the AI answers and the SAP answers are simulated from the sample "DEMO" system, and the Copilot Chat panel is an illustration, as the on-screen tags say.
 
 [`docs/media/SAP-Spec-Builder-Walkthrough.mp4`](docs/media/SAP-Spec-Builder-Walkthrough.mp4) (2:56, 1080p, voice-over): a single ABAP artifact from the builder to VS Code with the SAP ABAP ADT MCP server and the `dewa-abap` agent — specify the class, generate, Open in VS Code, confirm target, class + ABAP Unit test, evidence, `CONFIRM ARTEFACT`. The builder scenes are real; the VS Code / Copilot scenes are illustrations (marked in the video) and their evidence values are examples.
 

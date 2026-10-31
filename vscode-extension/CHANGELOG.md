@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.9
+
+- **Read an existing program:** the data requirements now keep the table and the field in separate columns, so discovery's reference check finds the tables. Before, a value such as `BSIK-LIFNR` was reported as not found.
+- The review dialog no longer says the AI only knows the requirement, which was wrong for results read from a program.
+- New walkthrough video, inside VS Code only, from running the extension to the developer hand-off.
+
 ## 1.0.8
 
 - **Technical specs stay in step with their functional spec.** A Technical spec created from an FS, from a RICEFW item or "change the program", remembers its source.
