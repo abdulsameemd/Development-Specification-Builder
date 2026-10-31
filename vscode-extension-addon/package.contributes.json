@@ -1,0 +1,237 @@
+{
+  "activationEvents": [
+    "onUri",
+    "onCommand:dewa.specBuilder.open",
+    "onWebviewPanel:dewaSpecBuilder"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "dewa.specBuilder.open",
+        "title": "Open SAP Spec Builder",
+        "category": "DEWA"
+      }
+    ],
+    "configuration": {
+      "title": "DEWA SAP Spec Builder",
+      "properties": {
+        "dewaSpecBuilder.discoveryTools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "*abap*",
+            "*adt*",
+            "*fiori*",
+            "*ui5*",
+            "*cap*"
+          ],
+          "markdownDescription": "Tool-name patterns (`*` wildcard) of the SAP MCP servers that **automatic discovery** may use. Tools whose names contain a write verb (create, update, delete, activate, transport, …) are always excluded."
+        },
+        "dewaSpecBuilder.maxToolRounds": {
+          "type": "number",
+          "default": 25,
+          "minimum": 1,
+          "maximum": 60,
+          "description": "Maximum number of tool-calling rounds for automatic discovery."
+        },
+        "dewaSpecBuilder.model": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Copilot model for **automatic discovery**, by family or name (e.g. `claude-sonnet`, `gpt-5`). Empty = the strongest available model; small models (Haiku, mini, flash) are used only when nothing else is available."
+        },
+        "dewaSpecBuilder.chatAutoSend": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Send the prompt in Copilot Chat right away when a Spec Builder button opens Chat (development spec to `dewa-abap`, discovery in Chat, draft in Chat, review of a functional spec). Off: the prompt is only filled in and you press Enter."
+        }
+      }
+    },
+    "languageModelTools": [
+      {
+        "name": "dewa_submitContextPack",
+        "toolReferenceName": "dewa_submitContextPack",
+        "displayName": "Send context pack to SAP Spec Builder",
+        "userDescription": "Imports the SAP system context pack into the open SAP Spec Builder.",
+        "modelDescription": "Call this once at the end of a dewa-fs-discovery run with the complete dewa-sap-context-pack JSON object. It imports the pack into the SAP Spec Builder panel. It does not change anything in SAP.",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(notebook)",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "kind",
+            "version"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "dewa-sap-context-pack"
+              ]
+            },
+            "version": {
+              "type": "number",
+              "enum": [
+                1
+              ]
+            },
+            "generatedAt": {
+              "type": "string"
+            },
+            "system": {
+              "type": "object"
+            },
+            "objects": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "transactions": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "fioriApps": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "ui5Apps": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "capServices": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "enhancements": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "customizingHints": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "notFound": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "dewa_submitFsDraft",
+        "toolReferenceName": "dewa_submitFsDraft",
+        "displayName": "Send draft to SAP Spec Builder",
+        "userDescription": "Sends an AI draft of a functional specification to the open SAP Spec Builder for review.",
+        "modelDescription": "Call this once at the end of a functional-specification draft with the complete fs-draft JSON object (kind \"fs-draft\", version 1). The SAP Spec Builder shows it to the user for review; nothing is added without the user's choice. It does not change any files or systems.",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(edit)",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "kind",
+            "version"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "fs-draft"
+              ]
+            },
+            "version": {
+              "type": "number",
+              "enum": [
+                1
+              ]
+            },
+            "title": {
+              "type": "string"
+            },
+            "objectives": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "kpis": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "inScope": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "outOfScope": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "stakeholders": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "asIs": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "toBe": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "frs": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "rules": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "uat": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "risks": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}
