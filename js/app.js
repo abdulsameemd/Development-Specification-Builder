@@ -448,6 +448,21 @@
     }).join('');
   }
 
+  /* Technical spec created from a functional spec: is the FS still the same? (spec-link.js) */
+  function linkBanner(s) {
+    if (!s.source) return '';
+    const st = APB.specLink.status(s);
+    const from = 'Created from the functional spec <strong>' + esc(s.source.fsName || 'FS') + '</strong>' + (s.source.label ? ' (' + esc(s.source.label) + ')' : '');
+    if (st.state === 'current') return '<p class="link-banner muted small">✓ ' + from + ' · up to date</p>';
+    if (st.state === 'missing') return '<p class="link-banner note">' + from + '. That FS is not in Drafts – upload its .md to check it for changes.</p>';
+    if (st.state === 'gone') return '<p class="link-banner note">' + from + '. The item is no longer in that FS – this spec is kept as it is. <button type="button" class="link" data-action="link-open-fs">Open the FS</button></p>';
+    return '<div class="link-banner note" role="status"><p><strong>The functional spec changed</strong> since ' + esc(s.source.at || 'this spec was created') + ': ' + esc(st.changes.join(', ')) + '. ' + from + '.</p>' +
+      '<p class="small">Update takes over only what came from the FS; what you added or edited here stays.</p>' +
+      '<div class="gen-actions"><button type="button" class="btn btn-primary btn-sm" data-action="link-update">Update from FS</button>' +
+      '<button type="button" class="btn btn-ghost btn-sm" data-action="link-keep">Keep my version</button>' +
+      '<button type="button" class="link small" data-action="link-open-fs">Open the FS</button></div></div>';
+  }
+
   function renderMain() {
     const s = S.get();
     if (stream) { clearInterval(stream.timer); stream = null; }
@@ -456,7 +471,7 @@
       if (info) { $('#main').innerHTML = APB.agentsGuide.html(); return; }
       const html = isFs() ? (ui.generated ? FA.generatedView(s, ui) : FA.renderStep(ui.step, s, ui))
         : ui.generated ? generatedView(s) : [step1, step2, step3, step4, step5][ui.step - 1](s);
-      $('#main').innerHTML = '<p class="step-count">' + (ui.generated ? 'Done' : 'Step ' + ui.step + ' of ' + steps().length) + '</p>' + html;
+      $('#main').innerHTML = '<p class="step-count">' + (ui.generated ? 'Done' : 'Step ' + ui.step + ' of ' + steps().length) + '</p>' + (isFs() ? '' : linkBanner(s)) + html;
     });
     applyChrome();
     renderStepper();
@@ -831,6 +846,28 @@
       inp.click();
     },
     copy: copyMarkdown,
+    'link-update': function () {
+      const r = APB.specLink.update(S.get());
+      if (!r) return;
+      S.replace(r.state);
+      renderMain();
+      toast('Updated from the FS' + (r.added.length ? ': ' + r.added.join(', ') : '') + (r.kept.length ? ' · kept ' + r.kept.join(', ') : '') + (r.dropped.length ? ' · no longer named in the FS: ' + r.dropped.join(', ') : ''), 8000);
+    },
+    'link-keep': function () {
+      const next = APB.specLink.dismiss(S.get());
+      if (!next) return;
+      S.replace(next);
+      renderMain();
+      toast('Kept your version – later FS changes will be offered again');
+    },
+    'link-open-fs': function () {
+      const fs = S.get().source && APB.specLink.findFs(S.get().source.fsKey);
+      if (fs) loadState(fs, 'Functional specification opened');
+    },
+    'link-open': function (el) {
+      const d = ST.load(el.dataset.id);
+      if (d) loadState(d, 'Technical spec opened');
+    },
     vscode: function () {
       const s = S.get();
       if (isFs()) { FA.actions['fs-discover'](); return; }
@@ -1047,6 +1084,10 @@
       const what = r.state.kind === 'fs' ? 'Functional specification' : 'Technical specification';
       loadState(r.state, r.mode === 'partial' ? what + ' partly restored from the Markdown – check every step' :
         r.edited ? what + ' restored as generated – manual edits made in the file are not taken over' : what + ' restored from ' + file.name);
+      // an uploaded FS only changes itself; Technical specs created from it offer the update when opened
+      const linked = r.state.kind === 'fs' ? APB.specLink.linkedTo(S.get()) : [];
+      const changed = linked.filter(function (x) { return x.state === 'changed'; }).length;
+      if (linked.length) toast(what + ' restored · ' + linked.length + ' Technical spec' + (linked.length > 1 ? 's were' : ' was') + ' created from it' + (changed ? ' – ' + changed + ' can be updated (step 3)' : ' – up to date'), 8000);
     }).catch(function (err) { toast((err && err.message) || 'The file could not be read', 7000); });
   }
 

@@ -70,6 +70,19 @@ tools only, write verbs always excluded) and describes the current logic in busi
 - After the review, step 2 shows the **current program logic**, the objects read, AS-IS steps, business rules, data and the current behaviour as FRs. The document gets a **Current System** section.
 - **→ Technical spec: change …** (step 3 and the finished document) creates a Development Specification with the program as the object to change and the objects it uses as existing objects, for `dewa-abap`.
 
+### Functional ↔ Technical
+
+A Technical spec created from an FS (a RICEFW item, or *→ Technical spec: change …* after reading a program) stays
+linked to it. The link is one-way – from Functional to Technical:
+
+| You change … | Effect |
+|---|---|
+| the FS (or upload a newer copy of it) | The linked Technical spec shows **"The functional spec changed"** with what changed. **Update from FS** takes over only what came from the FS – requirement text, rules, acceptance criteria, new objects, test scenarios. What the developer added or edited (own rules, edited text, object designs, fields, RAP details) stays; edited text is reported as kept. **Keep my version** accepts the FS as it is without changing the spec. |
+| the Technical spec (or upload it) | Nothing happens to the FS. |
+
+In the FS, step 3 lists the Technical specs created from it, with *up to date* or *FS changed*. If the FS is no longer
+in Drafts, the Technical spec asks you to upload its `.md`; an uploaded FS keeps its identity, so the link works again.
+
 **Output** – `FS_<Module or system>_<Title>.docx` (title page with document control, contents, numbered headings, tables, header with document ID and version, *Page X of Y* footer) and `FUNCTIONAL_SPECIFICATION.md`, both from the same content, in at most eight sections:
 
 1. Business Requirement & Scope (objectives, KPIs, scope, stakeholders)
@@ -96,7 +109,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.7.vsix`](dist/dewa-sap-spec-builder-1.0.7.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.7.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.8.vsix`](dist/dewa-sap-spec-builder-1.0.8.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.8.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **DEWA: Open SAP Spec Builder** (command palette or *Spec Builder* in the status bar) opens this same app as a tab inside VS Code:
 
@@ -184,7 +197,7 @@ Rules baked in: nothing is invented, unknown values become `[TO BE CONFIRMED]`, 
 |---|---|
 | **Open in VS Code** | One click copies a ready prompt (one-line instruction + the full specification) to the clipboard and launches VS Code. In VS Code press **Ctrl+Alt+I** (Copilot Chat), **Ctrl+V**, **Enter**. The browser asks once for permission to open VS Code; it cannot type into VS Code itself. |
 | **Download file** / **Copy Markdown** | `BUSINESS_REQUIREMENTS.md` – the specification for Copilot. |
-| **Upload** (header) | Opens a downloaded `FUNCTIONAL_SPECIFICATION.md` or `BUSINESS_REQUIREMENTS.md` again as a new draft, in the right mode. Downloaded files end with one hidden comment (`<!-- spec-builder-state:v1 … -->`, invisible in Markdown previews) that holds the builder data, so the spec comes back exactly. Edits made in the `.md` itself are not taken over (the builder says so). Older files without that comment are read best-effort (requirement, scope, steps, FRs and rules; objects and rules for a development spec). |
+| **Upload** (header) | Opens a downloaded `FUNCTIONAL_SPECIFICATION.md` or `BUSINESS_REQUIREMENTS.md` again as a new draft, in the right mode. It restores **only that spec**: uploading an FS never rewrites a Technical spec, and uploading a Technical spec never touches an FS. Technical specs created from an uploaded FS offer *Update from FS* when you open them (see *Functional ↔ Technical*). Downloaded files end with one hidden comment (`<!-- spec-builder-state:v1 … -->`, invisible in Markdown previews) that holds the builder data, so the spec comes back exactly; edits made in the `.md` itself are not taken over (the builder says so). Older files without that comment are read best-effort. |
 | **Copy share link** (🔗 in the header) | The project is encoded in the URL fragment (`#s=…`). Whoever opens it gets a copy as a new local draft. The fragment is not sent to any server, but anyone you send the link to can read the requirement, so treat it like the file itself. |
 
 ## Local storage
@@ -217,6 +230,7 @@ js/
   storage.js            localStorage drafts
   export.js             download, copy, share link, VS Code hand-off
   md-import.js          Upload: builder data in downloaded .md files, restore from a .md
+  spec-link.js          Functional → Technical link: change detection and three-way update
   agents-guide.js       Agents info page (from docs/AGENT_WORKFLOWS.md)
   fs-state.js           functional spec model, templates, FR / RICEFW numbering
   discovery.js          discovery prompt, context-pack validation, reference cross-check

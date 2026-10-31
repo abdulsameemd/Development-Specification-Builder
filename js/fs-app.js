@@ -322,6 +322,15 @@
       items.map(function (x) { return '<button type="button" class="chip" data-action="fs-handoff" data-i="' + x.i + '">→ ' + esc(x.id) + ' ' + esc(x.r.name || F.ricefwType(x.r.type).label) + '</button>'; }).join('') + '</div></div>';
   }
 
+  /* Technical specs created from this FS (spec-link.js), with their state. */
+  function linkedHtml(s) {
+    const l = APB.specLink.linkedTo(s);
+    if (!l.length) return '';
+    const word = { current: 'up to date', changed: 'FS changed – open to update', gone: 'item no longer in the FS', missing: '' };
+    return '<div class="suggest fs-linked"><p class="muted small">Technical specs created from this FS – they are updated from it when you open them:</p><div class="chips">' +
+      l.map(function (x) { return '<button type="button" class="chip' + (x.state === 'changed' ? ' chip-warn' : '') + '" data-action="link-open" data-id="' + esc(x.id) + '">' + esc(x.label) + ' · ' + esc(word[x.state] || '') + '</button>'; }).join('') + '</div></div>';
+  }
+
   /* "Technical spec from the program" – after Read an existing program. */
   function programHandoffHtml(s) {
     if (!F.isSap(s) || !mainProgram(s)) return '';
@@ -338,7 +347,7 @@
     const solution = sap
       ? discoveryPanel(s) +
         (gaps.length ? '<div class="refs" role="note"><strong>Gaps without a RICEFW item:</strong> ' + gaps.map(esc).join(', ') + ' — add an item and list the FR under “Covers FRs”.</div>' : '') +
-        block('solution', ['ricefw']) + handoffHtml(s) + programHandoffHtml(s) +
+        block('solution', ['ricefw']) + handoffHtml(s) + programHandoffHtml(s) + linkedHtml(s) +
         more('fs-more-sol', 'More details – roles & authorizations, interfaces, outputs, configuration', blockAll('solution', null, ['ricefw']), ['roles', 'interfaces', 'outputs', 'customizing'].some(function (k) { return V.isFilled(s.solution[k]); }))
       : block('solution');
     const q = s.quality, ctl = s.control;
@@ -376,7 +385,7 @@
       '<button type="button" class="btn btn-ghost btn-lg" data-action="download">Download Markdown</button>' +
       '<button type="button" class="btn btn-ghost" data-action="copy">Copy Markdown</button>' +
       (H.isVscode ? '<button type="button" class="btn btn-ghost" data-action="fs-chat-review">Open in Copilot Chat</button>' : '<button type="button" class="btn btn-ghost" data-action="share">Copy share link</button>') +
-      '<button type="button" class="btn btn-ghost" data-action="edit">Review Details</button></div>' + ho + (F.isSap(s) ? programHandoffHtml(s) : '') +
+      '<button type="button" class="btn btn-ghost" data-action="edit">Review Details</button></div>' + ho + (F.isSap(s) ? programHandoffHtml(s) + linkedHtml(s) : '') +
       '<div class="seg gen-seg" role="group" aria-label="Format"><button type="button" data-action="view-rendered" aria-pressed="' + !ui.raw + '">Preview</button><button type="button" data-action="view-raw" aria-pressed="' + ui.raw + '">Markdown</button></div>' +
       '<div class="gen-doc md" tabindex="0" aria-label="Generated specification">' + (ui.raw ? '<pre>' + esc(md) + '</pre>' : APB.markdown.toHtml(md)) + '</div>';
   }
@@ -619,6 +628,7 @@
       const s = S.get();
       const dev = toDevSpecFromProgram(s);
       if (!dev) { U().toast('Read an existing program first'); return; }
+      APB.specLink.stamp(dev, s, 'program');
       U().loadState(dev, 'Development spec created to change ' + mainProgram(s).name + ' — your FS is in Drafts');
     },
     'fs-chat-review': function () {
@@ -711,6 +721,7 @@
     'fs-handoff': function (el) {
       const s = S.get();
       const dev = toDevSpec(s, Number(el.dataset.i));
+      APB.specLink.stamp(dev, s, 'ricefw', Number(el.dataset.i));
       U().loadState(dev, 'Development spec created from ' + F.ricefwIds(s.solution.ricefw)[Number(el.dataset.i)] + ' — your FS is in Drafts');
     },
     'fs-docx': function () {

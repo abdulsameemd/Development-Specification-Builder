@@ -648,6 +648,9 @@ body.is-info .preview-panel, body.is-info .view-tabs, body.is-info .stepper { di
 .draft-review ul { margin: 6px 0 0 26px; padding: 0; color: var(--muted); }
 .fs-system .type-grid { margin: 10px 0 14px; }
 .fs-system .type-ico { font-size: .72rem; font-weight: 900; }
+.link-banner { margin: 0 0 14px; }
+div.link-banner p { margin: 0 0 6px; }
+.chip.chip-warn { border-color: var(--amber); }
 
 </style>
 </head>
@@ -11381,6 +11384,7 @@ window.APB_CONFIG = {
       rules: [],
       acceptance: [],
       assumptions: '',
+      source: null,
       quality: { authorization: '', authChecks: [], dataVolume: '', performanceReq: '', testTypes: ['Unit', 'Functional', 'Integration'], testScenarios: '', cleanCore: '', cleanCoreNote: '' },
       dod: defaultDod(),
       meta: { created: now, updated: now }
@@ -11409,6 +11413,8 @@ window.APB_CONFIG = {
     s.rules = arr(input.rules).map(function (r) { return { id: str(r.id) || uid(), condition: str(r.condition), behavior: str(r.behavior) }; });
     s.acceptance = arr(input.acceptance).map(function (a) { return { id: str(a.id) || uid(), text: str(a.text) }; });
     s.assumptions = str(input.assumptions);
+    // link to the functional spec it was created from (spec-link.js); null for specs written directly
+    s.source = APB.specLink ? APB.specLink.normalizeSource(input.source) : null;
     if (input.quality && typeof input.quality === 'object') Object.assign(s.quality, clone(input.quality));
     // schema 1 kept a single authorization object text
     if (s.quality.authObject && !s.quality.authChecks.length) s.quality.authChecks = [{ object: s.quality.authObject }];
@@ -12721,7 +12727,9 @@ window.APB_CONFIG = {
 
   function blank() {
     const now = Date.now();
-    const s = { kind: 'fs', schema: SCHEMA_VERSION, id: uid(), discovery: null, meta: { created: now, updated: now } };
+    // key: stable identity of the FS across share links and uploads (id is renewed there); Technical specs made from
+    // this FS point to it (spec-link.js)
+    const s = { kind: 'fs', schema: SCHEMA_VERSION, id: uid(), key: uid(), discovery: null, meta: { created: now, updated: now } };
     cfg.sections.forEach(function (sec) { s[sec.id] = {}; });
     s.control.version = '0.1';
     s.control.status = 'draft';
@@ -12760,6 +12768,7 @@ window.APB_CONFIG = {
     const s = blank();
     if (!input || typeof input !== 'object') return s;
     s.id = typeof input.id === 'string' && input.id ? input.id : s.id;
+    if (typeof input.key === 'string' && /^[\w-]{4,40}$/.test(input.key)) s.key = input.key;
     cfg.sections.forEach(function (sec) { Object.assign(s[sec.id], coerce(sec.fields, input[sec.id])); });
     if (!s.control.status) s.control.status = 'draft';
     // specs from before the system choice were SAP specs whenever a module was set
@@ -14719,6 +14728,15 @@ window.APB_CONFIG = {
       items.map(function (x) { return '<button type="button" class="chip" data-action="fs-handoff" data-i="' + x.i + '">→ ' + esc(x.id) + ' ' + esc(x.r.name || F.ricefwType(x.r.type).label) + '</button>'; }).join('') + '</div></div>';
   }
 
+  /* Technical specs created from this FS (spec-link.js), with their state. */
+  function linkedHtml(s) {
+    const l = APB.specLink.linkedTo(s);
+    if (!l.length) return '';
+    const word = { current: 'up to date', changed: 'FS changed – open to update', gone: 'item no longer in the FS', missing: '' };
+    return '<div class="suggest fs-linked"><p class="muted small">Technical specs created from this FS – they are updated from it when you open them:</p><div class="chips">' +
+      l.map(function (x) { return '<button type="button" class="chip' + (x.state === 'changed' ? ' chip-warn' : '') + '" data-action="link-open" data-id="' + esc(x.id) + '">' + esc(x.label) + ' · ' + esc(word[x.state] || '') + '</button>'; }).join('') + '</div></div>';
+  }
+
   /* "Technical spec from the program" – after Read an existing program. */
   function programHandoffHtml(s) {
     if (!F.isSap(s) || !mainProgram(s)) return '';
@@ -14735,7 +14753,7 @@ window.APB_CONFIG = {
     const solution = sap
       ? discoveryPanel(s) +
         (gaps.length ? '<div class="refs" role="note"><strong>Gaps without a RICEFW item:</strong> ' + gaps.map(esc).join(', ') + ' — add an item and list the FR under “Covers FRs”.</div>' : '') +
-        block('solution', ['ricefw']) + handoffHtml(s) + programHandoffHtml(s) +
+        block('solution', ['ricefw']) + handoffHtml(s) + programHandoffHtml(s) + linkedHtml(s) +
         more('fs-more-sol', 'More details – roles & authorizations, interfaces, outputs, configuration', blockAll('solution', null, ['ricefw']), ['roles', 'interfaces', 'outputs', 'customizing'].some(function (k) { return V.isFilled(s.solution[k]); }))
       : block('solution');
     const q = s.quality, ctl = s.control;
@@ -14773,7 +14791,7 @@ window.APB_CONFIG = {
       '<button type="button" class="btn btn-ghost btn-lg" data-action="download">Download Markdown</button>' +
       '<button type="button" class="btn btn-ghost" data-action="copy">Copy Markdown</button>' +
       (H.isVscode ? '<button type="button" class="btn btn-ghost" data-action="fs-chat-review">Open in Copilot Chat</button>' : '<button type="button" class="btn btn-ghost" data-action="share">Copy share link</button>') +
-      '<button type="button" class="btn btn-ghost" data-action="edit">Review Details</button></div>' + ho + (F.isSap(s) ? programHandoffHtml(s) : '') +
+      '<button type="button" class="btn btn-ghost" data-action="edit">Review Details</button></div>' + ho + (F.isSap(s) ? programHandoffHtml(s) + linkedHtml(s) : '') +
       '<div class="seg gen-seg" role="group" aria-label="Format"><button type="button" data-action="view-rendered" aria-pressed="' + !ui.raw + '">Preview</button><button type="button" data-action="view-raw" aria-pressed="' + ui.raw + '">Markdown</button></div>' +
       '<div class="gen-doc md" tabindex="0" aria-label="Generated specification">' + (ui.raw ? '<pre>' + esc(md) + '</pre>' : APB.markdown.toHtml(md)) + '</div>';
   }
@@ -15016,6 +15034,7 @@ window.APB_CONFIG = {
       const s = S.get();
       const dev = toDevSpecFromProgram(s);
       if (!dev) { U().toast('Read an existing program first'); return; }
+      APB.specLink.stamp(dev, s, 'program');
       U().loadState(dev, 'Development spec created to change ' + mainProgram(s).name + ' — your FS is in Drafts');
     },
     'fs-chat-review': function () {
@@ -15108,6 +15127,7 @@ window.APB_CONFIG = {
     'fs-handoff': function (el) {
       const s = S.get();
       const dev = toDevSpec(s, Number(el.dataset.i));
+      APB.specLink.stamp(dev, s, 'ricefw', Number(el.dataset.i));
       U().loadState(dev, 'Development spec created from ' + F.ricefwIds(s.solution.ricefw)[Number(el.dataset.i)] + ' — your FS is in Drafts');
     },
     'fs-docx': function () {
@@ -15167,6 +15187,186 @@ window.APB_CONFIG = {
     autoSend: function () { return autoSend(); },
     uatSkeleton: uatSkeleton
   };
+})(window.APB = window.APB || {});
+
+</script>
+  <script>
+/* Functional → Technical link. A Technical spec created from a functional spec (RICEFW hand-off or "change the
+   program") remembers its source: the FS key, which item it came from, and a snapshot of what the FS gave it.
+   When the FS changes – also after an Upload – the Technical spec offers "Update from FS". The update is a
+   three-way merge (snapshot / current / new): only what still equals the FS's earlier content is replaced, so
+   whatever the developer added or edited stays. Nothing flows from Technical back to Functional. */
+(function (APB) {
+  'use strict';
+
+  function str(v) { return typeof v === 'string' ? v : ''; }
+  function today() { return new Date().toISOString().slice(0, 10); }
+
+  /* What the FS gave the Technical spec (only these parts are ever updated). */
+  function snapshot(dev) {
+    const q = dev.quality || {};
+    return {
+      text: str(dev.requirement.text), objective: str(dev.requirement.objective),
+      rules: (dev.rules || []).map(ruleKey),
+      acceptance: (dev.acceptance || []).map(function (a) { return str(a.text); }),
+      objects: (dev.objects || []).map(function (o) { return { type: o.type, name: str(o.name).toUpperCase(), status: o.status, purpose: str(o.purpose) }; }),
+      assumptions: str(dev.assumptions), tests: str(q.testScenarios), performance: str(q.performanceReq)
+    };
+  }
+  function ruleKey(r) { return str(r.condition) + '\u0001' + str(r.behavior); }
+
+  function normalizeSource(src) {
+    if (!src || typeof src !== 'object' || typeof src.fsKey !== 'string' || !src.ref || typeof src.ref !== 'object') return null;
+    const ref = src.ref.kind === 'program' ? { kind: 'program', name: str(src.ref.name) } : { kind: 'ricefw', name: str(src.ref.name), type: str(src.ref.type), index: Number(src.ref.index) || 0 };
+    return { fsKey: src.fsKey, fsName: str(src.fsName), ref: ref, label: str(src.label), base: src.base && typeof src.base === 'object' ? JSON.parse(JSON.stringify(src.base)) : null, at: str(src.at) };
+  }
+
+  /* ------------------------------------------------------------ the FS side */
+  /* Where in the FS the Technical spec came from: the RICEFW item by name (else type + position), or the program. */
+  function derive(fs, ref) {
+    const FA = APB.fsApp;
+    if (ref.kind === 'program') {
+      const dev = FA.toDevSpecFromProgram(fs);
+      return dev && dev.objects[0].name === ref.name.toUpperCase() ? dev : null;
+    }
+    const list = fs.solution.ricefw || [];
+    let i = ref.name ? list.findIndex(function (r) { return r && str(r.name).trim().toUpperCase() === ref.name.toUpperCase(); }) : -1;
+    if (i < 0 && list[ref.index] && list[ref.index].type === ref.type) i = ref.index;
+    return i >= 0 ? FA.toDevSpec(fs, i) : null;
+  }
+
+  function refOf(fs, kind, i) {
+    if (kind === 'program') return { kind: 'program', name: APB.fsApp.toDevSpecFromProgram(fs).objects[0].name };
+    const r = fs.solution.ricefw[i] || {};
+    return { kind: 'ricefw', name: str(r.name).trim().toUpperCase(), type: str(r.type), index: i };
+  }
+
+  /* Called by the hand-off: dev was just created from fs. */
+  function stamp(dev, fs, kind, i) {
+    const ref = refOf(fs, kind, i);
+    dev.source = {
+      fsKey: fs.key, fsName: APB.fs.model.name(fs), ref: ref,
+      label: kind === 'program' ? 'change ' + ref.name : APB.fs.ricefwIds(fs.solution.ricefw)[i] + (ref.name ? ' ' + ref.name : ''),
+      base: snapshot(dev), at: today()
+    };
+    return dev;
+  }
+
+  function load(id) { const raw = APB.storage.load(id); return raw ? APB.state.migrate(raw) : null; }
+
+  /* The newest FS draft with this key (an uploaded or shared copy keeps the key). */
+  function findFs(key) {
+    const ST = APB.storage;
+    const cur = APB.state.get();
+    // the FS on screen is the newest copy (an upload is saved to Drafts only a moment later)
+    let best = cur && cur.kind === 'fs' && cur.key === key ? { state: cur, updated: Infinity } : null;
+    ST.list().forEach(function (d) {
+      if (d.kind !== 'fs') return;
+      const s = cur && cur.id === d.id ? cur : load(d.id);
+      if (s && s.key === key && (!best || d.updated > best.updated)) best = { state: s, updated: d.updated };
+    });
+    return best ? best.state : null;
+  }
+
+  /* → { state: 'none' | 'missing' | 'gone' | 'current' | 'changed', fs, next, changes[] } */
+  function status(dev) {
+    const src = dev && dev.source;
+    if (!src) return { state: 'none' };
+    const fs = findFs(src.fsKey);
+    if (!fs) return { state: 'missing' };
+    const next = derive(fs, src.ref);
+    if (!next) return { state: 'gone', fs: fs };
+    const a = src.base, b = snapshot(next);
+    if (JSON.stringify(a) === JSON.stringify(b)) return { state: 'current', fs: fs, next: next };
+    return { state: 'changed', fs: fs, next: next, changes: describe(a || {}, b) };
+  }
+
+  function describe(a, b) {
+    const out = [];
+    const added = function (x, y) { return (y || []).filter(function (v) { return (x || []).indexOf(v) < 0; }).length; };
+    if (a.text !== b.text) out.push('requirement text');
+    if (a.objective !== b.objective) out.push('objective');
+    const ac = added(a.acceptance, b.acceptance), ru = added(a.rules, b.rules);
+    if (ac) out.push('+' + ac + ' acceptance criteri' + (ac > 1 ? 'a' : 'on'));
+    if (ru) out.push('+' + ru + ' rule' + (ru > 1 ? 's' : ''));
+    const names = function (l) { return (l || []).map(function (o) { return o.name; }); };
+    const no = added(names(a.objects), names(b.objects));
+    if (no) out.push('+' + no + ' object' + (no > 1 ? 's' : ''));
+    if (a.tests !== b.tests) out.push('test scenarios');
+    if (!out.length) out.push('details');
+    return out;
+  }
+
+  /* ---------------------------------------------------------------- update */
+  function update(dev) {
+    const st = status(dev);
+    if (st.state !== 'changed' && st.state !== 'current') return null;
+    const base = dev.source.base || snapshot({ requirement: {}, rules: [], acceptance: [], objects: [] });
+    const nb = snapshot(st.next);
+    const next = JSON.parse(JSON.stringify(dev));
+    const kept = [], added = [];
+    function scalar(label, get, set, b, n) {
+      const curV = get(next);
+      if (curV === b || !curV.trim()) { if (curV !== n) set(next, n); }
+      else if (n !== b) kept.push(label);
+    }
+    scalar('your edited requirement text', function (s) { return s.requirement.text; }, function (s, v) { s.requirement.text = v; }, base.text, nb.text);
+    scalar('your edited objective', function (s) { return s.requirement.objective; }, function (s, v) { s.requirement.objective = v; }, base.objective, nb.objective);
+    scalar('your edited assumptions', function (s) { return s.assumptions; }, function (s, v) { s.assumptions = v; }, base.assumptions, nb.assumptions);
+    next.quality = next.quality || {};
+    scalar('your edited test scenarios', function (s) { return str(s.quality.testScenarios); }, function (s, v) { s.quality.testScenarios = v; }, base.tests, nb.tests);
+    scalar('your edited performance', function (s) { return str(s.quality.performanceReq); }, function (s, v) { s.quality.performanceReq = v; }, base.performance, nb.performance);
+
+    // lists: keep own / edited items, drop FS items the developer deleted, add what is new in the FS
+    function list(items, key, baseKeys, newItems, make, label) {
+      const curKeys = items.map(key);
+      const removed = baseKeys.filter(function (k) { return curKeys.indexOf(k) < 0; });
+      const own = items.filter(function (it) { return baseKeys.indexOf(key(it)) < 0; });
+      const fromFs = newItems.filter(function (it) { return removed.indexOf(key(it)) < 0 || baseKeys.indexOf(key(it)) < 0; });
+      const merged = [];
+      // FS items in the FS order, each own item after them
+      fromFs.forEach(function (it) { const i = curKeys.indexOf(key(it)); merged.push(i >= 0 ? items[i] : make(it)); });
+      own.forEach(function (it) { if (merged.indexOf(it) < 0) merged.push(it); });
+      const n = fromFs.filter(function (it) { return curKeys.indexOf(key(it)) < 0; }).length;
+      if (n) added.push(n + ' ' + label);
+      return merged;
+    }
+    next.rules = list(next.rules, ruleKey, base.rules, st.next.rules, function (r) { return { id: APB.state.uid(), condition: r.condition, behavior: r.behavior }; }, 'rule(s)');
+    next.acceptance = list(next.acceptance, function (a) { return str(a.text); }, base.acceptance, st.next.acceptance, function (a) { return { id: APB.state.uid(), text: a.text }; }, 'acceptance criteria');
+
+    // objects by name: existing ones keep everything the developer specified
+    const have = next.objects.map(function (o) { return str(o.name).toUpperCase(); });
+    st.next.objects.forEach(function (o) {
+      if (have.indexOf(str(o.name).toUpperCase()) >= 0) return;
+      next.objects.push({ id: APB.state.uid(), type: o.type, name: o.name, status: o.status, purpose: o.purpose, parent: '', detail: {} });
+      added.push('object ' + o.name);
+    });
+    const nowNames = nb.objects.map(function (o) { return o.name; });
+    const dropped = base.objects.map(function (o) { return o.name; }).filter(function (n) { return n && nowNames.indexOf(n) < 0 && have.indexOf(n) >= 0; });
+
+    next.source = Object.assign({}, dev.source, { base: nb, at: today(), fsName: APB.fs.model.name(st.fs) });
+    return { state: APB.state.migrate(next), kept: kept, added: added, dropped: dropped };
+  }
+
+  /* "Keep my version": accept the current FS as the new baseline without changing the content. */
+  function dismiss(dev) {
+    const st = status(dev);
+    if (!st.next) return null;
+    const next = JSON.parse(JSON.stringify(dev));
+    next.source = Object.assign({}, dev.source, { base: snapshot(st.next), at: today() });
+    return APB.state.migrate(next);
+  }
+
+  /* Technical drafts created from this FS, with their status. */
+  function linkedTo(fs) {
+    if (!fs || !fs.key) return [];
+    const ST = APB.storage;
+    return ST.list().filter(function (d) { return d.kind !== 'fs'; }).map(function (d) { return load(d.id); })
+      .filter(function (s) { return s && s.source && s.source.fsKey === fs.key; })
+      .map(function (s) { const st = status(s); return { id: s.id, label: s.source.label || s.project.name, state: st.state }; });
+  }
+
+  APB.specLink = { normalizeSource: normalizeSource, snapshot: snapshot, stamp: stamp, status: status, update: update, dismiss: dismiss, linkedTo: linkedTo, findFs: findFs };
 })(window.APB = window.APB || {});
 
 </script>
@@ -15621,6 +15821,21 @@ window.APB_CONFIG = {
     }).join('');
   }
 
+  /* Technical spec created from a functional spec: is the FS still the same? (spec-link.js) */
+  function linkBanner(s) {
+    if (!s.source) return '';
+    const st = APB.specLink.status(s);
+    const from = 'Created from the functional spec <strong>' + esc(s.source.fsName || 'FS') + '</strong>' + (s.source.label ? ' (' + esc(s.source.label) + ')' : '');
+    if (st.state === 'current') return '<p class="link-banner muted small">✓ ' + from + ' · up to date</p>';
+    if (st.state === 'missing') return '<p class="link-banner note">' + from + '. That FS is not in Drafts – upload its .md to check it for changes.</p>';
+    if (st.state === 'gone') return '<p class="link-banner note">' + from + '. The item is no longer in that FS – this spec is kept as it is. <button type="button" class="link" data-action="link-open-fs">Open the FS</button></p>';
+    return '<div class="link-banner note" role="status"><p><strong>The functional spec changed</strong> since ' + esc(s.source.at || 'this spec was created') + ': ' + esc(st.changes.join(', ')) + '. ' + from + '.</p>' +
+      '<p class="small">Update takes over only what came from the FS; what you added or edited here stays.</p>' +
+      '<div class="gen-actions"><button type="button" class="btn btn-primary btn-sm" data-action="link-update">Update from FS</button>' +
+      '<button type="button" class="btn btn-ghost btn-sm" data-action="link-keep">Keep my version</button>' +
+      '<button type="button" class="link small" data-action="link-open-fs">Open the FS</button></div></div>';
+  }
+
   function renderMain() {
     const s = S.get();
     if (stream) { clearInterval(stream.timer); stream = null; }
@@ -15629,7 +15844,7 @@ window.APB_CONFIG = {
       if (info) { $('#main').innerHTML = APB.agentsGuide.html(); return; }
       const html = isFs() ? (ui.generated ? FA.generatedView(s, ui) : FA.renderStep(ui.step, s, ui))
         : ui.generated ? generatedView(s) : [step1, step2, step3, step4, step5][ui.step - 1](s);
-      $('#main').innerHTML = '<p class="step-count">' + (ui.generated ? 'Done' : 'Step ' + ui.step + ' of ' + steps().length) + '</p>' + html;
+      $('#main').innerHTML = '<p class="step-count">' + (ui.generated ? 'Done' : 'Step ' + ui.step + ' of ' + steps().length) + '</p>' + (isFs() ? '' : linkBanner(s)) + html;
     });
     applyChrome();
     renderStepper();
@@ -16004,6 +16219,28 @@ window.APB_CONFIG = {
       inp.click();
     },
     copy: copyMarkdown,
+    'link-update': function () {
+      const r = APB.specLink.update(S.get());
+      if (!r) return;
+      S.replace(r.state);
+      renderMain();
+      toast('Updated from the FS' + (r.added.length ? ': ' + r.added.join(', ') : '') + (r.kept.length ? ' · kept ' + r.kept.join(', ') : '') + (r.dropped.length ? ' · no longer named in the FS: ' + r.dropped.join(', ') : ''), 8000);
+    },
+    'link-keep': function () {
+      const next = APB.specLink.dismiss(S.get());
+      if (!next) return;
+      S.replace(next);
+      renderMain();
+      toast('Kept your version – later FS changes will be offered again');
+    },
+    'link-open-fs': function () {
+      const fs = S.get().source && APB.specLink.findFs(S.get().source.fsKey);
+      if (fs) loadState(fs, 'Functional specification opened');
+    },
+    'link-open': function (el) {
+      const d = ST.load(el.dataset.id);
+      if (d) loadState(d, 'Technical spec opened');
+    },
     vscode: function () {
       const s = S.get();
       if (isFs()) { FA.actions['fs-discover'](); return; }
@@ -16220,6 +16457,10 @@ window.APB_CONFIG = {
       const what = r.state.kind === 'fs' ? 'Functional specification' : 'Technical specification';
       loadState(r.state, r.mode === 'partial' ? what + ' partly restored from the Markdown – check every step' :
         r.edited ? what + ' restored as generated – manual edits made in the file are not taken over' : what + ' restored from ' + file.name);
+      // an uploaded FS only changes itself; Technical specs created from it offer the update when opened
+      const linked = r.state.kind === 'fs' ? APB.specLink.linkedTo(S.get()) : [];
+      const changed = linked.filter(function (x) { return x.state === 'changed'; }).length;
+      if (linked.length) toast(what + ' restored · ' + linked.length + ' Technical spec' + (linked.length > 1 ? 's were' : ' was') + ' created from it' + (changed ? ' – ' + changed + ' can be updated (step 3)' : ' – up to date'), 8000);
     }).catch(function (err) { toast((err && err.message) || 'The file could not be read', 7000); });
   }
 

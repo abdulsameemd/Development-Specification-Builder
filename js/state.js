@@ -42,6 +42,7 @@
       rules: [],
       acceptance: [],
       assumptions: '',
+      source: null,
       quality: { authorization: '', authChecks: [], dataVolume: '', performanceReq: '', testTypes: ['Unit', 'Functional', 'Integration'], testScenarios: '', cleanCore: '', cleanCoreNote: '' },
       dod: defaultDod(),
       meta: { created: now, updated: now }
@@ -70,6 +71,8 @@
     s.rules = arr(input.rules).map(function (r) { return { id: str(r.id) || uid(), condition: str(r.condition), behavior: str(r.behavior) }; });
     s.acceptance = arr(input.acceptance).map(function (a) { return { id: str(a.id) || uid(), text: str(a.text) }; });
     s.assumptions = str(input.assumptions);
+    // link to the functional spec it was created from (spec-link.js); null for specs written directly
+    s.source = APB.specLink ? APB.specLink.normalizeSource(input.source) : null;
     if (input.quality && typeof input.quality === 'object') Object.assign(s.quality, clone(input.quality));
     // schema 1 kept a single authorization object text
     if (s.quality.authObject && !s.quality.authChecks.length) s.quality.authChecks = [{ object: s.quality.authObject }];

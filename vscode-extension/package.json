@@ -3,7 +3,7 @@
   "name": "dewa-sap-spec-builder",
   "displayName": "DEWA SAP Spec Builder",
   "description": "Functional and development specifications for SAP, inside VS Code – with read-only SAP system discovery through GitHub Copilot and the SAP MCP servers.",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "publisher": "dewa",
   "license": "UNLICENSED",
   "private": true,

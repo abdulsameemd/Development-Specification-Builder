@@ -633,3 +633,6 @@ body.is-info .preview-panel, body.is-info .view-tabs, body.is-info .stepper { di
 .draft-review ul { margin: 6px 0 0 26px; padding: 0; color: var(--muted); }
 .fs-system .type-grid { margin: 10px 0 14px; }
 .fs-system .type-ico { font-size: .72rem; font-weight: 900; }
+.link-banner { margin: 0 0 14px; }
+div.link-banner p { margin: 0 0 6px; }
+.chip.chip-warn { border-color: var(--amber); }

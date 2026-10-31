@@ -87,7 +87,9 @@
 
   function blank() {
     const now = Date.now();
-    const s = { kind: 'fs', schema: SCHEMA_VERSION, id: uid(), discovery: null, meta: { created: now, updated: now } };
+    // key: stable identity of the FS across share links and uploads (id is renewed there); Technical specs made from
+    // this FS point to it (spec-link.js)
+    const s = { kind: 'fs', schema: SCHEMA_VERSION, id: uid(), key: uid(), discovery: null, meta: { created: now, updated: now } };
     cfg.sections.forEach(function (sec) { s[sec.id] = {}; });
     s.control.version = '0.1';
     s.control.status = 'draft';
@@ -126,6 +128,7 @@
     const s = blank();
     if (!input || typeof input !== 'object') return s;
     s.id = typeof input.id === 'string' && input.id ? input.id : s.id;
+    if (typeof input.key === 'string' && /^[\w-]{4,40}$/.test(input.key)) s.key = input.key;
     cfg.sections.forEach(function (sec) { Object.assign(s[sec.id], coerce(sec.fields, input[sec.id])); });
     if (!s.control.status) s.control.status = 'draft';
     // specs from before the system choice were SAP specs whenever a module was set

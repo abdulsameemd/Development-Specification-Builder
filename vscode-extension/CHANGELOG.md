@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.8
+
+- **Technical specs stay in step with their functional spec.** A Technical spec created from an FS, from a RICEFW item or "change the program", remembers its source.
+  - When the FS changes, including after an upload, the Technical spec shows what changed.
+  - **Update from FS** takes over only what came from the FS. Everything the developer added or edited stays.
+  - **Keep my version** accepts the change without updating.
+  - The FS lists its Technical specs, each marked *up to date* or *FS changed*.
+- **Upload still restores only the spec you upload.** Nothing flows from a Technical spec back to the FS.
+
 ## 1.0.7
 
 - **Simpler functional specs.** Three steps instead of five: *Requirement*, *Process & requirements* and *Solution & sign-off*. Rarely used fields sit under **More details**.
