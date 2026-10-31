@@ -81,13 +81,14 @@
     }
     if (ctl['Document ID']) s.control.docId = ctl['Document ID'];
     if (ctl.Version) s.control.version = ctl.Version;
-    const br = sec['Business Requirement'] || '';
+    // current headings first, then those of files generated before the 8-section layout
+    const br = sec['Business Requirement & Scope'] || sec['Business Requirement'] || '';
     s.context.requirement = firstParas(br);
     const pa = /\*\*Process area:\*\*\s*(.+)/.exec(br);
     if (pa) s.context.processArea = pa[1].trim();
     s.context.objectives = bullets(sub(br, 'Objectives')).join('\n');
     s.context.kpis = bullets(sub(br, 'KPIs / success measures')).join('\n');
-    const sc = sec.Scope || '';
+    const sc = sec.Scope || br;
     s.context.inScope = bullets(sub(sc, 'In scope')).join('\n');
     s.context.outOfScope = bullets(sub(sc, 'Out of scope')).join('\n');
     const procRows = function (text, last) {
@@ -98,8 +99,8 @@
         return row;
       }).filter(function (r) { return r.step; });
     };
-    s.process.asIs = procRows(sec['Current Process (AS-IS)'], 'pain');
-    s.process.toBe = procRows(sec['Proposed Process (TO-BE)'], 'change');
+    s.process.asIs = procRows(sec['Current Process (AS-IS)'] || sub(sec.Process, 'Current process (AS-IS)'), 'pain');
+    s.process.toBe = procRows(sec['Proposed Process (TO-BE)'] || sub(sec.Process, 'Proposed process (TO-BE)'), 'change');
     const frSec = sec['Functional Requirements'] || '';
     const frField = F.field('reqs', 'frs');
     s.reqs.frs = table(frSec).map(function (r) {
@@ -113,7 +114,7 @@
         acceptance: bullets(block).filter(function (b) { return /^AC-/.test(b); }).map(function (b) { return b.replace(/^AC-[\d.]+\s*/, ''); }).filter(function (b) { return b && b !== TBC; }).join('\n')
       };
     }).filter(function (f) { return f.title; });
-    s.reqs.rules = table(sec['Business Rules & Validations']).map(function (r) {
+    s.reqs.rules = table(sec['Business Rules & Validations'] || sub(frSec, 'Business rules & validations')).map(function (r) {
       return { rule: r.Rule || '', type: optionValue(col(F.field('reqs', 'rules'), 'type'), r.Type), outcome: r['Message / outcome'] || '', fr: r.FR || '' };
     }).filter(function (r) { return r.rule; });
     return s;

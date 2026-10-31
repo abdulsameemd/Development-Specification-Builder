@@ -149,9 +149,9 @@ kbd { border: 1px solid var(--line-strong); border-bottom-width: 2px; border-rad
 .hero-cta { display: flex; gap: 10px; flex-wrap: wrap; }
 
 /* ---------- stepper (progress track) ---------- */
-.stepper { --p: 0; position: relative; display: grid; grid-template-columns: repeat(5, 1fr); list-style: none; margin: 0 0 22px; padding: 0; }
-.stepper::before, .stepper::after { content: ''; position: absolute; top: 17px; left: 10%; right: 10%; height: 3px; border-radius: 3px; background: var(--line-strong); }
-.stepper::after { right: auto; width: calc(80% * var(--p)); background: var(--grad); box-shadow: 0 0 14px rgba(163, 230, 53, .6); transition: width .5s cubic-bezier(.2, .8, .2, 1); }
+.stepper { --p: 0; --n: 5; position: relative; display: grid; grid-template-columns: repeat(var(--n), 1fr); list-style: none; margin: 0 0 22px; padding: 0; }
+.stepper::before, .stepper::after { content: ''; position: absolute; top: 17px; left: calc(50% / var(--n)); right: calc(50% / var(--n)); height: 3px; border-radius: 3px; background: var(--line-strong); }
+.stepper::after { right: auto; width: calc((100% - 100% / var(--n)) * var(--p)); background: var(--grad); box-shadow: 0 0 14px rgba(163, 230, 53, .6); transition: width .5s cubic-bezier(.2, .8, .2, 1); }
 .stepper li { position: relative; z-index: 1; display: flex; justify-content: center; }
 .stepper button { display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; border: 0; font: inherit; font-weight: 600; font-size: .85rem; color: var(--muted); padding: 0 6px; cursor: pointer; }
 .step-n { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--panel-solid); border: 2px solid var(--line-strong); font-family: var(--mono); font-size: .85rem; color: var(--muted); transition: all .25s; }

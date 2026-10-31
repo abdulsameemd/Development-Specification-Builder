@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.7
+
+- **Simpler functional specs.** Three steps instead of five: *Requirement*, *Process & requirements* and *Solution & sign-off*. Rarely used fields sit under **More details**.
+  - The document has at most eight sections. Fit-gap and traceability are one table, and stakeholders, rules and data are subsections.
+  - The separate *Transactions & Fiori apps* card is gone. Process steps keep the type-ahead by description, which now also offers what discovery found.
+- **Generate the whole spec with Copilot.** Step 1's AI card writes the complete spec, now including data, roles, interfaces, outputs, NFRs and fit-gap (SAP). After the review, the document opens directly.
+- **Read an existing program** (SAP).
+  - Copilot reads named programs, transactions, classes or function modules and the objects they use, read-only through the SAP MCP servers.
+  - In the background it runs with the same read-only tool filter as discovery; in Copilot Chat it uses `dewa-fs-discovery`.
+  - The current logic, the objects read, the AS-IS steps, rules, data and current behaviour as FRs come back for review.
+  - **→ Technical spec: change …** creates a Development Specification that changes the program.
+
 ## 1.0.6
 
 - **Copilot Chat sends the prompt itself.** Builder buttons that open Copilot Chat no longer wait for you to press Enter: the development spec to `dewa-abap`, discovery in Chat, and the new chat buttons below. Turn it off with `dewaSpecBuilder.chatAutoSend`.

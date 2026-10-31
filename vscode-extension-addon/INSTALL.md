@@ -6,13 +6,16 @@ Adds the **SAP Spec Builder** to DEWA's VS Code extension, so consultants and de
   opens the builder as an editor tab — the same app as the standalone HTML file, Functional and Technical mode.
 - The user signs in to **GitHub Copilot** in VS Code (button in the builder or the Accounts menu). VS Code handles the
   sign-in; the builder only sees the account name.
-- **Discover automatically** (Functional, step 4) reads the SAP system **read-only** with the Copilot model and the
+- **Discover automatically** (Functional, step 3) reads the SAP system **read-only** with the Copilot model and the
   read tools of the ABAP ADT / Fiori / UI5 / CAP MCP servers, shows progress in the panel and imports the result.
 - **Run in Copilot Chat** opens Copilot Chat beside the panel with `dewa-fs-discovery` and the prompt filled in; the
   agent hands the result back through the `dewa_submitContextPack` tool.
-- **Draft with Copilot** (Functional, step 1) drafts the missing parts of an FS from the business requirement with the
-  Copilot model – one request, no tools – and the builder shows it for review (`src/draftRunner.js`). **Draft in
+- **Generate with Copilot** (Functional, step 1) writes the whole FS from the business requirement with the
+  Copilot model – one request, no tools – and the builder shows it for review (`src/draftRunner.js`). **Generate in
   Copilot Chat** runs it in Chat (agent mode); Chat hands the draft back with the `dewa_submitFsDraft` tool.
+- **Read an existing program** (Functional, step 1, SAP) reads programs and the objects they use read-only with the same
+  tool filter as discovery (`src/programReader.js`), or in Copilot Chat with `dewa-fs-discovery`; the logic comes back
+  as an `fs-draft` for review.
 - **Open in Copilot Chat** on a functional spec opens Chat in *ask* mode with a review prompt and the FS.
 - Chat buttons send the prompt automatically (setting `dewaSpecBuilder.chatAutoSend`, default `true`).
 - Word / Markdown files are saved through a VS Code save dialog (default: the workspace folder). In Technical mode,
@@ -22,7 +25,7 @@ The standalone browser version keeps working as before (copy & paste or `vscode:
 
 ## Quick path: the standalone VSIX
 
-`dist/dewa-sap-spec-builder-1.0.6.vsix` (built by `node scripts/build-vsix.js` from `vscode-extension/` and this folder)
+`dist/dewa-sap-spec-builder-1.0.7.vsix` (built by `node scripts/build-vsix.js` from `vscode-extension/` and this folder)
 is a ready-to-install extension, `dewa.dewa-sap-spec-builder`, that runs next to DEWA's existing extension. It also
 installs `dewa-fs-discovery.agent.md` into the VS Code prompts folder (setting `dewaSpecBuilder.installAgent`; an edited
 copy is never replaced; *DEWA: Reinstall dewa-fs-discovery agent*). Install it with *Extensions → … → Install from VSIX…*.
@@ -47,6 +50,7 @@ VS Code ┌───────────────────────
 |---|---|
 | `src/index.js` | Entry point: panel, command, serializer, status-bar item, submit tool, URI handler (`/builder`, `/discover`) |
 | `src/specBuilderPanel.js` | Webview panel: loads the builder with a strict CSP + nonce, validated message routing |
+| `src/programReader.js` | Read an existing program: read-only tool loop (discoveryRunner) returning an `fs-draft` |
 | `src/draftRunner.js` | AI draft of an FS: one Copilot request without tools, one repair turn |
 | `src/discoveryRunner.js` | Automatic discovery: Copilot model + read-only MCP tools, round limit, cancellation |
 | `src/submitPackTool.js` | `dewa_submitContextPack` and `dewa_submitFsDraft` language-model tools (Copilot Chat → panel) |
@@ -90,7 +94,7 @@ VS Code ┌───────────────────────
 ## Verify on a DEWA machine
 
 1. **DEWA: Open SAP Spec Builder** → the builder opens in a tab; the status bar shows *Spec Builder*.
-2. Functional → Examples → *FI-AP: Vendor open items ageing* → step 4. The card shows *GitHub Copilot · not signed in*
+2. Functional → Examples → *FI-AP: Vendor open items ageing* → step 3. The card shows *GitHub Copilot · not signed in*
    → **Sign in to GitHub Copilot** → VS Code's GitHub sign-in → *signed in as …*.
 3. **Discover automatically**. First time only, VS Code asks to allow the extension to use the Copilot language model —
    allow it. The log lists the model, the number of read tools, each tool call, and any excluded write tools; the pack

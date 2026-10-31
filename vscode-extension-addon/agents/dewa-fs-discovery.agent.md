@@ -2,8 +2,8 @@
 description: Read-only SAP system discovery for functional specifications. Reads the DEWA SAP system through the ABAP ADT, Fiori, UI5 and CAP MCP servers and returns a JSON context pack for the SAP Specification Builder. Never changes anything.
 # Limit the agent to read tools. Replace the server names with the ones in your mcp.json (keep only read operations
 # where the server lets you pick individual tools), e.g. 'sap-abap-adt/*', 'sap-fiori/*', 'sap-ui5/*', 'sap-cap/*'.
-# dewa_submitContextPack (from the DEWA extension) hands the pack to the SAP Spec Builder panel.
-tools: ['sap-abap-adt/*', 'sap-fiori/*', 'sap-ui5/*', 'sap-cap/*', 'dewa_submitContextPack']
+# dewa_submitContextPack and dewa_submitFsDraft (from the DEWA extension) hand the result to the SAP Spec Builder panel.
+tools: ['sap-abap-adt/*', 'sap-fiori/*', 'sap-ui5/*', 'sap-cap/*', 'dewa_submitContextPack', 'dewa_submitFsDraft']
 ---
 
 # dewa-fs-discovery — read-only SAP system discovery
@@ -72,6 +72,21 @@ objects or existing implementations). Then return **exactly one** fenced `json` 
   imports the pack into the SAP Spec Builder panel (it changes nothing in SAP). If the tool is not available, the
   consultant copies your answer and clicks **Import from clipboard** in the builder.
 - **Automatic discovery** (started from the builder panel) uses these instructions too; there, just return the answer.
+
+## Program logic mode (`FS-PROGRAM v1`)
+
+When the prompt starts with `FS-PROGRAM v1`, the consultant wants to know what an **existing program** does today. The
+hard rules above apply unchanged (read only, never invent, no table contents).
+
+- For a transaction code, find the program or app behind it first.
+- Read the source, includes, selection screen / parameters, and the function modules, classes, BAdIs and CDS views it
+  calls; note the tables it reads and writes, its messages and its authorization checks. Stop when the business logic
+  is clear – do not read the whole call tree.
+- Describe the logic in business words. Technical names go only into `programs` and the data `table` column.
+- Return **one `fs-draft` JSON block** (not a context pack) with `currentLogic`, `programs`, `asIs`, `rules`, `data`
+  and `frs`, exactly as the prompt shows. List objects you could not read under "Not read:" in `currentLogic`.
+- **In Copilot Chat:** then call the `dewa_submitFsDraft` tool once with the same JSON object. The builder shows it to
+  the consultant for review.
 
 ## After the pack
 

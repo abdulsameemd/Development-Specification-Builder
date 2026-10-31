@@ -12,6 +12,7 @@ const path = require('path');
 const crypto = require('crypto');
 const runner = require('./discoveryRunner');
 const drafter = require('./draftRunner');
+const programReader = require('./programReader');
 const fsDiscovery = require('./fsDiscovery');
 const submitTool = require('./submitPackTool');
 
@@ -144,6 +145,40 @@ function createRouter(vscode, context, deps) {
           model: deps.config().get('model', ''),
           token: cts.token,
           onProgress: function (p) { deps.post({ type: 'draft-progress', text: p.text }); }
+        });
+        deps.post({ type: 'draft-result', text: text });
+      } catch (e) {
+        deps.post({ type: 'draft-error', code: e.code || 'FAILED', message: String(e && e.message || e) });
+      } finally {
+        if (cts) cts.dispose();
+        cts = null;
+      }
+      return true;
+    },
+    /* Read an existing program (read-only) → fs-draft for the review dialog. */
+    'read-program': async function (m) {
+      if (!str(m.prompt, 200000) || m.prompt.indexOf(programReader.MARKER) !== 0 || ['auto', 'chat'].indexOf(m.mode) < 0) return false;
+      const auth = await deps.getAuth();
+      if (!auth.copilot) { deps.post({ type: 'draft-error', code: 'NO_COPILOT', message: 'GitHub Copilot Chat is not installed in VS Code.' }); return true; }
+      if (!auth.signedIn) { deps.post({ type: 'draft-error', code: 'SIGNED_OUT', message: 'Sign in to GitHub Copilot first.' }); return true; }
+      if (m.mode === 'chat') {
+        const sent = chat.autoSend ? chat.autoSend() : false;
+        const how = await chat.openChat(m.prompt + DRAFT_SUFFIX);
+        deps.post({ type: 'draft-progress', text: (sent ? 'Copilot Chat is reading the program with ' + fsDiscovery.AGENT : 'The prompt is in Copilot Chat (' + fsDiscovery.AGENT + ') – press Enter there') + (how === 'agent' ? '' : ' (agent mode)') + '; the result comes back here for review' });
+        return true;
+      }
+      if (cts) { deps.post({ type: 'draft-error', code: 'BUSY', message: 'Copilot is already working on a request.' }); return true; }
+      cts = new vscode.CancellationTokenSource();
+      const cfg = deps.config();
+      try {
+        const text = await programReader.run(vscode, {
+          prompt: m.prompt,
+          allowPatterns: cfg.get('discoveryTools', []),
+          maxRounds: cfg.get('maxToolRounds', 25),
+          model: cfg.get('model', ''),
+          exclude: [submitTool.TOOL_NAME, submitTool.DRAFT_TOOL_NAME],
+          token: cts.token,
+          onProgress: function (p) { deps.post(Object.assign({ type: 'draft-progress' }, p, { key: p.key || 'info' })); }
         });
         deps.post({ type: 'draft-result', text: text });
       } catch (e) {

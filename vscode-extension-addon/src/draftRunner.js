@@ -8,7 +8,7 @@ const { pickModel } = require('./discoveryRunner');
 const MARKER = 'FS-DRAFT v1';
 const JUSTIFICATION = 'Drafts the missing parts of a functional specification from its business requirement.';
 
-function hasDraft(text) { return /\{[\s\S]*\}/.test(text || '') && /"(frs|toBe|objectives)"/.test(text || ''); }
+function hasDraft(text) { return /\{[\s\S]*\}/.test(text || '') && /"(frs|toBe|objectives|currentLogic|asIs|programs)"/.test(text || ''); }
 
 function cancelled(token) {
   if (token && token.isCancellationRequested) { const e = new Error('Drafting stopped.'); e.code = 'CANCELLED'; throw e; }

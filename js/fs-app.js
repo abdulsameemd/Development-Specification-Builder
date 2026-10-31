@@ -77,30 +77,70 @@
   }
 
   /* ------------------------------------------------------------- AI draft */
-  const drf = { running: false, mode: '', status: '', error: '', pending: null };
+  /* One Copilot job at a time: kind 'draft' (generate the spec) or 'program' (read an existing program). */
+  const drf = { running: false, kind: '', mode: '', status: '', error: '', pending: null, pendingKind: '', log: [] };
   /* Copilot Chat sends prompts itself unless dewaSpecBuilder.chatAutoSend is off (reported with the auth status). */
   function autoSend() { return !disc.auth || disc.auth.chatAutoSend !== false; }
 
+  function copilotReady() { const a = disc.auth; return !!(a && a.copilot && a.signedIn); }
+
+  function runningHtml() {
+    return '<button type="button" class="btn btn-ghost" data-action="fs-draft-stop">' + (drf.mode === 'chat' ? 'Stop waiting' : 'Stop') + '</button><span class="muted small fs-draft-status">' + esc(drf.status || 'Copilot is working…') + '</span>';
+  }
+
+  function draftLogHtml() {
+    if (!drf.log.length) return '';
+    const icon = { running: '…', done: '✓', blocked: '⛔', error: '✗', info: '›' };
+    return '<ol class="fs-log" aria-live="polite">' + drf.log.map(function (l) { return '<li class="' + esc(l.status || 'info') + '"><span aria-hidden="true">' + (icon[l.status] || '›') + '</span> ' + esc(l.text) + '</li>'; }).join('') + '</ol>';
+  }
+
   function draftCard(s) {
     const ready = (s.context.requirement || '').trim().length >= 10;
-    const a = disc.auth;
-    const copilotReady = a && a.copilot && a.signedIn;
+    const can = ready && copilotReady() && !drf.running;
     const vs = H.isVscode ? '<div class="chips fs-copilot">' + copilotStatus() + '</div>' : '';
     const run = H.isVscode
-      ? (drf.running
-        ? '<button type="button" class="btn btn-ghost" data-action="fs-draft-stop">' + (drf.mode === 'chat' ? 'Stop waiting' : 'Stop') + '</button><span class="muted small">' + esc(drf.status || 'Copilot is drafting…') + '</span>'
-        : '<button type="button" class="btn btn-primary" data-action="fs-draft-run"' + (ready && copilotReady ? '' : ' disabled') + '>✦ Draft with Copilot</button>' +
-          '<button type="button" class="btn btn-ghost" data-action="fs-draft-chat"' + (ready && copilotReady ? '' : ' disabled') + ' title="Watch and steer the draft in Copilot Chat; the result comes back here for review">Draft in Copilot Chat</button>')
+      ? (drf.running && drf.kind === 'draft'
+        ? runningHtml()
+        : '<button type="button" class="btn btn-primary" data-action="fs-draft-run"' + (can ? '' : ' disabled') + '>✦ Generate with Copilot</button>' +
+          '<button type="button" class="btn btn-ghost" data-action="fs-draft-chat"' + (can ? '' : ' disabled') + ' title="Watch and steer it in Copilot Chat; the result comes back here for review">Generate in Copilot Chat</button>')
       : '<button type="button" class="btn btn-primary" data-action="fs-draft-copy"' + (ready ? '' : ' disabled') + '>✦ Copy AI prompt</button>';
     const paste = '<details class="paste"' + U().detailsAttrs('fs-draft-paste', false) + '><summary>' + (H.isVscode ? 'Use another AI chat instead' : 'Paste the AI answer') + '</summary>' +
       (H.isVscode ? '<p class="small muted"><button type="button" class="link" data-action="fs-draft-copy">Copy the prompt</button>, paste it into an AI chat your organisation allows, then paste the whole answer here.</p>' : '<label for="fs-draft-answer" class="small muted">The whole answer, or only its ```json block.</label>') +
       '<textarea id="fs-draft-answer" rows="5" spellcheck="false"></textarea>' +
       '<button type="button" class="btn btn-ghost btn-sm" data-action="fs-draft-review">Review the answer</button></details>';
-    return '<section class="card fs-draft" aria-labelledby="h-draft"><h3 id="h-draft">✦ Draft the rest with AI <span class="hint">optional</span></h3>' +
-      '<p class="muted small">From your requirement, AI proposes objectives, scope, process steps, functional requirements with acceptance criteria, rules, test scenarios and risks. You review it before anything is added, and nothing you typed is overwritten.' +
-      (H.isVscode ? ' Uses your GitHub Copilot in VS Code – no system access. <strong>Draft in Copilot Chat</strong> lets you watch and steer it.' : ' Copy the prompt, paste it into an AI chat your organisation allows (for example Copilot Chat), then paste the answer below.') + '</p>' +
+    return '<section class="card fs-draft" aria-labelledby="h-draft"><h3 id="h-draft">✦ Generate the whole spec with Copilot <span class="hint">recommended</span></h3>' +
+      '<p class="muted small">From your requirement, Copilot writes the complete specification: objectives, scope, process, functional requirements with acceptance criteria, rules, data, roles, interfaces, test scenarios and risks. You review it before anything is added, nothing you typed is overwritten, and the document opens right after.' +
+      (H.isVscode ? ' Uses your GitHub Copilot in VS Code – no system access. <strong>Generate in Copilot Chat</strong> lets you watch and steer it.' : ' Copy the prompt, paste it into an AI chat your organisation allows (for example Copilot Chat), then paste the answer below.') + '</p>' +
       vs + '<div class="gen-actions">' + run + (ready ? '' : '<span class="muted small">Describe the requirement first.</span>') + '</div>' +
-      (drf.error ? '<p class="field-error" role="alert">' + esc(drf.error) + '</p>' : '') + paste + '</section>';
+      (drf.error && drf.kind !== 'program' ? '<p class="field-error" role="alert">' + esc(drf.error) + '</p>' : '') + paste + '</section>';
+  }
+
+  /* SAP only: read an existing program (and what it uses) read-only, and bring its logic into the spec. */
+  function programCard(s) {
+    const names = APB.storage.getPref('programNames', '');
+    const can = copilotReady() && !drf.running;
+    const run = H.isVscode
+      ? (drf.running && drf.kind === 'program'
+        ? runningHtml()
+        : '<button type="button" class="btn btn-primary" data-action="fs-prog-auto"' + (can ? '' : ' disabled') + '>Read automatically</button>' +
+          '<button type="button" class="btn btn-ghost" data-action="fs-prog-chat"' + (can ? '' : ' disabled') + '>Read in Copilot Chat</button>')
+      : '<button type="button" class="btn btn-primary" data-action="fs-prog-copy">Copy prompt</button>';
+    return '<section class="card fs-prog" aria-labelledby="h-prog"><h3 id="h-prog">Read an existing program <span class="hint">optional</span></h3>' +
+      '<p class="muted small">Copilot reads the program, the objects it uses and the SAP system <strong>read-only</strong> through the SAP MCP servers, and describes the current logic in business words: current process, business rules, data, current behaviour as requirements. You review it before it is added. Afterwards you can create a Technical spec that changes the program.' +
+      (H.isVscode ? '' : ' In the browser: copy the prompt, paste it into Copilot Chat in VS Code with the <code class="agent-name">' + esc(DS.cfg.agent) + '</code> agent, then paste the answer under <em>Paste the AI answer</em> above.') + '</p>' +
+      '<div class="field narrow"><label for="fs-prog-names">Programs, transactions, classes or function modules</label><input id="fs-prog-names" type="text" data-pref="programNames" value="' + esc(names) + '" placeholder="e.g. ZFI_AGEING, FBL1N" spellcheck="false"></div>' +
+      '<div class="gen-actions">' + run + '</div>' + (drf.kind === 'program' ? draftLogHtml() : '') +
+      (drf.error && drf.kind === 'program' ? '<p class="field-error" role="alert">' + esc(drf.error) + '</p>' : '') + '</section>';
+  }
+
+  /* All fields of a section in one form grid (no nested "Advanced details"); used inside "More details". */
+  function blockAll(sectionId, ids, exclude) {
+    const s = S.get();
+    const fields = fieldsOf(sectionId, ids, exclude).map(function (f) { return f.advanced ? Object.assign({}, f, { advanced: false }) : f; });
+    return fields.length ? U().fieldsBlock(fields, s[sectionId], sectionId) : '';
+  }
+  function more(id, title, html, open) {
+    return html ? '<details class="more"' + U().detailsAttrs(id, !!open) + '><summary>' + esc(title) + '</summary>' + html + '</details>' : '';
   }
 
   function step1(s, ui) {
@@ -112,6 +152,7 @@
     const tpls = F.templates.list().map(function (t) {
       return '<button type="button" class="chip" data-action="fs-template" data-id="' + esc(t.id) + '" title="' + esc(t.description) + '">' + esc(t.label) + '</button>';
     }).join('');
+    const ctxFilled = ['processArea', 'objectives', 'kpis', 'inScope', 'outOfScope', 'stakeholders', 'otherOrg'].some(function (k) { return V.isFilled(c[k]); });
     return header(1) + systemCards(s) +
       '<div class="grid-2"><div class="field"><label for="fs-title">Specification title</label><input id="fs-title" type="text" data-bind="context.title" value="' + esc(c.title) + '" placeholder="' + esc(F.view(F.field('context', 'title'), s).placeholder) + '"></div>' +
       (!sap ? '</div>' : '') + (sap ? '<div class="field"><label for="fs-module">Module <span class="req">required</span></label><select id="fs-module" data-bind="context.module"' + (missing.indexOf('module') >= 0 ? ' aria-invalid="true"' : '') + '>' +
@@ -120,50 +161,28 @@
       '<div class="field"><label for="fs-req">Business requirement <span class="req">required</span></label>' +
       '<textarea id="fs-req" class="tall" rows="7" data-bind="context.requirement" placeholder="' + esc(req.placeholder) + '"' + (missing.indexOf('requirement') >= 0 ? ' aria-invalid="true" aria-describedby="fs-req-err"' : '') + '>' + esc(c.requirement) + '</textarea>' +
       (missing.indexOf('requirement') >= 0 ? '<p id="fs-req-err" class="field-error" role="alert">Describe the business need (a sentence or two is enough).</p>' : '') + '</div>' +
-      draftCard(s) +
-      block('context', null, ['title', 'module', 'requirement']) +
-      (!sap ? '' : '<details class="more"' + U().detailsAttrs('fs-templates', false) + '><summary>Start from a module template</summary><p class="muted small">Adds typical process steps, FR headings and roles for the module — only where you have not typed anything. Want a complete FS? <button type="button" class="link" data-action="examples">Load an example</button>.</p><div class="chips">' + tpls + '</div></details>') +
+      draftCard(s) + (sap ? programCard(s) : '') +
+      more('fs-more-ctx', 'More details – process area, objectives, KPIs, scope, stakeholders', blockAll('context', null, ['title', 'module', 'requirement']) +
+        (!sap ? '' : '<p class="muted small">Start from a module template – adds typical process steps, FR headings and roles where you have not typed anything. Want a complete FS? <button type="button" class="link" data-action="examples">Load an example</button>.</p><div class="chips">' + tpls + '</div>'), ctxFilled) +
       '<div class="nav-row"><span class="spacer"></span>' +
       '<button type="button" class="btn btn-ghost" data-action="fs-quick" title="Create the document from what you have – the rest is listed as open questions">Create document now</button>' +
       '<button type="button" class="btn btn-primary" data-action="next">Continue <span aria-hidden="true">→</span></button></div>';
   }
 
-  /* Suggestions per step: from the SAP system (discovery stepMatches), else from the built-in standard list.
-     A functional consultant describes the step; the technical name is picked, not remembered. */
-  function stepSuggestions(s) {
-    const open = DS.processSteps(s).filter(function (p) { return !p.tx; });
-    const fromSystem = !!(s.discovery && s.discovery.stepMatches.length);
-    const rowsHtml = open.map(function (p) {
-      const c = DS.suggestions(s, p);
-      return '<li><span class="sg-step"><b>' + esc(p.label) + '</b> ' + esc(p.text) + '</span><span class="chips">' +
-        (c.length ? c.map(function (x) {
-          return '<button type="button" class="chip sg-' + x.source + '" data-action="fs-pick-tx" data-key="' + esc(p.key) + '" data-v="' + esc(x.id) + '" title="' + esc(x.source === 'system' ? 'Found in the SAP system' : 'SAP standard – check with discovery') + '">' +
-            esc(x.id) + ' <small>' + esc(x.title || '') + '</small></button>';
-        }).join('') : '<span class="muted small">no suggestion yet</span>') + '</span></li>';
-    }).join('');
-    const btn = '<button type="button" class="btn btn-primary btn-sm" data-action="fs-suggest">✦ Suggest from SAP</button>';
-    return '<section class="card fs-suggest" aria-labelledby="h-sg"><h3 id="h-sg">Transactions &amp; Fiori apps</h3>' +
-      '<p class="muted small">Describe each step in business words – no technical names needed. <strong>Suggest from SAP</strong> asks discovery to find the matching transactions and Fiori apps in your system (read-only); until then, well-known SAP standard transactions are suggested. Click a suggestion to use it, or type in the cell to search by description.</p>' +
-      (open.length ? '<ul class="sg-list">' + rowsHtml + '</ul>' : '<p class="muted small">Every step has a transaction or app.</p>') +
-      '<div class="gen-actions">' + btn + (fromSystem ? '<span class="chk ok">✓ suggestions from ' + esc(s.discovery.system.sid || 'the system') + '</span>' : '<span class="muted small">Showing SAP standard suggestions</span>') + '</div></section>';
-  }
-
   function step2(s) {
-    const asIs = (s.process.asIs || []).filter(V.isFilled);
-    const toBe = (s.process.toBe || []).filter(V.isFilled);
-    return header(2) +
-      block('process', ['asIs']) +
-      (asIs.length && !toBe.length ? '<p><button type="button" class="btn btn-ghost btn-sm" data-action="fs-copy-asis">Start TO-BE from the AS-IS steps</button></p>' : '') +
-      block('process', null, ['asIs']) +
-      (F.isSap(s) && (asIs.length || toBe.length) ? stepSuggestions(s) : '') +
-      '<h3>TO-BE flow</h3>' + flowHtml(s.process.toBe) +
-      U().nav(true, 'Continue');
-  }
-
-  function step3(s) {
+    const p = s.process;
+    const asIs = (p.asIs || []).filter(V.isFilled);
+    const toBe = (p.toBe || []).filter(V.isFilled);
     const c = FC.evaluate(s).counts;
     const summary = c.frs ? '<div class="fs-fit" aria-label="Fit-gap summary"><span><b>' + c.frs + '</b> FRs</span><span><b>' + c.must + '</b> must-have</span><span class="ok"><b>' + c.standard + '</b> standard / config</span><span class="gap"><b>' + c.gaps + '</b> gaps</span></div>' : '';
-    return header(3) + summary + block('reqs') + U().nav(true, 'Continue');
+    const moreFilled = asIs.length || V.isFilled(p.variants) || V.isFilled(p.currentLogic) || V.isFilled(p.programs) || V.isFilled(s.reqs.data);
+    return header(2) +
+      block('process', ['toBe']) +
+      (asIs.length && !toBe.length ? '<p><button type="button" class="btn btn-ghost btn-sm" data-action="fs-copy-asis">Start TO-BE from the AS-IS steps</button></p>' : '') +
+      (toBe.length ? '<h3>TO-BE flow</h3>' + flowHtml(p.toBe) : '') +
+      summary + block('reqs', ['frs', 'rules']) +
+      more('fs-more-proc', 'More details – current process (AS-IS), current program logic, variants, data', blockAll('process', ['asIs', 'currentLogic', 'programs', 'variants']) + blockAll('reqs', ['data']), moreFilled) +
+      U().nav(true, 'Continue');
   }
 
   function badge(status) {
@@ -213,7 +232,7 @@
   }
 
   function rerenderDiscovery() {
-    if (S.isFs() && !U().ui.generated && U().ui.step === 4 && !U().ui.view) U().renderMain();
+    if (S.isFs() && !U().ui.generated && U().ui.step === 3 && !U().ui.view) U().renderMain();
   }
 
   if (H.isVscode) {
@@ -303,39 +322,47 @@
       items.map(function (x) { return '<button type="button" class="chip" data-action="fs-handoff" data-i="' + x.i + '">→ ' + esc(x.id) + ' ' + esc(x.r.name || F.ricefwType(x.r.type).label) + '</button>'; }).join('') + '</div></div>';
   }
 
-  function step4(s) {
-    if (!F.isSap(s)) return header(4) + block('solution') + U().nav(true, 'Continue');
-    const gaps = FC.uncoveredGaps(s);
-    return header(4) + discoveryPanel(s) +
-      (gaps.length ? '<div class="refs" role="note"><strong>Gaps without a RICEFW item:</strong> ' + gaps.map(esc).join(', ') + ' — add an item and list the FR under “Covers FRs”.</div>' : '') +
-      block('solution', ['ricefw']) + handoffHtml(s) +
-      block('solution', null, ['ricefw']) +
-      U().nav(true, 'Continue');
+  /* "Technical spec from the program" – after Read an existing program. */
+  function programHandoffHtml(s) {
+    if (!F.isSap(s) || !mainProgram(s)) return '';
+    const m = mainProgram(s);
+    return '<div class="suggest fs-handoff"><p class="muted small">Change the existing program: create a <strong>Development Specification</strong> for <code class="agent-name">dewa-abap</code> with <code>' + esc(m.name) + '</code> as the object to change and the objects it uses as existing objects (this FS stays in Drafts).</p>' +
+      '<div class="chips"><button type="button" class="chip" data-action="fs-dev-from-program">→ Technical spec: change ' + esc(m.name) + '</button></div></div>';
   }
 
-  function step5(s, ui) {
+  function step3(s, ui) {
     const ev = FC.evaluate(s);
     const c = ev.counts;
-    return header(5) + U().statusHtml(ev, true) +
+    const sap = F.isSap(s);
+    const gaps = sap ? FC.uncoveredGaps(s) : [];
+    const solution = sap
+      ? discoveryPanel(s) +
+        (gaps.length ? '<div class="refs" role="note"><strong>Gaps without a RICEFW item:</strong> ' + gaps.map(esc).join(', ') + ' — add an item and list the FR under “Covers FRs”.</div>' : '') +
+        block('solution', ['ricefw']) + handoffHtml(s) + programHandoffHtml(s) +
+        more('fs-more-sol', 'More details – roles & authorizations, interfaces, outputs, configuration', blockAll('solution', null, ['ricefw']), ['roles', 'interfaces', 'outputs', 'customizing'].some(function (k) { return V.isFilled(s.solution[k]); }))
+      : block('solution');
+    const q = s.quality, ctl = s.control;
+    const moreFilled = ['performance', 'volume', 'availability', 'audit', 'privacy', 'risks'].some(function (k) { return V.isFilled(q[k]); }) || V.isFilled(ctl.docId) || V.isFilled(ctl.author) || V.isFilled(ctl.history);
+    return header(3) + U().statusHtml(ev, true) +
       '<div class="stats">' +
       U().stat('Requirements', c.frs + ' FRs<br>' + c.gaps + ' gaps') +
-      (F.isSap(s) ? U().stat('RICEFW', String(c.ricefw)) : U().stat('System', esc(F.systemLabel(s)))) +
+      (sap ? U().stat('RICEFW', String(c.ricefw)) : U().stat('System', esc(F.systemLabel(s)))) +
       U().stat('UAT scenarios', String(c.uat)) +
-      (F.isSap(s) ? U().stat('System context', s.discovery ? (s.discovery.sample ? 'sample pack' : '✓ discovered') : 'not run') : '') +
+      (sap ? U().stat('System context', s.discovery ? (s.discovery.sample ? 'sample pack' : '✓ discovered') : 'not run') : '') +
       U().stat('Open questions', String(ev.questions.length)) + '</div>' +
-      (ev.questions.length ? '<details class="more"' + U().detailsAttrs('fs-questions', false) + '><summary>Open questions (' + ev.questions.length + ')</summary><ol class="small">' + ev.questions.map(function (q) { return '<li>' + esc(q) + '</li>'; }).join('') + '</ol></details>' : '') +
-      '<h3>Non-functional requirements</h3>' + block('quality', ['performance', 'volume', 'availability', 'audit', 'privacy']) +
-      '<h3>Testing &amp; risks</h3>' +
+      (ev.questions.length ? '<details class="more"' + U().detailsAttrs('fs-questions', false) + '><summary>Open questions (' + ev.questions.length + ')</summary><ol class="small">' + ev.questions.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol></details>' : '') +
+      '<h3>Solution</h3>' + solution +
+      '<h3>Testing &amp; sign-off</h3>' +
       (FC.frs(s).length ? '<p><button type="button" class="btn btn-ghost btn-sm" data-action="fs-uat">Create UAT skeleton from FRs</button> <span class="muted small">one positive and one negative case per FR that has none yet</span></p>' : '') +
-      block('quality', ['uat', 'risks']) +
-      '<section class="card" aria-labelledby="h-ctl"><h3 id="h-ctl">Document control &amp; sign-off</h3>' + block('control') + '</section>' +
+      block('quality', ['uat']) + block('control', ['approvals']) +
+      more('fs-more-q', 'More details – non-functional requirements, risks, document control', blockAll('quality', ['performance', 'volume', 'availability', 'audit', 'privacy', 'risks']) + blockAll('control', ['docId', 'version', 'status', 'author', 'history']), moreFilled) +
       '<div class="nav-row"><button type="button" class="btn btn-ghost" data-action="back">Back</button><span class="spacer"></span>' +
       (ev.level === 'almost' ? '<button type="button" class="btn btn-ghost" data-action="missing">Add Missing Details</button>' : '') +
       '<button type="button" class="btn btn-primary btn-lg" data-action="generate"' + (ev.mandatory.length ? ' disabled' : '') + '>Generate Specification</button></div>' +
       (ev.mandatory.length ? '<p class="field-error" role="alert">Still needed: ' + ev.mandatory.map(function (r) { return esc(r.label.toLowerCase()); }).join(' and ') + '.</p>' : '');
   }
 
-  function renderStep(n, s, ui) { return [step1, step2, step3, step4, step5][n - 1](s, ui); }
+  function renderStep(n, s, ui) { return [step1, step2, step3][n - 1](s, ui); }
 
   function generatedView(s, ui) {
     const md = FM.build(s);
@@ -344,12 +371,12 @@
     return '<div class="gen-head"><h2 class="step-title">Your functional specification is ready</h2>' +
       '<p class="muted">Download it as <strong>Word</strong> for review and sign-off, or as Markdown (<code>' + esc(FM.filename()) + '</code>) for the project repository. ' +
       (!F.isSap(s) ? (qn ? qn + ' open question' + (qn > 1 ? 's are' : ' is') + ' listed at the end – <button type="button" class="link" data-action="edit">add the details</button> whenever you have them.' : '')
-        : s.discovery ? 'System facts come from the discovery pack of ' + esc((s.discovery.generatedAt || '').slice(0, 10) || 'unknown date') + '.' : 'Tip: run <button type="button" class="link" data-action="goto" data-step="4">system discovery</button> so the FS reflects the current SAP system.') + '</p></div>' +
+        : s.discovery ? 'System facts come from the discovery pack of ' + esc((s.discovery.generatedAt || '').slice(0, 10) || 'unknown date') + '.' : 'Tip: run <button type="button" class="link" data-action="goto" data-step="3">system discovery</button> so the FS reflects the current SAP system.') + '</p></div>' +
       '<div class="gen-actions"><button type="button" class="btn btn-primary btn-lg" data-action="fs-docx">' + DOWNLOAD_ICON + ' Download Word</button>' +
       '<button type="button" class="btn btn-ghost btn-lg" data-action="download">Download Markdown</button>' +
       '<button type="button" class="btn btn-ghost" data-action="copy">Copy Markdown</button>' +
       (H.isVscode ? '<button type="button" class="btn btn-ghost" data-action="fs-chat-review">Open in Copilot Chat</button>' : '<button type="button" class="btn btn-ghost" data-action="share">Copy share link</button>') +
-      '<button type="button" class="btn btn-ghost" data-action="edit">Review Details</button></div>' + ho +
+      '<button type="button" class="btn btn-ghost" data-action="edit">Review Details</button></div>' + ho + (F.isSap(s) ? programHandoffHtml(s) : '') +
       '<div class="seg gen-seg" role="group" aria-label="Format"><button type="button" data-action="view-rendered" aria-pressed="' + !ui.raw + '">Preview</button><button type="button" data-action="view-raw" aria-pressed="' + ui.raw + '">Markdown</button></div>' +
       '<div class="gen-doc md" tabindex="0" aria-label="Generated specification">' + (ui.raw ? '<pre>' + esc(md) + '</pre>' : APB.markdown.toHtml(md)) + '</div>';
   }
@@ -399,6 +426,48 @@
     });
   }
 
+  /* ------------------------------------------- Technical spec from a program */
+  function mainProgram(s) {
+    const l = (s.process.programs || []).filter(function (p) { return p && (p.name || '').trim(); });
+    return l.filter(function (p) { return p.role === 'main'; })[0] || l[0] || null;
+  }
+
+  function devObjectType(t) {
+    const v = PACK_TO_TYPE[String(t || '').toUpperCase()] || String(t || '');
+    return APB.defs.objectTypes.indexOf(v) >= 0 ? v : 'Other';
+  }
+
+  /* The program read by "Read an existing program" becomes the object to change; what it uses stays existing. */
+  function toDevSpecFromProgram(s) {
+    const main = mainProgram(s);
+    if (!main) return null;
+    const mainType = devObjectType(main.type);
+    const devType = APB.defs.typeKeys().filter(function (k) { return APB.defs.types[k].mainObject.indexOf(mainType) >= 0; })[0] || 'REPORT';
+    const objects = [{ type: mainType, name: main.name.trim().toUpperCase(), status: 'change', purpose: (main.description || '').trim() || 'Existing program to change' }];
+    (s.process.programs || []).forEach(function (p) {
+      if (!p || !(p.name || '').trim() || p === main) return;
+      if (objects.some(function (o) { return o.name === p.name.trim().toUpperCase(); })) return;
+      objects.push({ type: devObjectType(p.type), name: p.name.trim().toUpperCase(), status: 'existing', purpose: (p.description || '').trim() || 'Used by ' + main.name });
+    });
+    const frs = (s.reqs.frs || []).map(function (f, k) { return { f: f, id: F.frId(k) }; }).filter(function (x) { return V.isFilled(x.f); });
+    const reqText = [(s.context.requirement || '').trim(),
+      (s.process.currentLogic || '').trim() && 'Current logic of ' + main.name + ':\n' + s.process.currentLogic.trim()]
+      .concat(frs.map(function (x) { return x.id + ' ' + (x.f.title || '').trim() + ((x.f.description || '').trim() ? ': ' + x.f.description.trim() : ''); })).filter(Boolean).join('\n\n');
+    const acceptance = [];
+    frs.forEach(function (x) { APB.markdown.helpers.splitLines(x.f.acceptance).forEach(function (a) { acceptance.push({ text: a }); }); });
+    const rules = (s.reqs.rules || []).filter(V.isFilled).map(function (b) { return { condition: (b.rule || '').trim(), behavior: (b.outcome || '').trim() }; });
+    const docRef = 'Source: functional specification ' + ([s.control.docId, s.control.version && 'v' + s.control.version].filter(Boolean).join(' ') || '"' + F.model.name(s) + '"') + '; current logic read from ' + main.name + ' (read-only).';
+    return APB.state.migrate({
+      project: { name: [s.control.docId, 'Change ' + main.name.trim().toUpperCase()].filter(Boolean).join(' · ') },
+      types: [devType],
+      requirement: { text: reqText, objective: APB.markdown.helpers.splitLines(s.context.objectives).join('; '), users: '', expectedOutput: '' },
+      objects: objects.map(function (o) { o.id = S.uid(); o.detail = {}; return o; }),
+      rules: rules.map(function (b) { b.id = S.uid(); return b; }),
+      acceptance: acceptance.map(function (a) { a.id = S.uid(); return a; }),
+      assumptions: docRef
+    });
+  }
+
   /* UAT skeleton: one positive and one negative case per FR without any case yet. */
   function uatSkeleton(s) {
     const have = {};
@@ -437,6 +506,7 @@
     if (!parts.length) { drf.error = ''; rerenderStep1(); U().toast('The draft adds nothing new – everything it proposes is already in the specification', 6000); return false; }
     drf.error = '';
     drf.pending = r.draft;
+    drf.pendingKind = drf.kind || 'draft';
     document.getElementById('draft-list').innerHTML = parts.map(function (p) {
       const more = p.items.length > 4 ? '<li class="muted">… and ' + (p.items.length - 4) + ' more</li>' : '';
       return '<li><label class="check"><input type="checkbox" name="draft-part" value="' + esc(p.id) + '" checked> <strong>' + esc(p.label) + '</strong> <span class="count">' + p.items.length + '</span></label>' +
@@ -449,12 +519,22 @@
 
   if (H.isVscode) {
     H.on('draft-progress', function (m) {
-      drf.status = String(m.text || '').slice(0, 200);
-      const el = document.querySelector('.fs-draft .gen-actions .muted');
+      const text = String(m.text || '').slice(0, 300);
+      if (m.key) {
+        const last = drf.log.filter(function (l) { return l.key === m.key; })[0];
+        if (last) { last.text = text; last.status = m.status; } else drf.log.push({ key: m.key, text: text, status: m.status });
+        if (drf.log.length > 80) drf.log.shift();
+        const el = document.querySelector('.fs-prog .fs-log');
+        if (el) el.outerHTML = draftLogHtml(); else rerenderStep1();
+        return;
+      }
+      drf.status = text;
+      const el = document.querySelector('.fs-draft-status');
       if (el && drf.running) el.textContent = drf.status; else rerenderStep1();
     });
     H.on('draft-result', function (m) {
       drf.running = false; drf.status = ''; drf.mode = '';
+      drf.log.push({ text: 'Result received', status: 'done' });
       const answer = String(m.text || '');
       if (!reviewDraft(answer)) {
         U().ui.open['fs-draft-paste'] = true; rerenderStep1();
@@ -463,6 +543,20 @@
       } else rerenderStep1();
     });
     H.on('draft-error', function (m) { drf.running = false; drf.status = ''; drf.error = String(m.message || 'Drafting failed').slice(0, 400); rerenderStep1(); });
+  }
+
+  function programNames() {
+    return APB.storage.getPref('programNames', '').split(/[\s,;]+/).map(function (n) { return n.trim().toUpperCase(); }).filter(function (n) { return /^[A-Z0-9_\/]{2,40}$/.test(n); }).slice(0, 10);
+  }
+
+  function readProgram(mode) {
+    const s = S.get();
+    const names = programNames();
+    if (!names.length) { U().toast('Name the program or transaction first'); return; }
+    drf.running = true; drf.kind = 'program'; drf.mode = mode; drf.error = ''; drf.log = [];
+    drf.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Reading ' + names.join(', ') + ' (read-only)…';
+    H.post({ type: 'read-program', mode: mode, prompt: APB.fsDraft.programPrompt(s, names) });
+    rerenderStep1();
   }
 
   const actions = {
@@ -498,18 +592,35 @@
     'fs-draft-run': function () {
       const s = S.get();
       if ((s.context.requirement || '').trim().length < 10) { U().toast('Describe the business requirement first'); return; }
-      drf.running = true; drf.error = ''; drf.status = 'Copilot is drafting…';
+      drf.running = true; drf.kind = 'draft'; drf.mode = 'auto'; drf.error = ''; drf.status = 'Copilot is writing the specification…'; drf.log = [];
       H.post({ type: 'draft', prompt: APB.fsDraft.prompt(s) });
       rerenderStep1();
     },
     'fs-draft-chat': function () {
       const s = S.get();
       if ((s.context.requirement || '').trim().length < 10) { U().toast('Describe the business requirement first'); return; }
-      drf.running = true; drf.mode = 'chat'; drf.error = ''; drf.status = 'Opening Copilot Chat…';
+      drf.running = true; drf.kind = 'draft'; drf.mode = 'chat'; drf.error = ''; drf.status = 'Opening Copilot Chat…'; drf.log = [];
       H.post({ type: 'draft', mode: 'chat', prompt: APB.fsDraft.prompt(s) });
       rerenderStep1();
     },
     'fs-draft-stop': function () { if (drf.mode !== 'chat') H.post({ type: 'stop' }); drf.running = false; drf.mode = ''; drf.status = ''; rerenderStep1(); },
+    'fs-prog-auto': function () { readProgram('auto'); },
+    'fs-prog-chat': function () { readProgram('chat'); },
+    'fs-prog-copy': function () {
+      const names = programNames();
+      if (!names.length) { U().toast('Name the program or transaction first'); return; }
+      Promise.resolve(APB.exporter.copy(APB.fsDraft.programPrompt(S.get(), names))).then(function (ok) {
+        U().ui.open['fs-draft-paste'] = true;
+        rerenderStep1();
+        U().toast(ok ? 'Prompt copied ✓ Paste it into Copilot Chat in VS Code (' + DS.cfg.agent + '), then paste the answer under Paste the AI answer' : 'Copy failed', 8000);
+      });
+    },
+    'fs-dev-from-program': function () {
+      const s = S.get();
+      const dev = toDevSpecFromProgram(s);
+      if (!dev) { U().toast('Read an existing program first'); return; }
+      U().loadState(dev, 'Development spec created to change ' + mainProgram(s).name + ' — your FS is in Drafts');
+    },
     'fs-chat-review': function () {
       const s = S.get();
       if (FC.checkMandatory(s).length) { U().toast(mandatoryMsg(s)); return; }
@@ -518,6 +629,8 @@
     },
     'fs-draft-review': function () {
       const ta = document.getElementById('fs-draft-answer');
+      // a pasted answer to the program prompt carries the program logic; anything else is a spec draft
+      drf.kind = /"(currentLogic|programs)"\s*:/.test(ta ? ta.value : '') ? 'program' : 'draft';
       if (ta && reviewDraft(ta.value)) U().ui.open['fs-draft-paste'] = false;
     },
     'fs-draft-apply': function () {
@@ -526,10 +639,17 @@
       if (dlg.close) dlg.close(); else dlg.removeAttribute('open');
       if (!drf.pending || !ids.length) return;
       const r = APB.fsDraft.merge(S.get(), drf.pending, ids);
+      const kind = drf.pendingKind;
       drf.pending = null;
       S.replace(r.state);
+      if (kind === 'program') {
+        // the program logic belongs to the current process: show it in step 2
+        U().ui.step = 2;
+        U().ui.open['fs-more-proc'] = true;
+      } else if (r.added.length && !FC.checkMandatory(r.state).length) U().ui.generated = true;
       U().renderMain();
-      U().toast(r.added.length ? 'Added ' + r.added.join(', ') + ' – review them in each step' : 'Nothing new to add', 7000);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      U().toast(r.added.length ? 'Added ' + r.added.join(', ') + (kind === 'program' ? ' – see More details in this step' : ' – use Review Details to change anything') : 'Nothing new to add', 7000);
     },
     'fs-template': function (el) {
       const t = F.templates.fromTemplate(el.dataset.id, S.get());
@@ -561,16 +681,6 @@
     },
     'fs-copy-prompt': function () {
       Promise.resolve(APB.exporter.copy(DS.prompt(S.get()))).then(function (ok) { U().toast(ok ? 'Discovery prompt copied' : 'Copy failed'); });
-    },
-    'fs-pick-tx': function (el) {
-      const m = /^(asIs|toBe)\.(\d+)$/.exec(el.dataset.key || '');
-      if (!m) return;
-      U().updateSteps(function (st) { const r = (st.process[m[1]] || [])[Number(m[2])]; if (r) r.tx = el.dataset.v; });
-      U().toast(el.dataset.v + ' set for ' + (m[1] === 'asIs' ? 'AS-IS' : 'TO-BE') + ' step ' + (Number(m[2]) + 1));
-    },
-    'fs-suggest': function () {
-      if (H.isVscode) { startDiscovery('auto'); U().toast('Discovery is reading the system – suggestions appear here when it is done', 6000); return; }
-      actions['fs-discover']();
     },
     'fs-signin': function () { H.post({ type: 'sign-in' }); },
     'fs-auto': function () { startDiscovery('auto'); },
@@ -621,24 +731,25 @@
     const cur = S.get();
     const list = F.steps.map(function (n) { return F.stepFor(n.n, cur); }).map(function (st) { return { g: 'Navigate', i: String(st.n), t: 'Step ' + st.n + ' · ' + st.title, run: function () { run.setStep(st.n); } }; });
     list.push(
-      { g: 'Create', i: '✦', t: 'Generate functional specification', run: function () { run.setStep(5); run.actions.generate(); } },
+      { g: 'Create', i: '✦', t: 'Generate functional specification', run: function () { run.setStep(3); run.actions.generate(); } },
       { g: 'Create', i: 'W', t: 'Download Word (.docx)', run: actions['fs-docx'] },
       { g: 'Create', i: '⬇', t: 'Download Markdown', run: run.actions.download },
       { g: 'Create', i: '⧉', t: 'Copy Markdown', run: run.actions.copy },
       { g: 'Create', i: '+', t: 'New functional specification', run: run.actions.new },
-      { g: 'Create', i: '✦', t: 'Draft the rest with AI', run: function () { run.setStep(1); actions[H.isVscode ? 'fs-draft-run' : 'fs-draft-copy'](); } },
+      { g: 'Create', i: '✦', t: 'Generate the whole spec with Copilot', run: function () { run.setStep(1); actions[H.isVscode ? 'fs-draft-run' : 'fs-draft-copy'](); } },
       { g: 'Create', i: '⚡', t: 'Create document now (quick start)', run: actions['fs-quick'] }
     );
+    if (F.isSap(cur)) list.push({ g: 'System', i: '⌕', t: 'Read an existing program (logic into the spec)', run: function () { run.setStep(1); const el = document.getElementById('fs-prog-names'); if (el) el.focus(); } });
     if (H.isVscode) list.push(
-      { g: 'Create', i: '›', t: 'Draft the rest in Copilot Chat', run: function () { run.setStep(1); actions['fs-draft-chat'](); } },
+      { g: 'Create', i: '›', t: 'Generate the spec in Copilot Chat', run: function () { run.setStep(1); actions['fs-draft-chat'](); } },
       { g: 'Create', i: '›', t: 'Open in Copilot Chat (review the FS)', run: actions['fs-chat-review'] }
     );
     if (F.isSap(cur)) list.push(
-      { g: 'System', i: '›', t: H.isVscode ? 'Discover in SAP (automatic, read-only)' : 'Discover in SAP (open VS Code with ' + DS.cfg.agent + ')', run: function () { run.setStep(4); actions['fs-discover'](); } },
-      { g: 'System', i: '⇩', t: 'Import context pack from clipboard', run: function () { run.setStep(4); actions['fs-import-clip'](); } }
+      { g: 'System', i: '›', t: H.isVscode ? 'Discover in SAP (automatic, read-only)' : 'Discover in SAP (open VS Code with ' + DS.cfg.agent + ')', run: function () { run.setStep(3); actions['fs-discover'](); } },
+      { g: 'System', i: '⇩', t: 'Import context pack from clipboard', run: function () { run.setStep(3); actions['fs-import-clip'](); } }
     );
     list.push(
-      { g: 'Create', i: '✓', t: 'Create UAT skeleton from FRs', run: function () { run.setStep(5); actions['fs-uat'](); } }
+      { g: 'Create', i: '✓', t: 'Create UAT skeleton from FRs', run: function () { run.setStep(3); actions['fs-uat'](); } }
     );
     if (F.isSap(cur)) F.templates.list().forEach(function (t) { list.push({ g: 'Template', i: '◇', t: t.label, run: function () { run.setStep(1); actions['fs-template']({ dataset: { id: t.id } }); } }); });
     F.templates.examples().forEach(function (e) { list.push({ g: 'Example', i: e.module, t: e.label, run: function () { run.loadState(F.templates.example(e.id), 'Example loaded'); } }); });
@@ -655,6 +766,7 @@
     actions: actions,
     commands: commands,
     toDevSpec: toDevSpec,
+    toDevSpecFromProgram: toDevSpecFromProgram,
     autoSend: function () { return autoSend(); },
     uatSkeleton: uatSkeleton
   };

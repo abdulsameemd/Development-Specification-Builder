@@ -439,6 +439,7 @@
   /* ---------------------------------------------------------------- render core */
   function renderStepper() {
     const el = $('#stepper');
+    el.style.setProperty('--n', steps().length);
     el.style.setProperty('--p', ui.generated ? 1 : (ui.step - 1) / (steps().length - 1));
     el.innerHTML = steps().map(function (st) {
       const cur = !ui.generated && st.n === ui.step;
@@ -455,7 +456,7 @@
       if (info) { $('#main').innerHTML = APB.agentsGuide.html(); return; }
       const html = isFs() ? (ui.generated ? FA.generatedView(s, ui) : FA.renderStep(ui.step, s, ui))
         : ui.generated ? generatedView(s) : [step1, step2, step3, step4, step5][ui.step - 1](s);
-      $('#main').innerHTML = '<p class="step-count">' + (ui.generated ? 'Done' : 'Step ' + ui.step + ' of 5') + '</p>' + html;
+      $('#main').innerHTML = '<p class="step-count">' + (ui.generated ? 'Done' : 'Step ' + ui.step + ' of ' + steps().length) + '</p>' + html;
     });
     applyChrome();
     renderStepper();
@@ -489,7 +490,7 @@
 
   function setStep(n) {
     ui.view = null;
-    ui.step = Math.max(1, Math.min(5, n));
+    ui.step = Math.max(1, Math.min(steps().length, n));
     ui.generated = false;
     ui.showErrors = false;
     setTab('edit');
@@ -800,7 +801,7 @@
       toast(next === 'light' ? 'Light theme' : 'Dark theme');
     },
     palette: openPalette,
-    edit: function () { ui.view = null; ui.generated = false; ui.step = 5; renderMain(); },
+    edit: function () { ui.view = null; ui.generated = false; ui.step = steps().length; renderMain(); },
     agents: function () {
       ui.view = 'agents';
       renderMain();

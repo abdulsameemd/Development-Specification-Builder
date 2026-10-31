@@ -35,8 +35,17 @@
     { id: 'stakeholders', label: 'Stakeholders', path: 'context.stakeholders', kind: 'rows', keys: ['role', 'responsibility'], show: 'role' },
     { id: 'asIs', label: 'AS-IS steps', path: 'process.asIs', kind: 'rows', keys: ['step', 'role', 'pain'], show: 'step' },
     { id: 'toBe', label: 'TO-BE steps', path: 'process.toBe', kind: 'rows', keys: ['step', 'role', 'change'], enums: { change: ['process', 'toBe', 'change'] }, show: 'step' },
-    { id: 'frs', label: 'Functional requirements', path: 'reqs.frs', kind: 'rows', keys: ['title', 'priority', 'description', 'acceptance'], enums: { priority: ['reqs', 'frs', 'priority'] }, show: 'title' },
+    { id: 'currentLogic', label: 'Current program logic', path: 'process.currentLogic', kind: 'text', max: 6000 },
+    { id: 'programs', label: 'Programs and objects read', path: 'process.programs', kind: 'rows', keys: ['type', 'name', 'description', 'role'], enums: { role: ['process', 'programs', 'role'] }, show: 'name' },
+    { id: 'frs', label: 'Functional requirements', path: 'reqs.frs', kind: 'rows', keys: ['title', 'priority', 'fit', 'description', 'acceptance'], enums: { priority: ['reqs', 'frs', 'priority'], fit: ['reqs', 'frs', 'fit'] }, show: 'title' },
     { id: 'rules', label: 'Business rules', path: 'reqs.rules', kind: 'rows', keys: ['rule', 'type', 'outcome', 'fr'], enums: { type: ['reqs', 'rules', 'type'] }, show: 'rule', frRefs: 'fr' },
+    { id: 'data', label: 'Data requirements', path: 'reqs.data', kind: 'rows', keys: ['field', 'table', 'validation'], show: 'field' },
+    { id: 'roles', label: 'Roles', path: 'solution.roles', kind: 'rows', keys: ['role', 'tx', 'scope'], show: 'role' },
+    { id: 'interfaces', label: 'Interfaces', path: 'solution.interfaces', kind: 'rows', keys: ['name', 'direction', 'partner'], enums: { direction: ['solution', 'interfaces', 'direction'] }, show: 'name' },
+    { id: 'outputs', label: 'Outputs', path: 'solution.outputs', kind: 'rows', keys: ['name', 'type', 'trigger'], enums: { type: ['solution', 'outputs', 'type'] }, show: 'name' },
+    { id: 'performance', label: 'Performance', path: 'quality.performance', kind: 'text' },
+    { id: 'volume', label: 'Data volumes', path: 'quality.volume', kind: 'text' },
+    { id: 'privacy', label: 'Data privacy', path: 'quality.privacy', kind: 'text' },
     { id: 'uat', label: 'Test scenarios', path: 'quality.uat', kind: 'rows', keys: ['fr', 'scenario', 'type', 'expected'], enums: { type: ['quality', 'uat', 'type'] }, show: 'scenario', frRefs: 'fr' },
     { id: 'risks', label: 'Risks & assumptions', path: 'quality.risks', kind: 'rows', keys: ['type', 'text'], enums: { type: ['quality', 'risks', 'type'] }, show: 'text' }
   ];
@@ -45,7 +54,7 @@
     const d = {};
     PARTS.forEach(function (p) {
       const v = raw[p.id];
-      if (p.kind === 'text') d[p.id] = str(v).slice(0, 200);
+      if (p.kind === 'text') d[p.id] = (typeof v === 'string' ? v.trim() : Array.isArray(v) ? lines(v).join('\n') : '').slice(0, p.max || 400);
       else if (p.kind === 'lines') d[p.id] = lines(v);
       else {
         d[p.id] = (Array.isArray(v) ? v : []).slice(0, MAX_ITEMS).filter(function (r) { return r && typeof r === 'object'; }).map(function (r) {
@@ -108,7 +117,8 @@
       '- Do not invent technical names (transactions, tables, programs, apps, APIs), people or numbers that are not in the requirement.',
       '- No personal data.',
       '- 3 to 8 functional requirements, each one testable, with 1 to 3 acceptance criteria ("When …, then …"). Reference them as FR-01, FR-02 … in the order you list them.',
-      '- Allowed values: priority must|should|could|wont · change unchanged|changed|new|automated · rule type validation|derivation|calculation|authorization|approval · test type positive|negative · risk type risk|assumption|open|dependency.',
+      '- Allowed values: priority must|should|could|wont' + (F.isSap(s) ? ' · fit standard|config|custom|tbc (SAP standard, configuration, custom development)' : '') + ' · change unchanged|changed|new|automated · rule type validation|derivation|calculation|authorization|approval · direction inbound|outbound|both · output type form|email|report|file|notification · test type positive|negative · risk type risk|assumption|open|dependency.',
+      '- Fill every part that applies; leave a list empty when the requirement gives no basis for it.',
       '',
       'Answer with a one-line summary and then exactly one ```json block:',
       '```json',
@@ -116,13 +126,56 @@
         kind: KIND, version: 1, title: '', objectives: [''], kpis: [''], inScope: [''], outOfScope: [''],
         stakeholders: [{ role: '', responsibility: '' }],
         asIs: [{ step: '', role: '', pain: '' }], toBe: [{ step: '', role: '', change: 'new' }],
-        frs: [{ title: '', priority: 'must', description: '', acceptance: [''] }],
+        frs: [F.isSap(s) ? { title: '', priority: 'must', fit: 'tbc', description: '', acceptance: [''] } : { title: '', priority: 'must', description: '', acceptance: [''] }],
         rules: [{ rule: '', type: 'validation', outcome: '', fr: 'FR-01' }],
+        data: [{ field: '', validation: '' }],
+        roles: [{ role: '', scope: '' }],
+        interfaces: [{ name: '', direction: 'inbound', partner: '' }],
+        outputs: [{ name: '', type: 'email', trigger: '' }],
+        performance: '', volume: '', privacy: '',
         uat: [{ fr: 'FR-01', scenario: '', type: 'positive', expected: '' }],
         risks: [{ type: 'assumption', text: '' }]
       }, null, 2),
       '```'];
     return out.filter(function (l, i) { return l !== '' || out[i - 1] !== ''; }).join('\n');
+  }
+
+  /* ------------------------------------------- read an existing program */
+  const PROGRAM_MARK = 'FS-PROGRAM v1';
+
+  function programPrompt(s, names) {
+    const c = s.context;
+    return [PROGRAM_MARK,
+      'Read the existing SAP program(s) below and the SAP system READ-ONLY, and describe what they do today, for a functional specification.',
+      '',
+      'Objects to read: ' + names.join(', '),
+      c.module ? 'Module: ' + c.module : '',
+      (c.requirement || '').trim() ? 'Why the consultant asks (the planned change):\n' + c.requirement.trim() : '',
+      '',
+      'Read:',
+      '- for a transaction code, the program or app behind it first;',
+      '- the source, includes, selection screen / parameters, and the function modules, classes, BAdIs and CDS views it calls;',
+      '- the tables it reads and writes, its messages and its authorization checks.',
+      '',
+      'Rules:',
+      '- READ ONLY: never create, change, activate, run or transport anything. Do not read table contents.',
+      '- Describe the logic in business words for a functional consultant; name the technical objects only in "programs" and in data.table.',
+      '- Only report what you read. List objects you could not read in "currentLogic" under "Not read:".',
+      '- asIs: the current process steps the program supports. rules: the validations, derivations and calculations in the code.',
+      '- frs: the current behaviour as functional requirements ("The report shows …"), each with acceptance criteria, fit "custom".',
+      '- data: the main fields (business name, table-field, validation). programs: every object read (type PROG|CLAS|FUGR|FUNC|TABL|DDLS|BADI|TRAN|…, role main|used).',
+      '',
+      'Answer with a short summary and then exactly one ```json block:',
+      '```json',
+      JSON.stringify({
+        kind: KIND, version: 1, currentLogic: '',
+        programs: [{ type: 'PROG', name: '', description: '', role: 'main' }],
+        asIs: [{ step: '', role: '', pain: '' }],
+        rules: [{ rule: '', type: 'validation', outcome: '', fr: 'FR-01' }],
+        data: [{ field: '', table: 'TABLE-FIELD', validation: '' }],
+        frs: [{ title: '', priority: 'must', fit: 'custom', description: '', acceptance: [''] }]
+      }, null, 2),
+      '```'].filter(function (l, i, a) { return l !== '' || a[i - 1] !== ''; }).join('\n');
   }
 
   /* ---------------------------------------------------- review and merge */
@@ -171,5 +224,5 @@
     return { state: F.model.migrate(next), added: added };
   }
 
-  APB.fsDraft = { MARK: MARK, KIND: KIND, PARTS: PARTS, prompt: prompt, parse: parse, preview: preview, merge: merge };
+  APB.fsDraft = { MARK: MARK, PROGRAM_MARK: PROGRAM_MARK, KIND: KIND, PARTS: PARTS, prompt: prompt, programPrompt: programPrompt, parse: parse, preview: preview, merge: merge };
 })(window.APB = window.APB || {});

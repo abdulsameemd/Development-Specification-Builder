@@ -6,11 +6,10 @@ SAP system, read **read-only** through GitHub Copilot and DEWA's SAP MCP servers
 ## Start
 
 1. Run **DEWA: Open SAP Spec Builder**, from the command palette or the *Spec Builder* item in the status bar. The builder opens as a tab.
-2. **Sign in to GitHub Copilot.** Use the button in step 4 of a functional spec, or VS Code's Accounts menu. VS Code handles the sign-in; the builder only shows the account name.
-3. **Functional**: fill in context, process and requirements. In step 4, pick one way to read the system:
+2. **Sign in to GitHub Copilot.** Use the button in step 1 or 3 of a functional spec, or VS Code's Accounts menu. VS Code handles the sign-in; the builder only shows the account name.
+3. **Functional**: describe the requirement. In step 1, **Generate with Copilot** (or **Generate in Copilot Chat**) writes the whole spec for your review, and **Read automatically** / **Read in Copilot Chat** reads an existing program read-only and brings its logic into the spec. In step 3, pick one way to read the system:
    - **Discover automatically** reads the SAP system with the Copilot model and only the read tools of the SAP MCP servers. Progress is shown in the panel and the result is imported automatically.
    - **Run in Copilot Chat** opens Copilot Chat beside the panel with the `dewa-fs-discovery` agent and sends the prompt. The agent sends the result back to the builder.
-   - Not SAP, or only a requirement so far? **Draft with Copilot** or **Draft in Copilot Chat** in step 1 drafts the rest for your review.
 4. **Generate**: download **Word** or Markdown. Both are saved through a VS Code save dialog. **Open in Copilot Chat** asks Copilot to review the FS and answer your questions about it.
 5. **Technical**: use **Open in Copilot Chat** to hand a development spec to `dewa-abap`. You can also hand any RICEFW item from the FS straight to the Technical mode.
 

@@ -41,6 +41,8 @@ function pickModel(models, wanted) {
   return models.filter(function (m) { return !WEAK_MODEL.test(label(m)); })[0] || models[0];
 }
 
+const PACK_REPAIR = 'Stop calling tools. Return now a short summary and exactly one ```json block with the dewa-sap-context-pack (kind "dewa-sap-context-pack", version 1), based only on what you read. Put every listed name you could not verify into notFound.';
+
 function hasPack(text) { return /dewa-sap-context-pack/.test(text || '') && /\{[\s\S]*\}/.test(text || ''); }
 
 const BUDGET = 'Tool budget: at most ' + MAX_CALLS + ' tool calls in total. Never call a tool twice with the same input – reuse the earlier result. ' +
@@ -75,7 +77,9 @@ function cancelled(token) {
   if (token && token.isCancellationRequested) { const e = new Error('Discovery stopped.'); e.code = 'CANCELLED'; throw e; }
 }
 
-/* opts: { prompt, instructions, allowPatterns, maxRounds, model, token, onProgress, exclude } → final model text */
+/* opts: { prompt, instructions, allowPatterns, maxRounds, model, token, onProgress, exclude,
+           result: { isDone(text), label, repair, budget } – what the final answer must contain (default: the context pack) }
+   → final model text */
 async function run(vscode, opts) {
   const progress = opts.onProgress || function () {};
   const models = await vscode.lm.selectChatModels({ vendor: 'copilot' });
@@ -85,6 +89,7 @@ async function run(vscode, opts) {
     throw e;
   }
   const model = pickModel(models, opts.model);
+  const result = Object.assign({ isDone: hasPack, label: 'context pack', repair: PACK_REPAIR, budget: BUDGET }, opts.result || {});
   const tools = selectTools(vscode.lm.tools, opts.allowPatterns, opts.exclude);
   if (tools.blocked.length) progress({ key: 'blocked', text: tools.blocked.length + ' write tool' + (tools.blocked.length > 1 ? 's' : '') + ' excluded: ' + tools.blocked.map(function (t) { return t.name.replace(/^mcp_/, ''); }).join(', '), status: 'blocked' });
   if (!tools.allowed.length) {
@@ -97,19 +102,19 @@ async function run(vscode, opts) {
   const names = tools.allowed.map(function (t) { return t.name; });
   const offered = tools.allowed.map(function (t) { return { name: t.name, description: t.description || '', inputSchema: t.inputSchema }; });
   const M = vscode.LanguageModelChatMessage;
-  const messages = [M.User(String(opts.instructions || '') + '\n\n' + BUDGET + '\n\n---\n\n' + String(opts.prompt || ''))];
+  const messages = [M.User(String(opts.instructions || '') + '\n\n' + result.budget + '\n\n---\n\n' + String(opts.prompt || ''))];
   const seen = {};
   let callCount = 0;
   /* One extra turn without tools when the answer has no context pack (small models often forget it). */
   async function finish(text, why) {
-    if (hasPack(text)) return text;
-    progress({ key: 'final', text: why + ' – asking for the context pack', status: 'info' });
+    if (result.isDone(text)) return text;
+    progress({ key: 'final', text: why + ' – asking for the ' + result.label, status: 'info' });
     messages.push(M.Assistant([new vscode.LanguageModelTextPart(text || '(no answer)')]));
-    messages.push(M.User('Stop calling tools. Return now a short summary and exactly one ```json block with the dewa-sap-context-pack (kind "dewa-sap-context-pack", version 1), based only on what you read. Put every listed name you could not verify into notFound.'));
+    messages.push(M.User(result.repair));
     const last = await model.sendRequest(messages, { justification: JUSTIFICATION }, opts.token);
     let out = '';
     for await (const part of last.stream) if (part instanceof vscode.LanguageModelTextPart) out += part.value;
-    return hasPack(out) ? out : [text, out].filter(Boolean).join('\n\n');
+    return result.isDone(out) ? out : [text, out].filter(Boolean).join('\n\n');
   }
   const maxRounds = Math.max(1, Math.min(60, Number(opts.maxRounds) || DEFAULT_ROUNDS));
 
@@ -122,7 +127,7 @@ async function run(vscode, opts) {
       if (part instanceof vscode.LanguageModelTextPart) text += part.value;
       else if (part instanceof vscode.LanguageModelToolCallPart) calls.push(part);
     }
-    if (!calls.length) return finish(text, 'No context pack in the answer');
+    if (!calls.length) return finish(text, 'No ' + result.label + ' in the answer');
 
     messages.push(M.Assistant((text ? [new vscode.LanguageModelTextPart(text)] : []).concat(calls)));
     const results = [];
@@ -141,7 +146,7 @@ async function run(vscode, opts) {
         continue;
       }
       if (++callCount > MAX_CALLS) {
-        results.push(new vscode.LanguageModelToolResultPart(call.callId, [new vscode.LanguageModelTextPart('Tool budget used up. Write the answer with the context pack now.')]));
+        results.push(new vscode.LanguageModelToolResultPart(call.callId, [new vscode.LanguageModelTextPart('Tool budget used up. Write the answer with the ' + result.label + ' now.')]));
         continue;
       }
       progress({ key: key, text: describeCall(call), status: 'running' });
@@ -166,4 +171,4 @@ async function run(vscode, opts) {
 /* Agent file → plain instructions (front matter removed). */
 function instructionsFromAgentFile(text) { return String(text || '').replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, '').trim(); }
 
-module.exports = { run: run, selectTools: selectTools, isWriteTool: isWriteTool, pickModel: pickModel, hasPack: hasPack, words: words, describeCall: describeCall, instructionsFromAgentFile: instructionsFromAgentFile, DEFAULT_ALLOW: DEFAULT_ALLOW, WRITE_VERBS: WRITE_VERBS };
+module.exports = { MAX_CALLS: MAX_CALLS, run: run, selectTools: selectTools, isWriteTool: isWriteTool, pickModel: pickModel, hasPack: hasPack, words: words, describeCall: describeCall, instructionsFromAgentFile: instructionsFromAgentFile, DEFAULT_ALLOW: DEFAULT_ALLOW, WRITE_VERBS: WRITE_VERBS };

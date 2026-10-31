@@ -447,3 +447,49 @@ test('deliverDraft posts the draft to the open panel as a draft-result', async (
   assert.strictEqual(m.type, 'draft-result');
   assert.match(m.text, /```json\n\{"kind":"fs-draft"/);
 });
+
+/* ------------------------------------------------- read an existing program */
+const programReader = require('../src/programReader');
+const PROG_JSON = '```json\n{"kind":"fs-draft","version":1,"currentLogic":"Lists open items","programs":[{"type":"PROG","name":"ZFI_AGEING","role":"main"}]}\n```';
+
+test('program reader: read tools only, own instructions, returns the fs-draft', async () => {
+  const vs = fakeVscode({ script: [[{ call: ['abap_adt_get_object', { name: 'ZFI_AGEING' }] }, { call: ['abap_adt_create_object', { name: 'X' }] }], [{ text: PROG_JSON }]] });
+  const text = await programReader.run(vs, { prompt: programReader.MARKER + '\nObjects to read: ZFI_AGEING', allowPatterns: runner.DEFAULT_ALLOW });
+  assert.match(text, /ZFI_AGEING/);
+  assert.deepStrictEqual(vs.calls.invoked, ['abap_adt_get_object']);
+  assert.ok(!vs.calls.requests[0].tools.includes('abap_adt_create_object'));
+  const first = vs.calls.requests[0].messages[0].content;
+  assert.match(first, /READ ONLY/);
+  assert.match(first, /fs-draft/);
+  assert.doesNotMatch(first, /dewa-sap-context-pack/);
+});
+
+test('program reader: repair turn asks for the fs-draft when the answer has none', async () => {
+  const vs = fakeVscode({ script: [[{ text: 'The program lists open items.' }], [{ text: PROG_JSON }]] });
+  const text = await programReader.run(vs, { prompt: programReader.MARKER + '\nx', allowPatterns: runner.DEFAULT_ALLOW });
+  assert.strictEqual(vs.calls.requests.length, 2);
+  assert.deepStrictEqual(vs.calls.requests[1].tools, []);
+  assert.match(vs.calls.requests[1].messages.pop().content, /fs-draft/);
+  assert.match(text, /currentLogic/);
+});
+
+test('read-program route: auto streams progress and returns a draft-result; chat opens dewa-fs-discovery', async () => {
+  let vs = fakeVscode({ script: [[{ call: ['abap_adt_get_object', { name: 'ZFI_AGEING' }] }], [{ text: PROG_JSON }]] });
+  let { r, posts } = router(vs);
+  assert.strictEqual(await r.handle({ type: 'read-program', mode: 'auto', prompt: 'no marker' }), false);
+  await r.handle({ type: 'read-program', mode: 'auto', prompt: programReader.MARKER + '\nObjects to read: ZFI_AGEING' });
+  assert.ok(posts.some((p) => p.type === 'draft-progress' && p.key && /ZFI_AGEING/.test(p.text)));
+  assert.match(posts.filter((p) => p.type === 'draft-result')[0].text, /ZFI_AGEING/);
+  vs = fakeVscode();
+  ({ r, posts } = router(vs));
+  await r.handle({ type: 'read-program', mode: 'chat', prompt: programReader.MARKER + '\nx' });
+  const open = vs.calls.commands.find((c) => c.id === 'workbench.action.chat.open');
+  assert.strictEqual(open.args.mode, 'dewa-fs-discovery');
+  assert.match(open.args.query, /dewa_submitFsDraft/);
+});
+
+test('the discovery agent can hand a program draft back', () => {
+  const agent = fs.readFileSync(path.join(__dirname, '../agents/dewa-fs-discovery.agent.md'), 'utf8');
+  assert.match(agent, /tools:.*'dewa_submitFsDraft'/);
+  assert.match(agent, /FS-PROGRAM v1/);
+});

@@ -27,11 +27,9 @@
     { "value": "cap", "label": "CAP service (BTP)", "code": "S", "devType": "CAPM" }
   ],
   "steps": [
-    { "n": 1, "label": "Context", "title": "Business context & scope", "intro": "What the business needs and where it applies. Only the requirement and the module are required.", "generic": { "intro": "What the business needs and where it applies. Only the business requirement is required – everything else can follow later." } },
-    { "n": 2, "label": "Process", "title": "Current and future process", "intro": "AS-IS shows today's steps and pain points; TO-BE is the process after the change. Describe each step in business words — Suggest from SAP finds the matching transactions and Fiori apps for you.", "generic": { "intro": "AS-IS shows today's steps and pain points; TO-BE is the process after the change. Describe each step in business words." } },
-    { "n": 3, "label": "Requirements", "title": "Functional requirements", "intro": "One FR per testable need. Fit-gap tells the team whether standard SAP, configuration or custom development covers it.", "generic": { "intro": "One FR per testable need. Fit-gap tells the team whether a standard feature, configuration or new development covers it." } },
-    { "n": 4, "label": "Solution", "title": "System context & solution", "intro": "Read the current DEWA SAP system first, then list the RICEFW items that close the gaps.", "generic": { "title": "Solution & integration", "intro": "Who uses the solution, which other systems it talks to and what it produces." } },
-    { "n": 5, "label": "Sign-off", "title": "Quality, testing & sign-off", "intro": "Non-functional requirements, UAT scenarios, risks and approvals." }
+    { "n": 1, "label": "Requirement", "title": "Business requirement", "intro": "Describe the business need – that is all that is required. Copilot can generate the rest, or read an existing program, for you to review.", "generic": { "intro": "Describe the business need – that is all that is required. Copilot can generate the rest for you to review." } },
+    { "n": 2, "label": "Process & requirements", "title": "Process & requirements", "intro": "The process after the change (TO-BE), one functional requirement per testable need, and the business rules. The current process and data are under More details." },
+    { "n": 3, "label": "Solution & sign-off", "title": "Solution, testing & sign-off", "intro": "Read the current SAP system, list the RICEFW items that close the gaps, then the test scenarios and approvers.", "generic": { "intro": "Who uses the solution and which systems it talks to, then the test scenarios and approvers." } }
   ],
   "sections": [
     { "id": "context", "step": 1, "fields": [
@@ -73,9 +71,18 @@
           { "value": "", "label": "" }, { "value": "unchanged", "label": "Unchanged" }, { "value": "changed", "label": "Changed" }, { "value": "new", "label": "New" }, { "value": "automated", "label": "Automated" }
         ] }
       ] },
-      { "id": "variants", "label": "Process variants & exceptions", "kind": "lines", "advanced": true, "placeholder": "e.g. Blocked vendors are listed separately\nIntercompany vendors are excluded", "generic": { "placeholder": "e.g. Urgent complaints go straight to the team lead\nComplaints about invoices are forwarded to Finance" } }
+      { "id": "variants", "label": "Process variants & exceptions", "kind": "lines", "advanced": true, "placeholder": "e.g. Blocked vendors are listed separately\nIntercompany vendors are excluded", "generic": { "placeholder": "e.g. Urgent complaints go straight to the team lead\nComplaints about invoices are forwarded to Finance" } },
+      { "id": "currentLogic", "label": "Current program logic", "kind": "textarea", "advanced": true, "placeholder": "What the existing program does today, in business words – filled by Read an existing program", "hint": "Used for the Current System section of the document and for a Technical spec that changes the program." },
+      { "id": "programs", "label": "Programs and objects read", "kind": "grid", "advanced": true, "sapOnly": true, "addLabel": "+ Object", "paste": true, "columns": [
+        { "id": "type", "label": "Type", "w": 90, "placeholder": "e.g. PROG" },
+        { "id": "name", "label": "Name", "w": 170, "placeholder": "e.g. ZFI_AGEING" },
+        { "id": "description", "label": "Description", "w": 240 },
+        { "id": "role", "label": "Role", "kind": "select", "w": 130, "options": [
+          { "value": "", "label": "" }, { "value": "main", "label": "Main program" }, { "value": "used", "label": "Used object" }
+        ] }
+      ] }
     ] },
-    { "id": "reqs", "step": 3, "fields": [
+    { "id": "reqs", "step": 2, "fields": [
       { "id": "frs", "label": "Functional requirements", "kind": "records", "itemLabel": "FR", "titleField": "title", "bulk": true, "fields": [
         { "id": "title", "label": "Requirement", "kind": "text", "placeholder": "e.g. Ageing buckets per vendor", "generic": { "placeholder": "e.g. Log a complaint with category and priority" } },
         { "id": "priority", "label": "Priority (MoSCoW)", "kind": "select", "options": [
@@ -107,7 +114,7 @@
         ] }
       ], "generic": { "hint": "The information the solution needs. Where it is stored is optional – the solution team confirms it." } }
     ] },
-    { "id": "solution", "step": 4, "fields": [
+    { "id": "solution", "step": 3, "fields": [
       { "id": "ricefw", "label": "RICEFW items", "kind": "records", "itemLabel": "Item", "titleField": "name", "fields": [
         { "id": "type", "label": "RICEFW type", "kind": "select", "optionsRef": "ricefw" },
         { "id": "name", "label": "Proposed object name", "kind": "text", "placeholder": "e.g. ZFI_AP_AGEING" },
@@ -146,7 +153,7 @@
       ] },
       { "id": "customizing", "label": "Configuration (SPRO) notes", "kind": "lines", "advanced": true, "placeholder": "e.g. Payment terms per vendor group: SPRO → Financial Accounting → AP → Payment terms", "sapOnly": true }
     ] },
-    { "id": "quality", "step": 5, "fields": [
+    { "id": "quality", "step": 3, "fields": [
       { "id": "performance", "label": "Performance", "kind": "text", "placeholder": "e.g. Online response < 10 s for one company code" },
       { "id": "volume", "label": "Data volumes", "kind": "text", "placeholder": "e.g. 200,000 open items at month-end" },
       { "id": "availability", "label": "Availability / processing window", "kind": "text", "placeholder": "e.g. Business hours; background run overnight" },
@@ -169,7 +176,7 @@
         { "id": "action", "label": "Mitigation / due", "w": 180 }
       ] }
     ] },
-    { "id": "control", "step": 5, "fields": [
+    { "id": "control", "step": 3, "fields": [
       { "id": "docId", "label": "Document ID", "kind": "text", "placeholder": "e.g. FS-FI-0042" },
       { "id": "version", "label": "Version", "kind": "text", "placeholder": "e.g. 0.1" },
       { "id": "status", "label": "Status", "kind": "select", "options": [
@@ -198,16 +205,16 @@
   ],
   "recommended": [
     { "id": "toBe", "label": "TO-BE process steps", "step": 2, "important": true, "anyOf": ["process.toBe"], "question": "The TO-BE process steps (who does what, in which transaction or app).", "generic": { "question": "The TO-BE process steps (who does what, in which system or screen)." } },
-    { "id": "frs", "label": "Functional requirements", "step": 3, "important": true, "anyOf": ["reqs.frs"], "question": "The functional requirements (FR-01 …) the solution must meet." },
-    { "id": "frAcceptance", "label": "Acceptance criteria for every FR", "step": 3, "important": true, "anyOf": ["fr:acceptance"] },
-    { "id": "frFit", "label": "Fit-gap for every FR", "step": 3, "anyOf": ["fr:fit"] },
-    { "id": "discovery", "label": "Current SAP system context (discovery)", "step": 4, "important": true, "anyOf": ["discovery"], "sapOnly": true },
-    { "id": "ricefw", "label": "RICEFW items for the gaps", "step": 4, "important": true, "when": "fr:hasGap", "anyOf": ["solution.ricefw"], "question": "Which RICEFW objects close the custom-development gaps.", "sapOnly": true },
-    { "id": "roles", "label": "Roles & authorizations", "step": 4, "anyOf": ["solution.roles"], "question": "Business roles and the authorizations they need.", "generic": { "label": "Roles & access", "question": "Business roles and what they may see and do." } },
-    { "id": "data", "label": "Data requirements", "step": 3, "anyOf": ["reqs.data"] },
-    { "id": "nfr", "label": "Non-functional requirements", "step": 5, "anyOf": ["quality.performance", "quality.volume", "quality.availability", "quality.audit", "quality.privacy"], "question": "Performance, data volume and compliance expectations." },
-    { "id": "uat", "label": "UAT scenarios", "step": 5, "important": true, "anyOf": ["quality.uat"] },
-    { "id": "approvals", "label": "Approvers", "step": 5, "anyOf": ["control.approvals"], "question": "Who signs off this specification." }
+    { "id": "frs", "label": "Functional requirements", "step": 2, "important": true, "anyOf": ["reqs.frs"], "question": "The functional requirements (FR-01 …) the solution must meet." },
+    { "id": "frAcceptance", "label": "Acceptance criteria for every FR", "step": 2, "important": true, "anyOf": ["fr:acceptance"] },
+    { "id": "frFit", "label": "Fit-gap for every FR", "step": 2, "anyOf": ["fr:fit"] },
+    { "id": "discovery", "label": "Current SAP system context (discovery)", "step": 3, "important": true, "anyOf": ["discovery"], "sapOnly": true },
+    { "id": "ricefw", "label": "RICEFW items for the gaps", "step": 3, "important": true, "when": "fr:hasGap", "anyOf": ["solution.ricefw"], "question": "Which RICEFW objects close the custom-development gaps.", "sapOnly": true },
+    { "id": "roles", "label": "Roles & authorizations", "step": 3, "anyOf": ["solution.roles"], "question": "Business roles and the authorizations they need.", "generic": { "label": "Roles & access", "question": "Business roles and what they may see and do." } },
+    { "id": "data", "label": "Data requirements", "step": 2, "anyOf": ["reqs.data"] },
+    { "id": "nfr", "label": "Non-functional requirements", "step": 3, "anyOf": ["quality.performance", "quality.volume", "quality.availability", "quality.audit", "quality.privacy"], "question": "Performance, data volume and compliance expectations." },
+    { "id": "uat", "label": "UAT scenarios", "step": 3, "important": true, "anyOf": ["quality.uat"] },
+    { "id": "approvals", "label": "Approvers", "step": 3, "anyOf": ["control.approvals"], "question": "Who signs off this specification." }
   ],
   "discovery": {
     "packKind": "dewa-sap-context-pack",

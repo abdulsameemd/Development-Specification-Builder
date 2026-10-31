@@ -7262,46 +7262,27 @@ window.APB_CONFIG = {
   "steps": [
    {
     "n": 1,
-    "label": "Context",
-    "title": "Business context & scope",
-    "intro": "What the business needs and where it applies. Only the requirement and the module are required.",
+    "label": "Requirement",
+    "title": "Business requirement",
+    "intro": "Describe the business need – that is all that is required. Copilot can generate the rest, or read an existing program, for you to review.",
     "generic": {
-     "intro": "What the business needs and where it applies. Only the business requirement is required – everything else can follow later."
+     "intro": "Describe the business need – that is all that is required. Copilot can generate the rest for you to review."
     }
    },
    {
     "n": 2,
-    "label": "Process",
-    "title": "Current and future process",
-    "intro": "AS-IS shows today's steps and pain points; TO-BE is the process after the change. Describe each step in business words — Suggest from SAP finds the matching transactions and Fiori apps for you.",
-    "generic": {
-     "intro": "AS-IS shows today's steps and pain points; TO-BE is the process after the change. Describe each step in business words."
-    }
+    "label": "Process & requirements",
+    "title": "Process & requirements",
+    "intro": "The process after the change (TO-BE), one functional requirement per testable need, and the business rules. The current process and data are under More details."
    },
    {
     "n": 3,
-    "label": "Requirements",
-    "title": "Functional requirements",
-    "intro": "One FR per testable need. Fit-gap tells the team whether standard SAP, configuration or custom development covers it.",
+    "label": "Solution & sign-off",
+    "title": "Solution, testing & sign-off",
+    "intro": "Read the current SAP system, list the RICEFW items that close the gaps, then the test scenarios and approvers.",
     "generic": {
-     "intro": "One FR per testable need. Fit-gap tells the team whether a standard feature, configuration or new development covers it."
+     "intro": "Who uses the solution and which systems it talks to, then the test scenarios and approvers."
     }
-   },
-   {
-    "n": 4,
-    "label": "Solution",
-    "title": "System context & solution",
-    "intro": "Read the current DEWA SAP system first, then list the RICEFW items that close the gaps.",
-    "generic": {
-     "title": "Solution & integration",
-     "intro": "Who uses the solution, which other systems it talks to and what it produces."
-    }
-   },
-   {
-    "n": 5,
-    "label": "Sign-off",
-    "title": "Quality, testing & sign-off",
-    "intro": "Non-functional requirements, UAT scenarios, risks and approvals."
    }
   ],
   "sections": [
@@ -7598,12 +7579,68 @@ window.APB_CONFIG = {
       "generic": {
        "placeholder": "e.g. Urgent complaints go straight to the team lead\nComplaints about invoices are forwarded to Finance"
       }
+     },
+     {
+      "id": "currentLogic",
+      "label": "Current program logic",
+      "kind": "textarea",
+      "advanced": true,
+      "placeholder": "What the existing program does today, in business words – filled by Read an existing program",
+      "hint": "Used for the Current System section of the document and for a Technical spec that changes the program."
+     },
+     {
+      "id": "programs",
+      "label": "Programs and objects read",
+      "kind": "grid",
+      "advanced": true,
+      "sapOnly": true,
+      "addLabel": "+ Object",
+      "paste": true,
+      "columns": [
+       {
+        "id": "type",
+        "label": "Type",
+        "w": 90,
+        "placeholder": "e.g. PROG"
+       },
+       {
+        "id": "name",
+        "label": "Name",
+        "w": 170,
+        "placeholder": "e.g. ZFI_AGEING"
+       },
+       {
+        "id": "description",
+        "label": "Description",
+        "w": 240
+       },
+       {
+        "id": "role",
+        "label": "Role",
+        "kind": "select",
+        "w": 130,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "main",
+          "label": "Main program"
+         },
+         {
+          "value": "used",
+          "label": "Used object"
+         }
+        ]
+       }
+      ]
      }
     ]
    },
    {
     "id": "reqs",
-    "step": 3,
+    "step": 2,
     "fields": [
      {
       "id": "frs",
@@ -7861,7 +7898,7 @@ window.APB_CONFIG = {
    },
    {
     "id": "solution",
-    "step": 4,
+    "step": 3,
     "fields": [
      {
       "id": "ricefw",
@@ -8153,7 +8190,7 @@ window.APB_CONFIG = {
    },
    {
     "id": "quality",
-    "step": 5,
+    "step": 3,
     "fields": [
      {
       "id": "performance",
@@ -8289,7 +8326,7 @@ window.APB_CONFIG = {
    },
    {
     "id": "control",
-    "step": 5,
+    "step": 3,
     "fields": [
      {
       "id": "docId",
@@ -8443,7 +8480,7 @@ window.APB_CONFIG = {
    {
     "id": "frs",
     "label": "Functional requirements",
-    "step": 3,
+    "step": 2,
     "important": true,
     "anyOf": [
      "reqs.frs"
@@ -8453,7 +8490,7 @@ window.APB_CONFIG = {
    {
     "id": "frAcceptance",
     "label": "Acceptance criteria for every FR",
-    "step": 3,
+    "step": 2,
     "important": true,
     "anyOf": [
      "fr:acceptance"
@@ -8462,7 +8499,7 @@ window.APB_CONFIG = {
    {
     "id": "frFit",
     "label": "Fit-gap for every FR",
-    "step": 3,
+    "step": 2,
     "anyOf": [
      "fr:fit"
     ]
@@ -8470,7 +8507,7 @@ window.APB_CONFIG = {
    {
     "id": "discovery",
     "label": "Current SAP system context (discovery)",
-    "step": 4,
+    "step": 3,
     "important": true,
     "anyOf": [
      "discovery"
@@ -8480,7 +8517,7 @@ window.APB_CONFIG = {
    {
     "id": "ricefw",
     "label": "RICEFW items for the gaps",
-    "step": 4,
+    "step": 3,
     "important": true,
     "when": "fr:hasGap",
     "anyOf": [
@@ -8492,7 +8529,7 @@ window.APB_CONFIG = {
    {
     "id": "roles",
     "label": "Roles & authorizations",
-    "step": 4,
+    "step": 3,
     "anyOf": [
      "solution.roles"
     ],
@@ -8505,7 +8542,7 @@ window.APB_CONFIG = {
    {
     "id": "data",
     "label": "Data requirements",
-    "step": 3,
+    "step": 2,
     "anyOf": [
      "reqs.data"
     ]
@@ -8513,7 +8550,7 @@ window.APB_CONFIG = {
    {
     "id": "nfr",
     "label": "Non-functional requirements",
-    "step": 5,
+    "step": 3,
     "anyOf": [
      "quality.performance",
      "quality.volume",
@@ -8526,7 +8563,7 @@ window.APB_CONFIG = {
    {
     "id": "uat",
     "label": "UAT scenarios",
-    "step": 5,
+    "step": 3,
     "important": true,
     "anyOf": [
      "quality.uat"
@@ -8535,7 +8572,7 @@ window.APB_CONFIG = {
    {
     "id": "approvals",
     "label": "Approvers",
-    "step": 5,
+    "step": 3,
     "anyOf": [
      "control.approvals"
     ],

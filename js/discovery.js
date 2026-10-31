@@ -200,40 +200,21 @@
     return out;
   }
 
-  /* Built-in list of well-known standard transactions (config/sap-catalog.json), matched by words. */
+  /* Built-in list of well-known standard transactions (config/sap-catalog.json) for the type-ahead. */
   const CATALOG = (APB.config.sapCatalog || { transactions: [] }).transactions;
-  function stem(w) { return w.replace(/(ies)$/, 'y').replace(/(ing|ed|es|s)$/, ''); }
-  function wordsOf(t) { return String(t || '').toLowerCase().split(/[^a-z0-9]+/).filter(function (w) { return w.length > 2 && ['the', 'and', 'for', 'with', 'per', 'from', 'all', 'list'].indexOf(w) < 0; }).map(stem); }
-  function catalogMatches(text, module) {
-    const want = wordsOf(text);
-    if (!want.length) return [];
-    return CATALOG.map(function (t) {
-      const have = wordsOf(t.text + ' ' + t.code);
-      let score = want.filter(function (w) { return have.indexOf(w) >= 0; }).length;
-      if (module && t.modules.indexOf(module) >= 0) score += 0.5;
-      return { t: t, score: score };
-    }).filter(function (x) { return x.score >= 1; }).sort(function (a, b) { return b.score - a.score; }).slice(0, 3)
-      .map(function (x) { return { kind: 'transaction', id: x.t.code, title: x.t.text, source: 'standard' }; });
-  }
-
-  /* Candidates for one step: from the system (discovery) first, else from the built-in list. */
-  function suggestions(st, step) {
-    const pack = st.discovery;
-    const m = pack && pack.stepMatches.filter(function (x) { return x.step === step.key; })[0];
-    if (m) return m.candidates.map(function (c) { return Object.assign({ source: 'system' }, c); });
-    return catalogMatches(step.text, st.context.module);
-  }
 
   /* Type-ahead lists: value = technical name, label = description, so typing "invoice" finds MIRO. */
   function datalists(pack) {
     const tx = CATALOG.map(function (t) { return { v: t.code, l: t.text + ' · standard' }; });
     if (!pack) return { 'ds-tx': tx, 'ds-obj': [] };
     const sys = pack.transactions.map(function (t) { return { v: t.code, l: (t.description || 'Transaction') + ' · in system' }; })
-      .concat(pack.fioriApps.map(function (a) { return { v: a.appId, l: (a.title || 'Fiori app') + ' · Fiori app in system' }; }));
+      .concat(pack.fioriApps.map(function (a) { return { v: a.appId, l: (a.title || 'Fiori app') + ' · Fiori app in system' }; }))
+      // matches discovery found for process steps described in business words
+      .concat([].concat.apply([], pack.stepMatches.map(function (m) { return m.candidates; })).map(function (c) { return { v: c.id, l: (c.title || (c.kind === 'fioriApp' ? 'Fiori app' : 'Transaction')) + ' · in system' }; }));
     const seen = {};
-    sys.forEach(function (x) { seen[x.v] = true; });
+    const list = sys.concat(tx).filter(function (x) { if (!x.v || seen[x.v]) return false; seen[x.v] = true; return true; });
     return {
-      'ds-tx': sys.concat(tx.filter(function (x) { return !seen[x.v]; })).filter(function (x) { return x.v; }),
+      'ds-tx': list,
       'ds-obj': pack.objects.map(function (o) { return o.name; }).concat(pack.enhancements.map(function (e) { return e.name; })).filter(Boolean)
     };
   }
@@ -243,5 +224,5 @@
     return mode === 'plain' ? 'vscode://' : 'vscode://' + (extensionId || cfg.extensionId) + '/discover?src=clipboard&v=' + cfg.packVersion;
   }
 
-  APB.discovery = { cfg: cfg, normalize: normalize, parse: parse, ageDays: ageDays, isStale: isStale, index: index, names: names, references: references, crossCheck: crossCheck, prompt: prompt, datalists: datalists, launchUrl: launchUrl, processSteps: processSteps, suggestions: suggestions, catalogMatches: catalogMatches };
+  APB.discovery = { cfg: cfg, normalize: normalize, parse: parse, ageDays: ageDays, isStale: isStale, index: index, names: names, references: references, crossCheck: crossCheck, prompt: prompt, datalists: datalists, launchUrl: launchUrl, processSteps: processSteps };
 })(window.APB = window.APB || {});

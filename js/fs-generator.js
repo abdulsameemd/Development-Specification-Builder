@@ -165,15 +165,28 @@
     return map;
   }
 
+  /* FR → fit-gap → solution (→ RICEFW for SAP) → UAT, in one table (fit-gap and traceability together). */
   function fitGap(s) {
-    const list = s.reqs.frs || [];
     const by = coveredBy(s);
-    const l = list.map(function (f, i) { return { f: f, id: F.frId(i) }; }).filter(function (x) { return V.isFilled(x.f) && x.f.fit; });
-    const viaRicefw = sap();
-    return l.length ? table(['FR', 'Requirement', 'Fit-gap', 'Solution'], l.map(function (x) {
-      const sol = x.f.fit === 'custom' && viaRicefw ? (by[x.id] || []).join(', ') : (x.f.approach || '').trim();
-      return [x.id, cell(x.f.title), x.f.fit === 'tbc' ? TBC : clean(opt('reqs', 'frs', x.f.fit, 'fit')), x.f.fit === 'custom' ? cell(sol) : dash(sol)];
-    })) : '';
+    const tests = {};
+    rows(s.quality.uat).forEach(function (r, i) { F.parseFrRefs(r.fr).forEach(function (fr) { (tests[fr] = tests[fr] || []).push('UAT-' + (i < 9 ? '0' : '') + (i + 1)); }); });
+    const l = (s.reqs.frs || []).map(function (f, i) { return { f: f, id: F.frId(i) }; }).filter(function (x) { return V.isFilled(x.f); });
+    if (!l.length) return '';
+    return table(['FR', 'Requirement', 'Fit-gap', 'Solution'].concat(sap() ? ['RICEFW'] : []).concat(['UAT']), l.map(function (x) {
+      const std = x.f.fit === 'standard' || x.f.fit === 'config';
+      const row = [x.id, cell(x.f.title), !x.f.fit || x.f.fit === 'tbc' ? TBC : clean(opt('reqs', 'frs', x.f.fit, 'fit')), dash((x.f.approach || '').trim())];
+      if (sap()) row.push((by[x.id] || []).join(', ') || (std ? 'n/a' : TBC));
+      row.push((tests[x.id] || []).join(', ') || TBC);
+      return row;
+    }));
+  }
+
+  /* Current System: what the existing program does (Read an existing program). */
+  function programLogic(s) {
+    const p = s.process;
+    const objs = rows(p.programs);
+    const tbl = objs.length ? table(['Object', 'Type', 'Description', 'Role'], objs.map(function (o) { return [cell(o.name), dash(o.type), dash(o.description), dash(opt('process', 'programs', o.role, 'role'))]; })) : '';
+    return sub('Current program logic', join([(p.currentLogic || '').trim(), tbl]));
   }
 
   function solution(s) {
@@ -185,12 +198,12 @@
     })) : '';
     const details = items.map(function (x) {
       return join([
-        '### ' + x.id + ': ' + ((x.r.name || '').trim() || TBC) + (x.r.type ? ' (' + F.ricefwType(x.r.type).label + ')' : ''),
+        '#### ' + x.id + ': ' + ((x.r.name || '').trim() || TBC) + (x.r.type ? ' (' + F.ricefwType(x.r.type).label + ')' : ''),
         (x.r.description || '').trim(),
         (x.r.existing || '').trim() && '- **Existing objects / enhancement spots:** ' + clean(x.r.existing)
       ]);
     });
-    return join([inv].concat(details).concat([sub('Configuration (SPRO)', bullets(s.solution.customizing))]));
+    return join([sub('RICEFW items', join([inv].concat(details))), sub('Configuration (SPRO)', bullets(s.solution.customizing))]);
   }
 
   function simpleGrid(sectionId, fieldId, list) {
@@ -211,49 +224,25 @@
     })) : '';
   }
 
-  /* FR ↔ RICEFW ↔ UAT */
-  function traceability(s) {
-    const list = s.reqs.frs || [];
-    const by = coveredBy(s);
-    const tests = {};
-    rows(s.quality.uat).forEach(function (r, i) { F.parseFrRefs(r.fr).forEach(function (fr) { (tests[fr] = tests[fr] || []).push('UAT-' + (i < 9 ? '0' : '') + (i + 1)); }); });
-    const l = list.map(function (f, i) { return { f: f, id: F.frId(i) }; }).filter(function (x) { return V.isFilled(x.f); });
-    if (!l.length) return '';
-    if (!sap()) {
-      return table(['FR', 'Requirement', 'Fit-gap', 'UAT'], l.map(function (x) {
-        return [x.id, cell(x.f.title), dash(x.f.fit === 'tbc' ? TBC : opt('reqs', 'frs', x.f.fit, 'fit')), (tests[x.id] || []).join(', ') || TBC];
-      }));
-    }
-    return table(['FR', 'Requirement', 'Fit-gap', 'RICEFW', 'UAT'], l.map(function (x) {
-      const std = x.f.fit === 'standard' || x.f.fit === 'config';
-      return [x.id, cell(x.f.title), dash(x.f.fit === 'tbc' ? TBC : opt('reqs', 'frs', x.f.fit, 'fit')), (by[x.id] || []).join(', ') || (std ? 'n/a' : TBC), (tests[x.id] || []).join(', ') || TBC];
-    }));
-  }
-
   function build(s) {
     cur = s;
     const sections = [];
     function add(t, body) { if (body && body.trim()) sections.push({ title: t, body: body.trim() }); }
-    add('Business Requirement', businessRequirement(s));
-    add('Scope', scope(s));
-    add('Stakeholders', simpleGrid('context', 'stakeholders', s.context.stakeholders));
-    add('Current Process (AS-IS)', processTable(s.process.asIs, 'pain', 'Pain point'));
-    add('Proposed Process (TO-BE)', join([processTable(s.process.toBe, 'change', 'Change', 'toBe'), flow(s.process.toBe), sub('Variants & exceptions', bullets(s.process.variants))]));
-    add('Functional Requirements', frSection(s));
-    add('Business Rules & Validations', rulesTable(s));
-    add('Data Requirements', dataTable(s));
-    if (sap()) add('Current SAP System Context', systemContext(s));
-    add('Fit-Gap Analysis', fitGap(s));
-    if (sap()) add('Solution Design (RICEFW)', solution(s));
-    add(sap() ? 'Roles & Authorizations' : 'Roles & Access', simpleGrid('solution', 'roles', s.solution.roles));
-    add('Interfaces', simpleGrid('solution', 'interfaces', s.solution.interfaces));
-    add('Outputs & Forms', simpleGrid('solution', 'outputs', s.solution.outputs));
-    add('Non-Functional Requirements', nfr(s));
-    add('Test Scenarios (UAT)', uat(s));
-    add('Traceability Matrix', traceability(s));
-    add('Risks, Assumptions & Open Points', simpleGrid('quality', 'risks', s.quality.risks));
-    add('Open Questions', FC.openQuestions(s).map(function (q, i) { return (i + 1) + '. ' + TBC + ' ' + q; }).join('\n'));
-    add('Version History & Approvals', join([sub('Version history', simpleGrid('control', 'history', s.control.history)), sub('Approvals', simpleGrid('control', 'approvals', s.control.approvals))]));
+    add('Business Requirement & Scope', join([businessRequirement(s), scope(s), sub('Stakeholders', simpleGrid('context', 'stakeholders', s.context.stakeholders))]));
+    add('Process', join([
+      sub('Current process (AS-IS)', processTable(s.process.asIs, 'pain', 'Pain point')),
+      sub('Proposed process (TO-BE)', join([processTable(s.process.toBe, 'change', 'Change', 'toBe'), flow(s.process.toBe)])),
+      sub('Variants & exceptions', bullets(s.process.variants))]));
+    add('Functional Requirements', join([frSection(s), sub('Business rules & validations', rulesTable(s)), sub('Data requirements', dataTable(s))]));
+    add('Current System', join([programLogic(s), sap() ? sub('SAP system context', systemContext(s).replace(/^### /gm, '#### ')) : '']));
+    add('Solution', join([sub('Fit-gap & traceability', fitGap(s)), sap() ? solution(s) : '',
+      sub(sap() ? 'Roles & authorizations' : 'Roles & access', simpleGrid('solution', 'roles', s.solution.roles)),
+      sub('Interfaces', simpleGrid('solution', 'interfaces', s.solution.interfaces)),
+      sub('Outputs & forms', simpleGrid('solution', 'outputs', s.solution.outputs))]));
+    add('Testing & Quality', join([sub('Test scenarios (UAT)', uat(s)), sub('Non-functional requirements', nfr(s))]));
+    add('Risks & Open Questions', join([sub('Risks, assumptions & open points', simpleGrid('quality', 'risks', s.quality.risks)),
+      sub('Open questions', FC.openQuestions(s).map(function (q, i) { return (i + 1) + '. ' + TBC + ' ' + q; }).join('\n'))]));
+    add('Document Control', join([sub('Version history', simpleGrid('control', 'history', s.control.history)), sub('Approvals', simpleGrid('control', 'approvals', s.control.approvals))]));
 
     const lines = ['# Functional Specification' + (title(s) ? ': ' + title(s) : ''), '', controlTable(s), ''];
     sections.forEach(function (sec, i) { lines.push('## ' + (i + 1) + '. ' + sec.title, '', sec.body, ''); });
