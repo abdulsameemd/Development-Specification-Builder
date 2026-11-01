@@ -258,22 +258,17 @@ The model in `state.js` does not depend on Copilot; Copilot is just an **output 
 
 ## Walkthrough videos
 
-[`docs/media/SAP-Spec-Builder-Functional-and-Technical.mp4`](docs/media/SAP-Spec-Builder-Functional-and-Technical.mp4) (4:13, 1080p, voice-over) shows the whole flow inside VS Code, step by step, from running the extension to handing over to the developer. It follows one FI-AP requirement (vendor open items ageing):
+[`docs/media/SAP-Spec-Builder-Functional-and-Technical.mp4`](docs/media/SAP-Spec-Builder-Functional-and-Technical.mp4) (4:00, 1080p, voice-over) is the whole flow inside VS Code, for one FI-AP requirement (vendor open items ageing). The narration and captions follow the builder's own three steps:
 
-1. Install the extension (VSIX) – Extensions view.
-2. **DEWA: Open SAP Spec Builder** from the command palette.
-3. Functional mode, sign in to GitHub Copilot.
-4. SAP, module and the business requirement.
-5. **Read an existing program** (`ZFI_AP_OPEN_ITEMS_OLD`) read-only → review → current process, rules and data in the spec.
-6. **Generate the whole spec with Copilot** → review → the document opens.
-7. Review the details: TO-BE process, FRs, priority and fit-gap.
-8. **Discover automatically** → reference check → RICEFW item R-01.
-9. Generate and save the Word file into the project.
-10. Hand over: the RICEFW item becomes a linked Technical spec.
-11. The FS changes → **Update from FS** in the Technical spec.
-12. Save `BUSINESS_REQUIREMENTS.md` and **Open in Copilot Chat** → `dewa-abap`.
+- **Why it matters** (illustration): without a spec, Copilot has to guess – invented tables and fields, follow-up questions, prompt after prompt, more time and tokens. With `BUSINESS_REQUIREMENTS.md`, one prompt carries the objects checked in SAP, rules, acceptance criteria and tests. What developers gain: fewer prompts, no invented objects, lower token use, consistent quality, traceability.
+- **Before you start:** install the VSIX, run *DEWA: Open SAP Spec Builder*, switch to Functional, sign in to GitHub Copilot.
+- **Step 1 · Requirement:** SAP and module, the business need; *Read an existing program* (read-only) → review; *Generate the whole spec with Copilot* → review → document.
+- **Step 2 · Process & requirements:** TO-BE process, FRs with priority and fit-gap, rules; the program's current logic under *More details*.
+- **Step 3 · Solution & sign-off:** *Discover automatically* → reference check → RICEFW item → Generate → Word saved into the project.
+- **Hand over to the developer:** the RICEFW item becomes a linked Technical spec; when the FS changes, *Update from FS* keeps the developer's work.
+- **The developer builds:** `BUSINESS_REQUIREMENTS.md` → *Open in Copilot Chat* → `dewa-abap`.
 
-The VS Code workbench and the builder are real (code-server with a demo build of the extension). The Copilot sign-in, the AI answers and the SAP answers are simulated from the sample "DEMO" system, and the Copilot Chat panel is an illustration, as the on-screen tags say.
+The VS Code workbench and the builder are real (code-server with a demo build of the extension). The Copilot sign-in, the AI answers and the SAP answers are simulated from the sample "DEMO" system; the "Why" chats and the Copilot Chat panel are illustrations, as the on-screen tags say.
 
 [`docs/media/SAP-Spec-Builder-Walkthrough.mp4`](docs/media/SAP-Spec-Builder-Walkthrough.mp4) (2:56, 1080p, voice-over): a single ABAP artifact from the builder to VS Code with the SAP ABAP ADT MCP server and the `dewa-abap` agent — specify the class, generate, Open in VS Code, confirm target, class + ABAP Unit test, evidence, `CONFIRM ARTEFACT`. The builder scenes are real; the VS Code / Copilot scenes are illustrations (marked in the video) and their evidence values are examples.
 
