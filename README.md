@@ -270,18 +270,19 @@ The model in `state.js` does not depend on Copilot; Copilot is just an **output 
 
 The VS Code workbench and the builder are real (code-server with a demo build of the extension). The Copilot sign-in, the AI answers and the SAP answers are simulated from the sample "DEMO" system; the "Why" chats and the Copilot Chat panel are illustrations, as the on-screen tags say.
 
-[`docs/media/SAP-Spec-Builder-Technical.mp4`](docs/media/SAP-Spec-Builder-Technical.mp4) (3:30, 1080p, voice-over) is the Technical (development spec) walkthrough inside VS Code, building a RAP business object (SD billing block rules, managed, with draft). The narration and captions follow the Technical builder's own five steps:
+[`docs/media/SAP-Spec-Builder-Technical.mp4`](docs/media/SAP-Spec-Builder-Technical.mp4) (4:20, 1080p, voice-over) is the Technical (development spec) walkthrough inside VS Code, building a RAP business object (SD billing block rules, managed, with draft). The narration and captions follow the Technical builder's own five steps:
 
-- **Why it matters** (animated cartoon, illustration): without a spec, a developer asks Copilot for a RAP app and Copilot has to guess – questions, then activation errors (behavior pool missing, draft table missing, ETag field wrong) and "activate this object?" one by one, with time and tokens climbing. With `BUSINESS_REQUIREMENTS.md`, one prompt carries every object and the RAP blueprint, and `dewa-abap` activates group by group. What developers gain: fewer prompts, the right RAP objects first time, activation per group, lower token use, tests built in.
+- **Why it matters** (animated cartoon of an ABAP developer in the office, illustration): without a spec, Copilot has to guess – questions, then activation errors (behavior pool missing, draft table missing, ETag field wrong) and "activate this object?" one by one, with time and tokens climbing. With `BUSINESS_REQUIREMENTS.md`, one prompt carries every object and the RAP blueprint, and the `dewa-abap` Copilot agent activates group by group. What developers gain: fewer prompts, the right RAP objects first time, activation per group, lower token use, tests and review built in.
 - **Before you start:** *DEWA: Open SAP Spec Builder* → Technical.
-- **Step 1 · Build:** requirement and the *RAP Application* template (table, draft table, root and projection view, business object, Fiori app).
+- **Step 1 · Build:** requirement and the *RAP Application* template.
 - **Step 2 · Requirement:** objective, users, a business rule, an acceptance criterion.
 - **Step 3 · Objects:** the object names and the dependency map.
 - **Step 4 · Specify:** the RAP readiness check lists what would break activation with the proposed names; once filled in: *no findings*.
-- **Step 5 · Review:** the RAP Implementation Blueprint (artifacts, activation groups, BDEF and behavior pool skeletons); `BUSINESS_REQUIREMENTS.md` saved into the project.
-- **Open in Copilot Chat → `dewa-abap`:** the agent builds group by group, one activation per group.
+- **Step 5 · Review:** the RAP Implementation Blueprint; `BUSINESS_REQUIREMENTS.md` saved into the project.
+- **The `dewa-abap` Copilot agent builds** group by group (one activation per group) and the generated objects open in VS Code: table, root and projection CDS views, behavior definition, behavior pool with the `validateDuplicate` validation, service definition – plus the Fiori elements app with the duplicate-rule check.
+- **The `dewa-codereview` Copilot agent reviews** the code: three findings, fixed by `dewa-abap`, no blocking findings.
 
-The VS Code workbench and the builder are real (code-server with a demo build of the extension); the cartoon and the Copilot Chat build log are illustrations, as the on-screen tags say.
+The VS Code workbench and the builder are real (code-server with a demo build of the extension). The cartoon, the Copilot Chat logs, the generated sources and the Fiori preview are illustrations with fixed sample output, as the on-screen tags say.
 
 ## Agent workflows page
 
