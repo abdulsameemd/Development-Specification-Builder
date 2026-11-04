@@ -258,19 +258,19 @@ The model in `state.js` does not depend on Copilot; Copilot is just an **output 
 
 ## Walkthrough videos
 
-[`docs/media/SAP-Spec-Builder-Functional-and-Technical.mp4`](docs/media/SAP-Spec-Builder-Functional-and-Technical.mp4) (4:00, 1080p, voice-over) is the whole flow inside VS Code, for one FI-AP requirement (vendor open items ageing). The narration and captions follow the builder's own three steps:
+[`docs/media/SAP-Spec-Builder-Functional.mp4`](docs/media/SAP-Spec-Builder-Functional.mp4) (3:41, 1080p, voice-over) is the Functional walkthrough inside VS Code, for one FI-AP requirement (vendor open items ageing), from the business need to the signed-off spec. The narration and captions follow the builder's own three steps:
 
-- **Why it matters** (illustration): without a spec, Copilot has to guess – invented tables and fields, follow-up questions, prompt after prompt, more time and tokens. With `BUSINESS_REQUIREMENTS.md`, one prompt carries the objects checked in SAP, rules, acceptance criteria and tests. What developers gain: fewer prompts, no invented objects, lower token use, consistent quality, traceability.
+- **Why it matters** (animated, semi-realistic illustration of a functional consultant in the office): without a spec, Copilot has to guess – invented tables and fields, follow-up questions, the requirement explained again prompt after prompt, more time and tokens. With `BUSINESS_REQUIREMENTS.md`, one prompt carries the objects checked in SAP, rules, acceptance criteria and tests. What the team gains: fewer prompts, no invented objects, lower token use, consistent quality, traceability.
 - **Before you start:** install the VSIX, run *DEWA: Open SAP Spec Builder*, switch to Functional, sign in to GitHub Copilot.
 - **Step 1 · Requirement:** SAP and module, the business need; *Read an existing program* (read-only) → review; *Generate the whole spec with Copilot* → review → document.
 - **Step 2 · Process & requirements:** TO-BE process, FRs with priority and fit-gap, rules; the program's current logic under *More details*.
 - **Step 3 · Solution & sign-off:** *Discover automatically* → reference check → RICEFW item → Generate → Word saved into the project.
-- **Hand over to the developer:** the RICEFW item becomes a linked Technical spec; when the FS changes, *Update from FS* keeps the developer's work.
-- **The developer builds:** `BUSINESS_REQUIREMENTS.md` → *Open in Copilot Chat* → `dewa-abap`.
+- **Ready for the developer:** one click on the RICEFW item creates the linked Technical spec – the Technical walkthrough below shows that part.
+- Ends with *Powered by MORO*.
 
-The VS Code workbench and the builder are real (code-server with a demo build of the extension). The Copilot sign-in, the AI answers and the SAP answers are simulated from the sample "DEMO" system; the "Why" chats and the Copilot Chat panel are illustrations, as the on-screen tags say.
+The VS Code workbench and the builder are real (code-server with a demo build of the extension). The Copilot sign-in, the AI answers and the SAP answers are simulated from the sample "DEMO" system; the illustrated consultant and the "Why" chats are illustrations, as the on-screen tags say.
 
-[`docs/media/SAP-Spec-Builder-Technical.mp4`](docs/media/SAP-Spec-Builder-Technical.mp4) (4:33, 1080p, voice-over) is the Technical (development spec) walkthrough inside VS Code. The intro is general – the builder is for ABAP objects and Fiori apps (reports, classes, RFCs, CDS, RAP, OData, CAP, Fiori) – and the demo builds a RAP business object (SD billing block rules, managed, with draft). It ends with *Powered by MORO*. The narration and captions follow the Technical builder's own five steps:
+[`docs/media/SAP-Spec-Builder-Technical.mp4`](docs/media/SAP-Spec-Builder-Technical.mp4) (4:34, 1080p, voice-over) is the Technical (development spec) walkthrough inside VS Code. The intro is general – the builder is for ABAP objects and Fiori apps (reports, classes, RFCs, CDS, RAP, OData, CAP, Fiori) – and the demo builds a RAP business object (SD billing block rules, managed, with draft). It ends with *Powered by MORO*. The narration and captions follow the Technical builder's own five steps:
 
 - **Why it matters** (animated, semi-realistic illustration of an ABAP developer in the office): without a spec, Copilot has to guess – questions, then activation errors (behavior pool missing, draft table missing, ETag field wrong) and "activate this object?" one by one, with time and tokens climbing. With `BUSINESS_REQUIREMENTS.md`, one prompt carries every object, the rules and the activation order, and the `dewa-abap` Copilot agent activates group by group. What developers gain: fewer prompts, the right objects first time, the right activation order, lower token use, tests and review built in.
 - **Before you start:** *DEWA: Open SAP Spec Builder* → Technical.
