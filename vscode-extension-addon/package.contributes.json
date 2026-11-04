@@ -231,6 +231,102 @@
             }
           }
         }
+      },
+      {
+        "name": "dewa_submitDevContext",
+        "toolReferenceName": "dewa_submitDevContext",
+        "displayName": "Send SAP check to SAP Spec Builder",
+        "userDescription": "Sends the read-only SAP check of a development specification (Check & read in SAP) to the open SAP Spec Builder for review.",
+        "modelDescription": "Call this once at the end of a 'DEV-CONTEXT v1' run with the complete dewa-dev-context JSON object (kind \"dewa-dev-context\", version 1): the checked object names, the existing objects read and notFound. The SAP Spec Builder shows it to the developer for review; nothing is taken over without the developer's choice. It does not change any files or systems.",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(checklist)",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "kind",
+            "version"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "dewa-dev-context"
+              ]
+            },
+            "version": {
+              "type": "number",
+              "enum": [
+                1
+              ]
+            },
+            "system": {
+              "type": "string"
+            },
+            "checked": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "result": {
+                    "type": "string",
+                    "enum": [
+                      "verified",
+                      "missing",
+                      "clash"
+                    ]
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "objects": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "summary": {
+                    "type": "string"
+                  },
+                  "detail": {
+                    "type": "object"
+                  },
+                  "uses": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "usedBy": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "notFound": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
       }
     ]
   }

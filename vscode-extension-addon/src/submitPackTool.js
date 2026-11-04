@@ -58,4 +58,32 @@ function registerDraft(vscode, deliver) {
   });
 }
 
-module.exports = { register: register, registerDraft: registerDraft, TOOL_NAME: TOOL_NAME, DRAFT_TOOL_NAME: DRAFT_TOOL_NAME };
+/* Third tool: "Check & read in SAP" for a development spec, run in Copilot Chat. The builder validates the JSON
+   again and shows it for review before anything is taken over. */
+const DEV_TOOL_NAME = 'dewa_submitDevContext';
+const MAX_DEV = 400000;
+
+function registerDev(vscode, deliver) {
+  return vscode.lm.registerTool(DEV_TOOL_NAME, {
+    prepareInvocation: function () {
+      return { invocationMessage: 'Sending the SAP check to the Spec Builder for review' };
+    },
+    invoke: async function (options) {
+      const ctx = options && options.input;
+      const text = (function () { try { return JSON.stringify(ctx); } catch (e) { return ''; } })();
+      let reply;
+      if (!ctx || typeof ctx !== 'object' || Array.isArray(ctx) || ctx.kind !== 'dewa-dev-context') {
+        reply = 'Not sent: the input must be the dewa-dev-context JSON object (kind "dewa-dev-context", version 1).';
+      } else if (text.length > MAX_DEV) {
+        reply = 'Not sent: the result is too large. Give structures and signatures, not full source code.';
+      } else {
+        reply = (await deliver(ctx))
+          ? 'The SAP check was sent to the Spec Builder. The developer reviews it there – summarise it in one or two sentences, do not repeat it.'
+          : 'The SAP Spec Builder panel is not open. Ask the user to open it ("DEWA: Open SAP Spec Builder") and paste your answer under "Paste an answer instead" in step 3.';
+      }
+      return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(reply)]);
+    }
+  });
+}
+
+module.exports = { register: register, registerDraft: registerDraft, registerDev: registerDev, TOOL_NAME: TOOL_NAME, DRAFT_TOOL_NAME: DRAFT_TOOL_NAME, DEV_TOOL_NAME: DEV_TOOL_NAME };

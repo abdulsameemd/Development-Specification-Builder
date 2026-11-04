@@ -493,3 +493,71 @@ test('the discovery agent can hand a program draft back', () => {
   assert.match(agent, /tools:.*'dewa_submitFsDraft'/);
   assert.match(agent, /FS-PROGRAM v1/);
 });
+
+/* ------------------------------------------- check & read in SAP (development spec) */
+const devReader = require('../src/devReader');
+const DEV_JSON = '```json\n{"kind":"dewa-dev-context","version":1,"checked":[{"name":"VBRK","result":"verified"}],"objects":[{"name":"VBRK","type":"Table","summary":"Billing header"}]}\n```';
+
+test('read-dev route: auto reads with read tools only and returns a devctx-result; chat opens dewa-fs-discovery', async () => {
+  let vs = fakeVscode({ script: [[{ call: ['abap_adt_get_object', { name: 'VBRK' }] }], [{ text: DEV_JSON }]] });
+  let { r, posts } = router(vs);
+  assert.strictEqual(await r.handle({ type: 'read-dev', mode: 'auto', prompt: 'no marker' }), false);
+  assert.strictEqual(await r.handle({ type: 'read-dev', mode: 'other', prompt: devReader.MARKER }), false);
+  await r.handle({ type: 'read-dev', mode: 'auto', prompt: devReader.MARKER + '\nObjects to check: VBRK' });
+  // write tools and the builder's own submit tools are never offered
+  const offered = vs.calls.requests[0].tools;
+  assert.ok(offered.indexOf('abap_adt_get_object') >= 0);
+  assert.ok(!offered.some((t) => /create|activate|submit/i.test(t)));
+  assert.ok(posts.some((p) => p.type === 'devctx-progress' && p.key && /VBRK/.test(p.text)));
+  assert.match(posts.filter((p) => p.type === 'devctx-result')[0].text, /dewa-dev-context/);
+  vs = fakeVscode();
+  ({ r, posts } = router(vs));
+  await r.handle({ type: 'read-dev', mode: 'chat', prompt: devReader.MARKER + '\nx' });
+  const open = vs.calls.commands.find((c) => c.id === 'workbench.action.chat.open');
+  assert.strictEqual(open.args.mode, 'dewa-fs-discovery');
+  assert.match(open.args.query, /dewa_submitDevContext/);
+});
+
+test('read-dev asks again for the JSON when the model forgets it', async () => {
+  const vs = fakeVscode({ script: [[{ text: 'VBRK exists.' }], [{ text: DEV_JSON }]] });
+  const { r, posts } = router(vs);
+  await r.handle({ type: 'read-dev', mode: 'auto', prompt: devReader.MARKER + '\nx' });
+  assert.match(posts.filter((p) => p.type === 'devctx-result')[0].text, /dewa-dev-context/);
+  assert.strictEqual(vs.calls.requests.length, 2);
+  assert.deepStrictEqual(vs.calls.requests[1].tools, []);
+});
+
+test('submit-dev tool delivers a valid SAP check and refuses anything else', async () => {
+  const vs = fakeVscode();
+  const got = [];
+  let open = true;
+  submitTool.registerDev(vs, async (d) => { if (open) got.push(d); return open; });
+  const tool = vs.calls.registered[submitTool.DEV_TOOL_NAME];
+  const text = async (input) => (await tool.invoke({ input: input })).content[0].value;
+  assert.match(await text({ kind: 'dewa-dev-context', version: 1, checked: [] }), /sent to the Spec Builder/);
+  assert.strictEqual(got.length, 1);
+  assert.match(await text({ kind: 'fs-draft' }), /^Not sent/);
+  assert.match(await text({ kind: 'dewa-dev-context', version: 1, objects: [{ summary: 'x'.repeat(500000) }] }), /too large/);
+  open = false;
+  assert.match(await text({ kind: 'dewa-dev-context', version: 1 }), /panel is not open/);
+});
+
+test('deliverDev posts the SAP check to the open panel; the tool is registered and declared', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sb-'));
+  const vs = fakeVscode();
+  const b = panel.createSpecBuilder(vs, fakeContext(dir), {});
+  assert.strictEqual(await b.deliverDev({ kind: 'dewa-dev-context' }), false);
+  b.open();
+  assert.strictEqual(await b.deliverDev({ kind: 'dewa-dev-context', version: 1 }), true);
+  const m = vs.calls.panel.webview.posted.pop();
+  assert.strictEqual(m.type, 'devctx-result');
+  assert.match(m.text, /"kind":"dewa-dev-context"/);
+  const vs2 = fakeVscode();
+  index.activate(fakeContext(fs.mkdtempSync(path.join(os.tmpdir(), 'sb-'))), vs2);
+  assert.ok(vs2.calls.registered.dewa_submitDevContext);
+  const decl = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.contributes.json'), 'utf8')).contributes.languageModelTools;
+  assert.ok(decl.some((t) => t.name === 'dewa_submitDevContext'));
+  const agent = fs.readFileSync(path.join(__dirname, '../agents/dewa-fs-discovery.agent.md'), 'utf8');
+  assert.match(agent, /tools:.*'dewa_submitDevContext'/);
+  assert.match(agent, /DEV-CONTEXT v1/);
+});

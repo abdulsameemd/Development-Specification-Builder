@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.10
+
+- **Check & read in SAP for Technical specs** (step 3 Objects), read-only through the SAP MCP servers:
+  - every object name is checked: in system, not found, name free, or a new name that already exists;
+  - the existing objects are read: fields and keys, CDS elements, method and parameter signatures, the current logic and where-used;
+  - *To Be Confirmed* objects become *Existing* or *New* after your review;
+  - the current state is shown read-only in step 4, and goes into a new **Current State in SAP** section of the specification for `dewa-abap`. Your own design is never changed.
+- Runs automatically in VS Code, in Copilot Chat with `dewa-fs-discovery` (new `dewa_submitDevContext` tool), or with a copied prompt in the browser.
+- Walkthrough videos: a functional consultant's intro for the Functional video, one-word pronunciation of DEWA and ABAP, and *Powered by MORO* at the end of both.
+
 ## 1.0.9
 
 - **Read an existing program:** the data requirements now keep the table and the field in separate columns, so discovery's reference check finds the tables. Before, a value such as `BSIK-LIFNR` was reported as not found.

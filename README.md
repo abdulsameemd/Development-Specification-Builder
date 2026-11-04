@@ -80,6 +80,8 @@ linked to it. The link is one-way – from Functional to Technical:
 | the FS (or upload a newer copy of it) | The linked Technical spec shows **"The functional spec changed"** with what changed. **Update from FS** takes over only what came from the FS – requirement text, rules, acceptance criteria, new objects, test scenarios. What the developer added or edited (own rules, edited text, object designs, fields, RAP details) stays; edited text is reported as kept. **Keep my version** accepts the FS as it is without changing the spec. |
 | the Technical spec (or upload it) | Nothing happens to the FS. |
 
+A Technical spec written without an FS can check its objects itself with **Check & read in SAP** (step 3).
+
 In the FS, step 3 lists the Technical specs created from it, with *up to date* or *FS changed*. If the FS is no longer
 in Drafts, the Technical spec asks you to upload its `.md`; an uploaded FS keeps its identity, so the link works again.
 
@@ -109,12 +111,13 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.9.vsix`](dist/dewa-sap-spec-builder-1.0.9.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.9.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.10.vsix`](dist/dewa-sap-spec-builder-1.0.10.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.10.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **DEWA: Open SAP Spec Builder** (command palette or *Spec Builder* in the status bar) opens this same app as a tab inside VS Code:
 
 - **Read an existing program** (step 1, SAP) reads it read-only with the Copilot model and the read tools of the SAP MCP servers, or in Copilot Chat with `dewa-fs-discovery`; the logic comes back for review;
 - sign in to **GitHub Copilot** in VS Code (button in step 1 or 3 or the Accounts menu);
+- **Check & read in SAP** (Technical mode, step 3) checks every object name and reads the existing objects read-only, automatically or in Copilot Chat with `dewa-fs-discovery` (result back with the `dewa_submitDevContext` tool);
 - **Discover automatically** reads the system read-only with the Copilot model and only the *read* tools of the SAP MCP servers (write tools are filtered out), with live progress and automatic import — or **Run in Copilot Chat** beside the panel, where the agent sends the pack back with the `dewa_submitContextPack` tool;
 - **Generate with Copilot** (step 1) writes the whole spec in the background; **Generate in Copilot Chat** runs it visibly in Chat, where you can steer it – Chat sends the result back with the `dewa_submitFsDraft` tool and the builder opens its review dialog;
 - **Open in Copilot Chat** on a functional spec (preview or finished document) asks Copilot to review it – gaps, contradictions, untestable requirements, open questions – and then answer your questions; in Technical mode it hands the spec to `dewa-abap`;
@@ -134,9 +137,21 @@ Business Requirement → Select Object → Add Existing/New Objects → Add Impo
 |---|---|
 | 1. Build | Pick Report / ABAP Class / RFC / RAP / CDS / CAPM / DDIC / Enhancement / OData / Fiori / Form and paste the business requirement (the only two mandatory inputs). The main object is added automatically. |
 | 2. Requirement | Optional objective, users, expected output, business rules, acceptance criteria, assumptions. |
-| 3. Objects | One compact line per object: type, name, status (**Existing – reuse**, **Existing – change**, **New**, **To Be Confirmed**), purpose. Suggestions are offered, never assumed. A dependency map is drawn from the list. |
+| 3. Objects | One compact line per object: type, name, status (**Existing – reuse**, **Existing – change**, **New**, **To Be Confirmed**), purpose. Suggestions are offered, never assumed. **Check & read in SAP** (below) verifies the names and reads the existing objects. A dependency map is drawn from the list. |
 | 4. Specify | A designer per new / changed object (see below). For reused objects: "what do you need from it?". Plus authorization (authority-check grid), testing, clean core. |
 | 5. Review | "Ready for Copilot" check, counts, open questions, editable Definition of Done → **Generate Specification**. |
+
+### Check & read in SAP (step 3, read-only)
+
+A Technical spec does not need a functional spec to be checked against the system. In step 3, **Check & read in SAP**
+sends the object list to Copilot, which reads the SAP system **read-only** through the SAP MCP servers (same tool
+filter as discovery: read tools only, write verbs always excluded):
+
+- **Every name is checked:** ✓ in system · ✗ not found · ✓ name free (for a new object) · ⚠ already exists (a new name that is taken). The result shows under each name.
+- **Existing objects are read** (reuse, change and *To Be Confirmed*, up to 10): fields and keys of tables and structures, CDS elements and associations, class and interface methods, function module parameters, report selection screens, RAP entities, what the object does today, what it uses and where it is used.
+- **You review it first.** *To Be Confirmed* objects become *Existing – reuse* (found) or *New* (not found); the objects they use can be added. A new name that already exists is flagged, never renamed, and an "existing" object that was not found becomes an open question.
+- **Your design is never changed.** The current state is kept apart from the designer fields: step 4 shows it read-only above each object (*Current state in SAP*), and the specification gets a **Current State in SAP (read-only)** section with the reference check, so `dewa-abap` builds on facts instead of re-reading or guessing.
+- **Where it runs:** in VS Code *Check & read automatically* (progress log in the panel) or *In Copilot Chat* (`dewa-fs-discovery`, which hands the result back with `dewa_submitDevContext`); in the browser *Copy prompt* → Copilot Chat in VS Code → *Paste the answer*.
 
 ### Object designers (step 4)
 

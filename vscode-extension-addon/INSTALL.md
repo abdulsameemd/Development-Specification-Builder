@@ -16,6 +16,9 @@ Adds the **SAP Spec Builder** to DEWA's VS Code extension, so consultants and de
 - **Read an existing program** (Functional, step 1, SAP) reads programs and the objects they use read-only with the same
   tool filter as discovery (`src/programReader.js`), or in Copilot Chat with `dewa-fs-discovery`; the logic comes back
   as an `fs-draft` for review.
+- **Check & read in SAP** (Technical, step 3) checks every object name and reads the existing objects read-only with the
+  same tool filter (`src/devReader.js`), or in Copilot Chat with `dewa-fs-discovery`, which hands the result back with the
+  `dewa_submitDevContext` tool; the builder shows a `dewa-dev-context` for review.
 - **Open in Copilot Chat** on a functional spec opens Chat in *ask* mode with a review prompt and the FS.
 - Chat buttons send the prompt automatically (setting `dewaSpecBuilder.chatAutoSend`, default `true`).
 - Word / Markdown files are saved through a VS Code save dialog (default: the workspace folder). In Technical mode,
@@ -25,7 +28,7 @@ The standalone browser version keeps working as before (copy & paste or `vscode:
 
 ## Quick path: the standalone VSIX
 
-`dist/dewa-sap-spec-builder-1.0.9.vsix` (built by `node scripts/build-vsix.js` from `vscode-extension/` and this folder)
+`dist/dewa-sap-spec-builder-1.0.10.vsix` (built by `node scripts/build-vsix.js` from `vscode-extension/` and this folder)
 is a ready-to-install extension, `dewa.dewa-sap-spec-builder`, that runs next to DEWA's existing extension. It also
 installs `dewa-fs-discovery.agent.md` into the VS Code prompts folder (setting `dewaSpecBuilder.installAgent`; an edited
 copy is never replaced; *DEWA: Reinstall dewa-fs-discovery agent*). Install it with *Extensions → … → Install from VSIX…*.
@@ -51,9 +54,10 @@ VS Code ┌───────────────────────
 | `src/index.js` | Entry point: panel, command, serializer, status-bar item, submit tool, URI handler (`/builder`, `/discover`) |
 | `src/specBuilderPanel.js` | Webview panel: loads the builder with a strict CSP + nonce, validated message routing |
 | `src/programReader.js` | Read an existing program: read-only tool loop (discoveryRunner) returning an `fs-draft` |
+| `src/devReader.js` | Check & read in SAP (Technical spec): read-only tool loop (discoveryRunner) returning a `dewa-dev-context` |
 | `src/draftRunner.js` | AI draft of an FS: one Copilot request without tools, one repair turn |
 | `src/discoveryRunner.js` | Automatic discovery: Copilot model + read-only MCP tools, round limit, cancellation |
-| `src/submitPackTool.js` | `dewa_submitContextPack` and `dewa_submitFsDraft` language-model tools (Copilot Chat → panel) |
+| `src/submitPackTool.js` | `dewa_submitContextPack`, `dewa_submitFsDraft` and `dewa_submitDevContext` language-model tools (Copilot Chat → panel) |
 | `src/fsDiscovery.js` | `/discover` URI handler for the browser version, `openChat()` |
 | `agents/dewa-fs-discovery.agent.md` | Read-only discovery agent |
 | `package.contributes.json` | What to merge into the extension's `package.json` |

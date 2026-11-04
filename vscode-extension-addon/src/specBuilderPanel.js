@@ -4,6 +4,7 @@
    - persistent storage (globalState), save dialogs and the VS Code clipboard;
    - GitHub sign-in status (VS Code's own GitHub authentication – the panel never receives a token);
    - read-only SAP discovery, automatic (discoveryRunner.js) or in Copilot Chat (fsDiscovery.js + submitPackTool.js);
+   - "Check & read in SAP" for a development spec, read-only (devReader.js), automatic or in Copilot Chat;
    - AI draft of a functional spec, in the background (draftRunner.js) or in Copilot Chat (submitPackTool.js);
    - "Open in Copilot Chat" for the development spec (dewa-abap) and for reviewing a functional spec (ask mode). */
 
@@ -13,6 +14,7 @@ const crypto = require('crypto');
 const runner = require('./discoveryRunner');
 const drafter = require('./draftRunner');
 const programReader = require('./programReader');
+const devReader = require('./devReader');
 const fsDiscovery = require('./fsDiscovery');
 const submitTool = require('./submitPackTool');
 
@@ -22,6 +24,7 @@ const CHAT_AGENTS = ['dewa-abap', 'dewa-codereview', 'dewa-fs-discovery', 'ask']
 const SAVE_TYPES = { '.md': 'Markdown', '.docx': 'Word document', '.json': 'JSON' };
 const MAX_VALUE = 5 * 1024 * 1024;
 const CHAT_SUFFIX = '\n\nWhen the context pack is ready, call the ' + submitTool.TOOL_NAME + ' tool with it so it is imported into the SAP Spec Builder.';
+const DEV_SUFFIX = '\n\nWhen the JSON is ready, call the ' + submitTool.DEV_TOOL_NAME + ' tool once with the JSON object (kind "dewa-dev-context") so the developer can review it in the SAP Spec Builder. Do not edit any files.';
 const DRAFT_SUFFIX = '\n\nWhen the draft is ready, call the ' + submitTool.DRAFT_TOOL_NAME + ' tool once with the JSON object (kind "fs-draft") so the user can review it in the SAP Spec Builder. Do not edit any files.';
 
 /* Strict CSP + nonce on every <script>, and the host seed (storage, version) before the app scripts. */
@@ -189,6 +192,40 @@ function createRouter(vscode, context, deps) {
       }
       return true;
     },
+    /* Check & read in SAP for a development spec (read-only) → dewa-dev-context for the review dialog. */
+    'read-dev': async function (m) {
+      if (!str(m.prompt, 200000) || m.prompt.indexOf(devReader.MARKER) !== 0 || ['auto', 'chat'].indexOf(m.mode) < 0) return false;
+      const auth = await deps.getAuth();
+      if (!auth.copilot) { deps.post({ type: 'devctx-error', code: 'NO_COPILOT', message: 'GitHub Copilot Chat is not installed in VS Code.' }); return true; }
+      if (!auth.signedIn) { deps.post({ type: 'devctx-error', code: 'SIGNED_OUT', message: 'Sign in to GitHub Copilot first.' }); return true; }
+      if (m.mode === 'chat') {
+        const sent = chat.autoSend ? chat.autoSend() : false;
+        const how = await chat.openChat(m.prompt + DEV_SUFFIX);
+        deps.post({ type: 'devctx-progress', text: (sent ? 'Copilot Chat is checking the objects with ' + fsDiscovery.AGENT : 'The prompt is in Copilot Chat (' + fsDiscovery.AGENT + ') – press Enter there') + (how === 'agent' ? '' : ' (agent mode)') + '; the result comes back here for review' });
+        return true;
+      }
+      if (cts) { deps.post({ type: 'devctx-error', code: 'BUSY', message: 'Copilot is already working on a request.' }); return true; }
+      cts = new vscode.CancellationTokenSource();
+      const cfg = deps.config();
+      try {
+        const text = await devReader.run(vscode, {
+          prompt: m.prompt,
+          allowPatterns: cfg.get('discoveryTools', []),
+          maxRounds: cfg.get('maxToolRounds', 25),
+          model: cfg.get('model', ''),
+          exclude: [submitTool.TOOL_NAME, submitTool.DRAFT_TOOL_NAME, submitTool.DEV_TOOL_NAME],
+          token: cts.token,
+          onProgress: function (p) { deps.post(Object.assign({ type: 'devctx-progress' }, p, { key: p.key || 'info' })); }
+        });
+        deps.post({ type: 'devctx-result', text: text });
+      } catch (e) {
+        deps.post({ type: 'devctx-error', code: e.code || 'FAILED', message: String(e && e.message || e) });
+      } finally {
+        if (cts) cts.dispose();
+        cts = null;
+      }
+      return true;
+    },
     stop: function () { if (cts) cts.cancel(); return true; },
     'open-chat': async function (m) {
       if (CHAT_AGENTS.indexOf(m.agent) < 0 || !str(m.prompt, 400000)) return false;
@@ -280,7 +317,15 @@ function createSpecBuilder(vscode, context, opts) {
     return true;
   }
 
-  return { open: open, attach: attach, deliverPack: deliverPack, deliverDraft: deliverDraft, getAuth: getAuth };
+  /* From the dewa_submitDevContext tool (Check & read in SAP in Copilot Chat): the builder opens its review dialog. */
+  async function deliverDev(ctx) {
+    if (!current) return false;
+    await current.post({ type: 'devctx-result', text: '```json\n' + JSON.stringify(ctx) + '\n```' });
+    current.panel.reveal(undefined, true);
+    return true;
+  }
+
+  return { open: open, attach: attach, deliverPack: deliverPack, deliverDraft: deliverDraft, deliverDev: deliverDev, getAuth: getAuth };
 }
 
 module.exports = { VIEW_TYPE: VIEW_TYPE, STORAGE_KEY: STORAGE_KEY, buildHtml: buildHtml, createRouter: createRouter, createSpecBuilder: createSpecBuilder, safeName: safeName };

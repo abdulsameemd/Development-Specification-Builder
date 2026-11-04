@@ -28,6 +28,7 @@
           'Inspect the existing project/repository before writing code.',
           'Reuse existing SAP objects (listed here or found in the repository/system). Do not create duplicate functionality.',
           'Do not invent SAP objects, tables, fields, APIs, CDS views, classes, function modules, workflows, authorization objects, or business rules.',
+          s.sapCheck && 'Current State in SAP was read from the system (read-only): build on it, and re-read an object only when you need more than it shows.',
           'Anything unknown is marked ' + TBC + ': inspect the repository/system where possible, otherwise ask for clarification instead of inventing an implementation.',
           built.length && 'Implement names, signatures, typing, keys and exceptions exactly as given in Technical Design; report any deviation.',
           has(DDIC) && 'Create dictionary objects in dependency order (domain → data element → structure / table type → table) and activate them before use.',
@@ -171,6 +172,36 @@
     }).join('\n\n');
   }
 
+  /* One object as it is today in SAP (o.sap); head = with its ### heading. */
+  function sapObjectMd(o, head) {
+    const def = D.objectDef(o.sap.type || o.type);
+    const parts = head ? ['### ' + (o.sap.type || o.type) + ' ' + o.name.trim().toUpperCase() + ' (' + D.statusLabel(o.status).toLowerCase() + ', as it is today)'] : [];
+    if (o.sap.summary) parts.push(o.sap.summary);
+    const body = renderFields(def.fields, o.sap.detail || {}, 4);
+    if (body) parts.push(body);
+    const rel = [];
+    if (o.sap.uses && o.sap.uses.length) rel.push('- **Uses:** ' + o.sap.uses.map(function (n) { return '`' + n + '`'; }).join(', '));
+    if (o.sap.usedBy && o.sap.usedBy.length) rel.push('- **Used by:** ' + o.sap.usedBy.map(function (n) { return '`' + n + '`'; }).join(', '));
+    if (rel.length) parts.push(rel.join('\n'));
+    return parts.join('\n\n');
+  }
+
+  /* Reference check and current state read from SAP ("Check & read in SAP", dev-sap.js). Facts only, read-only. */
+  function sapState(s) {
+    const blocks = [];
+    const chk = s.sapCheck;
+    if (chk && chk.results && chk.results.length) {
+      const when = chk.at ? new Date(chk.at).toISOString().slice(0, 10) : '';
+      const rows = s.objects.filter(function (o) { return o.name.trim(); }).map(function (o) {
+        const b = APB.devSap.badge(s, o);
+        return [cell(o.type), cell(o.name.trim()), cell(D.statusLabel(o.status)), cell(b ? b.text : '– not checked')];
+      });
+      blocks.push('Checked in SAP' + (chk.system ? ' (system ' + clean(chk.system) + ')' : '') + (when ? ' on ' + when : '') + ', read-only.\n\n' + table(['Type', 'Name', 'Status', 'In SAP'], rows));
+    }
+    s.objects.filter(function (o) { return o.sap && o.name.trim(); }).forEach(function (o) { blocks.push(sapObjectMd(o, true)); });
+    return blocks.join('\n\n');
+  }
+
   /* "When X, Then Y" → structured Given/When/Then. Nothing is invented: missing parts are omitted. */
   function acceptanceBlock(a, i) {
     const text = a.text.trim().replace(/\s+/g, ' ');
@@ -218,6 +249,8 @@
     add('Existing Objects (reuse)', ex);
     add('Existing Objects to Change', by('change').length ? objectTable(by('change'), 'Name') : '');
     add('New Objects', by('new').length ? objectTable(by('new'), 'Proposed name') : '');
+
+    add('Current State in SAP (read-only)', APB.devSap ? sapState(s) : '');
 
     if (s.objects.length) {
       const tree = C.treeToText(C.buildTree(s), function (o) { return C.objectLabel(o) + ' [' + D.statusLabel(o.status).toLowerCase() + ']'; });
@@ -336,7 +369,7 @@
   }
 
   APB.markdown = {
-    build: build, filename: filename, chatPrompt: chatPrompt, toHtml: toHtml, profiles: profiles,
+    build: build, sapObjectMd: sapObjectMd, filename: filename, chatPrompt: chatPrompt, toHtml: toHtml, profiles: profiles,
     // shared with the functional-spec generator (fs-generator.js)
     helpers: { table: table, gridMd: gridMd, renderFields: renderFields, clean: clean, cell: cell, splitLines: splitLines, slug: slug }
   };

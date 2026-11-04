@@ -779,6 +779,8 @@
     toDevSpec: toDevSpec,
     toDevSpecFromProgram: toDevSpecFromProgram,
     autoSend: function () { return autoSend(); },
+    copilotReady: function () { return copilotReady(); },
+    copilotStatus: function () { return copilotStatus(); },
     uatSkeleton: uatSkeleton
   };
 })(window.APB = window.APB || {});

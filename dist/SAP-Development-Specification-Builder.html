@@ -486,6 +486,15 @@ table.fs-check td { padding: 6px 8px; font-size: .84rem; vertical-align: top; }
 .rap-check ul { margin: 6px 0 8px; padding-left: 20px; }
 .rap-check li { margin: 2px 0; }
 .rap-check li.error { color: var(--danger); font-weight: 600; }
+.sap-badge { display: inline-block; margin-top: 4px; font-size: .72rem; font-weight: 700; color: var(--muted); }
+.sap-badge.ok { color: var(--accent-text); }
+.sap-badge.bad { color: var(--danger); }
+.sap-card { margin-top: 14px; }
+.sap-last { color: var(--muted); margin: 6px 0 0; }
+.sap-current { border: 1px dashed var(--line); border-radius: 10px; padding: 6px 12px; margin: 0 0 12px; background: var(--input); }
+.sap-current summary { cursor: pointer; font-weight: 700; font-size: .86rem; }
+.sap-current-body { font-size: .84rem; max-height: 360px; overflow: auto; }
+.sap-current-body table { font-size: .78rem; }
 .rap-ok, .rap-draft { background: var(--ok-bg); border: 1px solid rgba(163, 230, 53, .35); border-radius: 10px; padding: 8px 12px; font-size: .86rem; color: var(--accent-text); }
 
 .sg-list { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 8px; }
@@ -769,6 +778,15 @@ div.link-banner p { margin: 0 0 6px; }
   </dialog>
   <input type="file" id="md-upload" accept=".md,.markdown,text/markdown,text/plain" hidden>
 
+  <dialog id="devctx-dialog" aria-labelledby="devctx-title">
+    <form method="dialog" class="dialog-head">
+      <h2 id="devctx-title">Review the SAP check</h2>
+      <button class="icon-btn" aria-label="Close">✕</button>
+    </form>
+    <p class="muted small">Read from SAP, read-only. Pick what to take over. Your own design in step 4 is never changed – the current state is shown next to it. Check every item – AI can be wrong.</p>
+    <ul id="devctx-list" class="draft-review"></ul>
+    <div class="nav-row"><span class="spacer"></span><button type="button" class="btn btn-primary" data-action="devctx-apply">Take over</button></div>
+  </dialog>
   <dialog id="examples-dialog" aria-labelledby="examples-title">
     <form method="dialog" class="dialog-head">
       <h2 id="examples-title">Worked examples</h2>
@@ -11385,6 +11403,7 @@ window.APB_CONFIG = {
       acceptance: [],
       assumptions: '',
       source: null,
+      sapCheck: null,
       quality: { authorization: '', authChecks: [], dataVolume: '', performanceReq: '', testTypes: ['Unit', 'Functional', 'Integration'], testScenarios: '', cleanCore: '', cleanCoreNote: '' },
       dod: defaultDod(),
       meta: { created: now, updated: now }
@@ -11407,7 +11426,9 @@ window.APB_CONFIG = {
         id: str(o.id) || uid(), type: APB.config.definitions.objectTypes[o.type] ? o.type : 'Other', name: str(o.name),
         status: ['existing', 'change', 'new', 'tbc'].indexOf(o.status) >= 0 ? o.status : 'tbc',
         purpose: str(o.purpose), parent: str(o.parent),
-        detail: o.detail && typeof o.detail === 'object' ? clone(o.detail) : {}
+        detail: o.detail && typeof o.detail === 'object' ? clone(o.detail) : {},
+        // current state read from SAP (dev-sap.js) – shown read-only, never mixed into the designer fields
+        sap: o.sap && typeof o.sap === 'object' && !Array.isArray(o.sap) ? clone(o.sap) : null
       };
     });
     s.rules = arr(input.rules).map(function (r) { return { id: str(r.id) || uid(), condition: str(r.condition), behavior: str(r.behavior) }; });
@@ -11415,6 +11436,10 @@ window.APB_CONFIG = {
     s.assumptions = str(input.assumptions);
     // link to the functional spec it was created from (spec-link.js); null for specs written directly
     s.source = APB.specLink ? APB.specLink.normalizeSource(input.source) : null;
+    // last "Check & read in SAP" (dev-sap.js)
+    s.sapCheck = input.sapCheck && typeof input.sapCheck === 'object' && Array.isArray(input.sapCheck.results)
+      ? { at: Number(input.sapCheck.at) || 0, system: str(input.sapCheck.system), results: arr(input.sapCheck.results).map(function (r) { return { name: str(r.name).toUpperCase(), type: str(r.type), result: ['verified', 'missing', 'clash'].indexOf(r.result) >= 0 ? r.result : 'missing', description: str(r.description) }; }), notFound: Array.isArray(input.sapCheck.notFound) ? input.sapCheck.notFound.map(str) : [] }
+      : null;
     if (input.quality && typeof input.quality === 'object') Object.assign(s.quality, clone(input.quality));
     // schema 1 kept a single authorization object text
     if (s.quality.authObject && !s.quality.authChecks.length) s.quality.authChecks = [{ object: s.quality.authObject }];
@@ -11614,6 +11639,7 @@ window.APB_CONFIG = {
     });
 
     if (APB.rap) APB.rap.checks(state).forEach(function (c) { q.push(c.text); });
+    if (APB.devSap) APB.devSap.questions(state).forEach(function (x) { q.push(x); });
 
     const qa = state.quality;
     if (qa.authorization === 'tbc') q.push('Whether authority checks are required.');
@@ -12070,6 +12096,274 @@ window.APB_CONFIG = {
 
 </script>
   <script>
+/* "Check & read in SAP" for development (Technical) specs. The browser never talks to SAP: Copilot reads the system
+   READ-ONLY through the SAP MCP servers (automatically in VS Code, in Copilot Chat with dewa-fs-discovery, or via a
+   copied prompt) and answers with a dewa-dev-context JSON. This module builds the prompt, validates the answer
+   (untrusted input), previews it for review and applies only what the developer picks:
+   - the reference check (✓ in system · ✗ not found · ⚠ already exists) per object name;
+   - status of "To Be Confirmed" objects → Existing (found) or New (not found);
+   - what an existing object looks like today (o.sap: summary, designer-shaped details, uses / used by) – kept
+     apart from the developer's own designer fields, which are never changed. */
+(function (APB) {
+  'use strict';
+
+  const MARK = 'DEV-CONTEXT v1';
+  const KIND = 'dewa-dev-context';
+  const MAX_TEXT = 400000;
+  const MAX_READ = 10;
+  const NAME_RE = /^[A-Z0-9_\/]{1,40}$/;
+  const RESULTS = ['verified', 'missing', 'clash'];
+
+  function D() { return APB.defs; }
+  function str(v, max) { return (typeof v === 'string' ? v : v == null ? '' : typeof v === 'number' || typeof v === 'boolean' ? String(v) : '').trim().slice(0, max || 2000); }
+  function upper(n) { return str(n, 60).toUpperCase(); }
+  function clone(v) { return JSON.parse(JSON.stringify(v)); }
+  function arr(v, max) { return (Array.isArray(v) ? v : []).slice(0, max || 50); }
+  function names(v, max) {
+    const out = [];
+    arr(v, max || 30).forEach(function (x) { const n = upper(typeof x === 'object' && x ? x.name : x); if (NAME_RE.test(n) && out.indexOf(n) < 0) out.push(n); });
+    return out;
+  }
+
+  /* Objects whose current state is worth reading: reused, changed or still unconfirmed, with a name. */
+  function readTargets(s) {
+    return s.objects.filter(function (o) { return o.name.trim() && o.status !== 'new' && !(APB.rap && APB.rap.isDraftTable(s, o)); }).slice(0, MAX_READ);
+  }
+  function checkTargets(s) { return s.objects.filter(function (o) { return o.name.trim(); }); }
+
+  /* Designer field ids (and grid columns / record fields) the answer may use for a type. */
+  function schemaLine(type) {
+    const fields = D().objectDef(type).fields || [];
+    if (!fields.length) return '';
+    return fields.filter(function (f) { return f.id !== 'used'; }).map(function (f) {
+      const sub = f.kind === 'grid' ? f.columns : f.kind === 'records' ? f.fields : null;
+      return f.id + (sub ? '[' + sub.map(function (c) { return c.id; }).join(', ') + ']' : '');
+    }).join('; ');
+  }
+
+  function prompt(s) {
+    const st = { existing: 'Existing – reuse', change: 'Existing – change', new: 'New (check that the name is free)', tbc: 'To Be Confirmed (does it exist?)' };
+    const all = checkTargets(s);
+    const read = readTargets(s);
+    const types = [];
+    read.forEach(function (o) { if (types.indexOf(o.type) < 0 && schemaLine(o.type)) types.push(o.type); });
+    return [MARK,
+      'Check the object names below in the SAP system and read the existing objects, READ-ONLY, for a development specification that GitHub Copilot (dewa-abap) will implement.',
+      '',
+      s.types.length ? 'Development: ' + s.types.map(function (t) { return (D().types[t] && D().types[t].label) || t; }).join(', ') : '',
+      s.requirement.text.trim() ? 'Requirement (why the developer asks):\n' + s.requirement.text.trim().slice(0, 3000) : '',
+      '',
+      'Objects to check (every name):',
+      all.map(function (o, i) { return (i + 1) + '. ' + o.type + ' ' + o.name.trim().toUpperCase() + ' – ' + st[o.status]; }).join('\n') || '(none)',
+      '',
+      read.length ? 'Objects to read (current state): ' + read.map(function (o) { return o.name.trim().toUpperCase(); }).join(', ') : 'Nothing to read – only check the names.',
+      types.length ? '\nDetail fields per type (use only these ids; grids and records are arrays of objects with the ids in [ ]):\n' + types.map(function (t) { return '- ' + t + ': ' + schemaLine(t); }).join('\n') : '',
+      '',
+      'Rules:',
+      '- READ ONLY: never create, change, delete, activate, lock, run or transport anything. Do not read table contents.',
+      '- checked: one entry per listed name. result "verified" = exists, "missing" = not found, "clash" = listed as New but the name already exists.',
+      '- objects: for each object to read that exists – summary (what it does today, 1-4 sentences), detail (only the ids above, only what a tool returned), uses (objects it reads or calls), usedBy (main where-used, at most 10).',
+      '- For tables, structures and CDS views give the fields with keys and types; for classes, interfaces and function modules the signatures (no full source); for reports the selection screen and the logic in a few sentences.',
+      '- Never invent: everything you could not read goes into notFound.',
+      '',
+      'Answer with a short summary and then exactly one ```json block:',
+      '```json',
+      JSON.stringify({
+        kind: KIND, version: 1, system: '',
+        checked: [{ name: 'NAME', type: 'Table', result: 'verified', description: '' }],
+        objects: [{ name: 'NAME', type: 'Table', summary: '', detail: {}, uses: [], usedBy: [] }],
+        notFound: []
+      }, null, 1),
+      '```'
+    ].filter(function (l) { return l !== null; }).join('\n').replace(/\n{3,}/g, '\n\n');
+  }
+
+  /* ------------------------------------------------------------ validation */
+  function cellValue(col, v) {
+    if (col.kind === 'check') return v === true || /^(x|yes|true|1|✓)$/i.test(str(v, 5));
+    if (col.kind === 'select') {
+      const t = str(v, 200);
+      const opt = (col.options || []).filter(function (o) { return o.value === t || o.label === t; })[0];
+      return opt ? opt.value : '';
+    }
+    if (col.kind === 'multicheck') return arr(v, 20).map(function (x) { return str(x, 100); }).filter(function (x) { return (col.options || []).some(function (o) { return o.value === x; }); });
+    if (col.kind === 'lines' || col.kind === 'textarea') return Array.isArray(v) ? v.map(function (x) { return str(x, 500); }).filter(Boolean).join('\n').slice(0, 8000) : str(v, 8000);
+    return str(v, 500);
+  }
+
+  /* Keep only the designer's field ids, with the designer's value shapes. */
+  function sanitize(fields, raw) {
+    const out = {};
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+    (fields || []).forEach(function (f) {
+      if (f.id === 'used' || raw[f.id] === undefined || raw[f.id] === null) return;
+      const v = raw[f.id];
+      if (f.kind === 'grid') {
+        const rows = arr(v, 200).filter(function (r) { return r && typeof r === 'object' && !Array.isArray(r); }).map(function (r) {
+          const row = {};
+          f.columns.forEach(function (c) { if (r[c.id] !== undefined) row[c.id] = cellValue(c, r[c.id]); });
+          return row;
+        }).filter(function (r) { return Object.keys(r).some(function (k) { return r[k] !== '' && r[k] !== false; }); });
+        if (rows.length) out[f.id] = rows;
+      } else if (f.kind === 'records') {
+        const recs = arr(v, 50).map(function (r) { return sanitize(f.fields, r); }).filter(function (r) { return Object.keys(r).length; });
+        if (recs.length) out[f.id] = recs;
+      } else {
+        const val = cellValue(f, v);
+        if (val !== '' && val !== false && !(Array.isArray(val) && !val.length)) out[f.id] = val;
+      }
+    });
+    return out;
+  }
+
+  function normalize(raw) {
+    const known = D().objectTypes;
+    const checked = [];
+    arr(raw.checked, 100).forEach(function (c) {
+      if (!c || typeof c !== 'object') return;
+      const n = upper(c.name);
+      const r = str(c.result, 20).toLowerCase();
+      if (!NAME_RE.test(n) || RESULTS.indexOf(r) < 0 || checked.some(function (x) { return x.name === n; })) return;
+      checked.push({ name: n, type: str(c.type, 40), result: r, description: str(c.description, 200) });
+    });
+    const objects = [];
+    arr(raw.objects, 20).forEach(function (o) {
+      if (!o || typeof o !== 'object') return;
+      const n = upper(o.name);
+      if (!NAME_RE.test(n) || objects.some(function (x) { return x.name === n; })) return;
+      const type = known.indexOf(str(o.type, 40)) >= 0 ? str(o.type, 40) : '';
+      objects.push({ name: n, type: type, summary: str(o.summary, 3000), detail: type ? sanitize(D().objectDef(type).fields, o.detail) : {}, uses: names(o.uses), usedBy: names(o.usedBy, 10) });
+    });
+    return { kind: KIND, version: 1, system: str(raw.system, 40), checked: checked, objects: objects, notFound: names(raw.notFound, 50) };
+  }
+
+  /* text: the whole answer or only its JSON → { ctx, error } */
+  function parse(text) {
+    text = String(text || '');
+    if (text.length > MAX_TEXT) return { ctx: null, error: 'The answer is too long.' };
+    const cands = [];
+    text.replace(/```(?:json)?\s*([\s\S]*?)```/gi, function (_, b) { cands.push(b); return _; });
+    const a = text.indexOf('{'), b = text.lastIndexOf('}');
+    if (a >= 0 && b > a) cands.push(text.slice(a, b + 1));
+    for (let i = cands.length - 1; i >= 0; i--) {
+      let raw;
+      try { raw = JSON.parse(cands[i]); } catch (e) { continue; }
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw) || raw.kind !== KIND) continue;
+      const ctx = normalize(raw);
+      if (ctx.checked.length || ctx.objects.length) return { ctx: ctx, error: '' };
+    }
+    return { ctx: null, error: 'No SAP check found in the answer – paste the whole answer including the ```json block (kind "' + KIND + '").' };
+  }
+
+  /* ------------------------------------------------------- review & apply */
+  function find(list, name) { const n = upper(name); return list.filter(function (x) { return x.name === n; })[0] || null; }
+
+  /* → [{ id, label, items[], checked }] for the review dialog */
+  function preview(s, ctx) {
+    const parts = [];
+    const res = { verified: 0, missing: 0, clash: 0 };
+    ctx.checked.forEach(function (c) { res[c.result]++; });
+    parts.push({ id: 'check', label: 'Reference check: ' + res.verified + ' ✓ in system · ' + res.missing + ' ✗ not found' + (res.clash ? ' · ' + res.clash + ' ⚠ already exists' : ''), items: ctx.checked.map(function (c) { return c.name + ' – ' + ({ verified: '✓ in system', missing: '✗ not found', clash: '⚠ already exists' })[c.result] + (c.description ? ' (' + c.description + ')' : ''); }), checked: true });
+    const status = [];
+    s.objects.forEach(function (o) {
+      const c = find(ctx.checked, o.name);
+      if (c && o.status === 'tbc' && c.result !== 'clash') status.push(o.name.toUpperCase() + ': To Be Confirmed → ' + (c.result === 'verified' ? 'Existing – reuse' : 'New'));
+    });
+    if (status.length) parts.push({ id: 'status', label: 'Update the status of unconfirmed objects', items: status, checked: true });
+    const read = [];
+    s.objects.forEach(function (o) {
+      const r = find(ctx.objects, o.name);
+      if (!r) return;
+      const ids = Object.keys(r.detail).map(function (k) { const f = (D().objectDef(r.type || o.type).fields || []).filter(function (x) { return x.id === k; })[0]; return f ? f.label : k; });
+      read.push(o.name.toUpperCase() + ': ' + (r.summary ? r.summary.slice(0, 120) : 'current state') + (ids.length ? ' · ' + ids.join(', ') : ''));
+    });
+    if (read.length) parts.push({ id: 'current', label: 'Current state read from SAP (shown read-only, your design is not changed)', items: read, checked: true });
+    const used = usedToAdd(s, ctx);
+    if (used.length) parts.push({ id: 'used', label: 'Add the objects they use as Existing – reuse', items: used.map(function (u) { return u.name + ' (used by ' + u.by + ')'; }), checked: false });
+    if (ctx.notFound.length) parts.push({ id: 'notfound', label: 'Could not be read', items: ctx.notFound, checked: true, info: true });
+    return parts;
+  }
+
+  function usedToAdd(s, ctx) {
+    const have = s.objects.map(function (o) { return o.name.trim().toUpperCase(); });
+    const out = [];
+    ctx.objects.forEach(function (r) {
+      r.uses.forEach(function (n) { if (have.indexOf(n) < 0 && !out.some(function (x) { return x.name === n; })) out.push({ name: n, by: r.name }); });
+    });
+    return out.slice(0, 15);
+  }
+
+  /* ids: the picked part ids → { state, applied[] } (state is a copy) */
+  function apply(s, ctx, ids) {
+    const next = clone(s);
+    const on = function (id) { return ids.indexOf(id) >= 0; };
+    const applied = [];
+    const now = Date.now();
+    if (on('check')) {
+      next.sapCheck = { at: now, system: ctx.system, results: ctx.checked.map(function (c) { return { name: c.name, type: c.type, result: c.result, description: c.description }; }), notFound: ctx.notFound.slice() };
+      applied.push('reference check');
+    }
+    if (on('status')) {
+      let n = 0;
+      next.objects.forEach(function (o) {
+        const c = find(ctx.checked, o.name);
+        if (c && o.status === 'tbc' && c.result !== 'clash') { o.status = c.result === 'verified' ? 'existing' : 'new'; n++; }
+      });
+      if (n) applied.push(n + ' status' + (n > 1 ? 'es' : ''));
+    }
+    if (on('current')) {
+      let n = 0;
+      next.objects.forEach(function (o) {
+        const r = find(ctx.objects, o.name);
+        if (!r) return;
+        o.sap = { at: now, system: ctx.system, type: r.type || o.type, summary: r.summary, detail: r.detail, uses: r.uses, usedBy: r.usedBy };
+        n++;
+      });
+      if (n) applied.push('current state of ' + n + ' object' + (n > 1 ? 's' : ''));
+    }
+    if (on('used')) {
+      const add = usedToAdd(next, ctx);
+      add.forEach(function (u) {
+        const c = find(ctx.checked, u.name);
+        next.objects.push({ id: APB.state.uid(), type: guessType(c && c.type), name: u.name, status: 'existing', purpose: 'Used by ' + u.by + ' (read from SAP)', parent: '', detail: {}, sap: null });
+      });
+      if (add.length) applied.push(add.length + ' used object' + (add.length > 1 ? 's' : ''));
+    }
+    return { state: next, applied: applied };
+  }
+
+  function guessType(t) { const known = D().objectTypes; return t && known.indexOf(t) >= 0 ? t : 'Other'; }
+
+  /* ---------------------------------------------------------------- views */
+  /* Result of the last check for an object (by its current name) → { cls, text, title } | null */
+  function badge(s, o) {
+    const chk = s.sapCheck;
+    if (!chk || !o.name.trim()) return null;
+    const r = find(chk.results || [], o.name);
+    if (!r) return { cls: '', text: '– not checked', title: 'Not in the last SAP check' };
+    if (r.result === 'verified') return o.status === 'new' ? { cls: 'bad', text: '⚠ already exists', title: 'Planned as new, but the name exists in SAP' } : { cls: 'ok', text: '✓ in system', title: r.description || 'Found in SAP' };
+    if (r.result === 'clash') return { cls: 'bad', text: '⚠ already exists', title: r.description || 'Planned as new, but the name exists in SAP' };
+    return o.status === 'new' ? { cls: 'ok', text: '✓ name free', title: 'Not found in SAP – free for a new object' } : { cls: 'bad', text: '✗ not found', title: 'Marked as existing but not found in SAP' };
+  }
+
+  /* Open questions from the last check (completeness.js). */
+  function questions(s) {
+    const q = [];
+    if (!s.sapCheck) return q;
+    s.objects.forEach(function (o) {
+      const b = badge(s, o);
+      if (!b || b.cls !== 'bad') return;
+      if (b.text.indexOf('already') >= 0) q.push('The proposed new name ' + o.name.trim() + ' already exists in SAP – choose another name or reuse the existing object.');
+      else q.push(o.type + ' ' + o.name.trim() + ' is marked as existing but was not found in SAP – check the name.');
+    });
+    return q;
+  }
+
+  APB.devSap = { MARK: MARK, KIND: KIND, MAX_READ: MAX_READ, prompt: prompt, parse: parse, sanitize: sanitize, preview: preview, apply: apply, badge: badge, questions: questions, readTargets: readTargets, checkTargets: checkTargets };
+})(window.APB = window.APB || {});
+
+</script>
+  <script>
 /* Turns the specification model into Markdown. Output "profiles" decide the
    filename and the closing instruction block; only GitHub Copilot exists today. */
 (function (APB) {
@@ -12100,6 +12394,7 @@ window.APB_CONFIG = {
           'Inspect the existing project/repository before writing code.',
           'Reuse existing SAP objects (listed here or found in the repository/system). Do not create duplicate functionality.',
           'Do not invent SAP objects, tables, fields, APIs, CDS views, classes, function modules, workflows, authorization objects, or business rules.',
+          s.sapCheck && 'Current State in SAP was read from the system (read-only): build on it, and re-read an object only when you need more than it shows.',
           'Anything unknown is marked ' + TBC + ': inspect the repository/system where possible, otherwise ask for clarification instead of inventing an implementation.',
           built.length && 'Implement names, signatures, typing, keys and exceptions exactly as given in Technical Design; report any deviation.',
           has(DDIC) && 'Create dictionary objects in dependency order (domain → data element → structure / table type → table) and activate them before use.',
@@ -12243,6 +12538,36 @@ window.APB_CONFIG = {
     }).join('\n\n');
   }
 
+  /* One object as it is today in SAP (o.sap); head = with its ### heading. */
+  function sapObjectMd(o, head) {
+    const def = D.objectDef(o.sap.type || o.type);
+    const parts = head ? ['### ' + (o.sap.type || o.type) + ' ' + o.name.trim().toUpperCase() + ' (' + D.statusLabel(o.status).toLowerCase() + ', as it is today)'] : [];
+    if (o.sap.summary) parts.push(o.sap.summary);
+    const body = renderFields(def.fields, o.sap.detail || {}, 4);
+    if (body) parts.push(body);
+    const rel = [];
+    if (o.sap.uses && o.sap.uses.length) rel.push('- **Uses:** ' + o.sap.uses.map(function (n) { return '`' + n + '`'; }).join(', '));
+    if (o.sap.usedBy && o.sap.usedBy.length) rel.push('- **Used by:** ' + o.sap.usedBy.map(function (n) { return '`' + n + '`'; }).join(', '));
+    if (rel.length) parts.push(rel.join('\n'));
+    return parts.join('\n\n');
+  }
+
+  /* Reference check and current state read from SAP ("Check & read in SAP", dev-sap.js). Facts only, read-only. */
+  function sapState(s) {
+    const blocks = [];
+    const chk = s.sapCheck;
+    if (chk && chk.results && chk.results.length) {
+      const when = chk.at ? new Date(chk.at).toISOString().slice(0, 10) : '';
+      const rows = s.objects.filter(function (o) { return o.name.trim(); }).map(function (o) {
+        const b = APB.devSap.badge(s, o);
+        return [cell(o.type), cell(o.name.trim()), cell(D.statusLabel(o.status)), cell(b ? b.text : '– not checked')];
+      });
+      blocks.push('Checked in SAP' + (chk.system ? ' (system ' + clean(chk.system) + ')' : '') + (when ? ' on ' + when : '') + ', read-only.\n\n' + table(['Type', 'Name', 'Status', 'In SAP'], rows));
+    }
+    s.objects.filter(function (o) { return o.sap && o.name.trim(); }).forEach(function (o) { blocks.push(sapObjectMd(o, true)); });
+    return blocks.join('\n\n');
+  }
+
   /* "When X, Then Y" → structured Given/When/Then. Nothing is invented: missing parts are omitted. */
   function acceptanceBlock(a, i) {
     const text = a.text.trim().replace(/\s+/g, ' ');
@@ -12290,6 +12615,8 @@ window.APB_CONFIG = {
     add('Existing Objects (reuse)', ex);
     add('Existing Objects to Change', by('change').length ? objectTable(by('change'), 'Name') : '');
     add('New Objects', by('new').length ? objectTable(by('new'), 'Proposed name') : '');
+
+    add('Current State in SAP (read-only)', APB.devSap ? sapState(s) : '');
 
     if (s.objects.length) {
       const tree = C.treeToText(C.buildTree(s), function (o) { return C.objectLabel(o) + ' [' + D.statusLabel(o.status).toLowerCase() + ']'; });
@@ -12408,7 +12735,7 @@ window.APB_CONFIG = {
   }
 
   APB.markdown = {
-    build: build, filename: filename, chatPrompt: chatPrompt, toHtml: toHtml, profiles: profiles,
+    build: build, sapObjectMd: sapObjectMd, filename: filename, chatPrompt: chatPrompt, toHtml: toHtml, profiles: profiles,
     // shared with the functional-spec generator (fs-generator.js)
     helpers: { table: table, gridMd: gridMd, renderFields: renderFields, clean: clean, cell: cell, splitLines: splitLines, slug: slug }
   };
@@ -15185,6 +15512,8 @@ window.APB_CONFIG = {
     toDevSpec: toDevSpec,
     toDevSpecFromProgram: toDevSpecFromProgram,
     autoSend: function () { return autoSend(); },
+    copilotReady: function () { return copilotReady(); },
+    copilotStatus: function () { return copilotStatus(); },
     uatSkeleton: uatSkeleton
   };
 })(window.APB = window.APB || {});
@@ -15639,7 +15968,7 @@ window.APB_CONFIG = {
     return '<div class="obj-row" role="group" aria-label="Object ' + (i + 1) + '">' +
       '<div class="field"><label for="ot' + i + '">Type</label><select id="ot' + i + '" data-bind="objects.' + i + '.type" data-rerender>' + typeOptions(o.type) + '</select></div>' +
       '<div class="field"><label for="on' + i + '">Name</label><input id="on' + i + '" type="text" data-bind="objects.' + i + '.name" data-name-check="' + i + '" value="' + esc(o.name) + '" placeholder="e.g. ZSD_BILL_BLOCK" spellcheck="false">' +
-      '<span class="name-warn" id="nw' + i + '"' + (namingWarning(o) ? '' : ' hidden') + '>Customer objects normally start with Z, Y or /NAMESPACE/.</span></div>' +
+      '<span class="name-warn" id="nw' + i + '"' + (namingWarning(o) ? '' : ' hidden') + '>Customer objects normally start with Z, Y or /NAMESPACE/.</span>' + sapBadgeHtml(o) + '</div>' +
       '<div class="field"><label for="os' + i + '">Status</label><select id="os' + i + '" class="status-select" data-status="' + o.status + '" data-status-sel data-bind="objects.' + i + '.status">' + optionsHtml(D.statuses, o.status) + '</select></div>' +
       '<div class="field"><label for="op' + i + '">Purpose</label><input id="op' + i + '" type="text" data-bind="objects.' + i + '.purpose" value="' + esc(o.purpose) + '" placeholder="Short purpose"></div>' +
       '<div class="row-actions">' +
@@ -15655,6 +15984,111 @@ window.APB_CONFIG = {
       chips.map(function (c) { return '<button type="button" class="chip" data-action="add-chip" data-type="' + esc(c.type) + '" data-status="' + c.status + '">+ ' + esc(c.label) + '</button>'; }).join('') + '</div></div>';
   }
 
+  /* ---------------- Check & read in SAP (js/dev-sap.js): read-only, through Copilot and the SAP MCP servers */
+  const sap = { running: false, mode: '', status: '', error: '', log: [], pending: null };
+
+  function sapBadgeHtml(o) {
+    const b = APB.devSap.badge(S.get(), o);
+    return b ? '<span class="sap-badge ' + b.cls + '" title="' + esc(b.title) + '">' + esc(b.text) + '</span>' : '';
+  }
+
+  function sapLogHtml() {
+    if (!sap.log.length) return '';
+    const icon = { running: '…', done: '✓', blocked: '⛔', error: '✗', info: '›' };
+    return '<ol class="fs-log" aria-live="polite">' + sap.log.map(function (l) { return '<li class="' + esc(l.status || 'info') + '"><span aria-hidden="true">' + (icon[l.status] || '›') + '</span> ' + esc(l.text) + '</li>'; }).join('') + '</ol>';
+  }
+
+  function sapCardHtml(s) {
+    const n = APB.devSap.checkTargets(s).length;
+    const reads = APB.devSap.readTargets(s).length;
+    const can = n > 0 && !sap.running && (!H.isVscode || FA.copilotReady());
+    const run = H.isVscode
+      ? (sap.running
+        ? '<button type="button" class="btn btn-ghost" data-action="devctx-stop">' + (sap.mode === 'chat' ? 'Stop waiting' : 'Stop') + '</button><span class="muted small sap-status">' + esc(sap.status || 'Reading SAP…') + '</span>'
+        : '<button type="button" class="btn btn-primary" data-action="devctx-auto"' + (can ? '' : ' disabled') + '>Check &amp; read automatically</button>' +
+          '<button type="button" class="btn btn-ghost" data-action="devctx-chat"' + (can ? '' : ' disabled') + '>In Copilot Chat</button>')
+      : '<button type="button" class="btn btn-primary" data-action="devctx-copy"' + (n ? '' : ' disabled') + '>Copy prompt</button>';
+    const chk = s.sapCheck;
+    const last = chk ? (function () {
+      const c = { verified: 0, missing: 0, clash: 0 };
+      chk.results.forEach(function (r) { c[r.result]++; });
+      return '<p class="small sap-last">Last check' + (chk.at ? ' ' + esc(new Date(chk.at).toLocaleString()) : '') + (chk.system ? ' · system ' + esc(chk.system) : '') + ': ' + c.verified + ' in system · ' + c.missing + ' not found' + (c.clash ? ' · ' + c.clash + ' already exist' : '') + '</p>';
+    })() : '';
+    const paste = '<details class="paste"' + detailsAttrs('devctx-paste', false) + '><summary>' + (H.isVscode ? 'Paste an answer instead' : 'Paste the answer') + '</summary>' +
+      (H.isVscode ? '' : '<p class="small muted">Paste the prompt into Copilot Chat in VS Code with the <code class="agent-name">dewa-fs-discovery</code> agent, then paste the whole answer here.</p>') +
+      '<textarea id="devctx-answer" rows="4" spellcheck="false" aria-label="Answer with the SAP check"></textarea>' +
+      '<button type="button" class="btn btn-ghost btn-sm" data-action="devctx-review">Review the answer</button></details>';
+    return '<section class="card sap-card" id="sap-card" aria-labelledby="h-sap"><h3 id="h-sap">Check &amp; read in SAP <span class="hint">read-only</span></h3>' +
+      '<p class="muted small">Copilot checks every name in the SAP system and reads the existing objects – fields and keys, CDS elements, method and parameter signatures, current logic, where-used – <strong>read-only</strong> through the SAP MCP servers. ' +
+      'Unconfirmed objects become Existing or New; the current state is shown next to your design in step 4 and goes into the specification for dewa-abap. You review it first.</p>' +
+      (H.isVscode ? '<div class="chips fs-copilot">' + FA.copilotStatus() + '</div>' : '') +
+      '<div class="gen-actions">' + run + (n ? '<span class="muted small">' + n + ' name' + (n > 1 ? 's' : '') + ' to check' + (reads ? ' · ' + reads + ' existing to read' : '') + '</span>' : '<span class="muted small">Name the objects first.</span>') + '</div>' +
+      sapLogHtml() + (sap.error ? '<p class="field-error" role="alert">' + esc(sap.error) + '</p>' : '') + last + paste + '</section>';
+  }
+
+  function rerenderSap() {
+    const el = document.getElementById('sap-card');
+    if (el) el.outerHTML = sapCardHtml(S.get());
+  }
+
+  function sapStart(mode) {
+    const s = S.get();
+    if (!APB.devSap.checkTargets(s).length) { toast('Name the objects first'); return; }
+    sap.running = true; sap.mode = mode; sap.error = ''; sap.log = [];
+    sap.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Checking ' + APB.devSap.checkTargets(s).length + ' names in SAP (read-only)…';
+    H.post({ type: 'read-dev', mode: mode, prompt: APB.devSap.prompt(s) });
+    rerenderSap();
+  }
+
+  function sapReview(text) {
+    const r = APB.devSap.parse(text);
+    if (!r.ctx) { sap.error = r.error; rerenderSap(); toast(r.error, 6000); return false; }
+    sap.error = '';
+    sap.pending = r.ctx;
+    const parts = APB.devSap.preview(S.get(), r.ctx);
+    $('#devctx-list').innerHTML = parts.map(function (p) {
+      const more = p.items.length > 6 ? '<li class="muted">… and ' + (p.items.length - 6) + ' more</li>' : '';
+      const box = p.info ? '<strong>' + esc(p.label) + '</strong>' : '<label class="check"><input type="checkbox" name="devctx-part" value="' + esc(p.id) + '"' + (p.checked ? ' checked' : '') + '> <strong>' + esc(p.label) + '</strong> <span class="count">' + p.items.length + '</span></label>';
+      return '<li>' + box + '<ul class="small">' + p.items.slice(0, 6).map(function (i) { return '<li>' + esc(String(i).slice(0, 180)) + '</li>'; }).join('') + more + '</ul></li>';
+    }).join('');
+    const dlg = $('#devctx-dialog');
+    if (typeof dlg.showModal === 'function') { if (!dlg.open) dlg.showModal(); } else dlg.setAttribute('open', '');
+    return true;
+  }
+
+  /* Step 4: what the object looks like today, read-only, next to the developer's design. */
+  function sapCurrentHtml(o) {
+    if (!o.sap) return '';
+    const when = o.sap.at ? new Date(o.sap.at).toLocaleDateString() : '';
+    return '<details class="sap-current"' + detailsAttrs('sapcur:' + o.id, o.status !== 'new') + '><summary>Current state in SAP <span class="hint">read-only' + (when ? ' · ' + esc(when) : '') + (o.sap.system ? ' · ' + esc(o.sap.system) : '') + '</span></summary>' +
+      '<div class="sap-current-body">' + M.toHtml(M.sapObjectMd(o, false)) + '</div></details>';
+  }
+
+  if (H.isVscode) {
+    H.on('auth', function () { if (!isFs() && ui.step === 3 && !ui.generated) rerenderSap(); });
+    H.on('devctx-progress', function (m) {
+      const text = String(m.text || '').slice(0, 300);
+      if (m.key) {
+        const last = sap.log.filter(function (l) { return l.key === m.key; })[0];
+        if (last) { last.text = text; last.status = m.status; } else sap.log.push({ key: m.key, text: text, status: m.status });
+        if (sap.log.length > 80) sap.log.shift();
+      } else sap.status = text;
+      rerenderSap();
+    });
+    H.on('devctx-result', function (m) {
+      sap.running = false; sap.status = ''; sap.mode = '';
+      sap.log.push({ text: 'Result received', status: 'done' });
+      const answer = String(m.text || '');
+      rerenderSap();
+      if (!sapReview(answer)) {
+        ui.open['devctx-paste'] = true; rerenderSap();
+        const ta = $('#devctx-answer');
+        if (ta) ta.value = answer;
+      }
+    });
+    H.on('devctx-error', function (m) { sap.running = false; sap.status = ''; sap.error = String(m.message || 'The SAP check failed').slice(0, 400); rerenderSap(); });
+  }
+
   function step3(s) {
     return '<h2 class="step-title">' + STEPS[2].title + '</h2>' +
       '<p class="muted">List what you reuse, what you change and what is new. You specify each object in the next step: fields for tables, parameters for function modules, methods for classes…</p>' +
@@ -15662,6 +16096,7 @@ window.APB_CONFIG = {
       '<div id="obj-rows">' + s.objects.map(function (o, i) { return objectRow(o, i, s.objects.length); }).join('') + '</div>' +
       (s.objects.length ? '' : '<p class="empty">No objects yet. Add the tables, CDS views, classes, function modules… Copilot should reuse or create.</p>') +
       '<button type="button" class="btn btn-ghost" data-action="add-object">+ Add Object</button>' +
+      sapCardHtml(s) +
       '<div id="suggest">' + suggestionsHtml(s) + '</div>' +
       '<h3>Dependency map</h3><p class="muted small">Built from the objects above. Use “used by” to nest an object under the one that uses it.</p>' +
       '<div id="depmap" class="depmap"></div>' +
@@ -15696,9 +16131,11 @@ window.APB_CONFIG = {
         (def.fields.length ? '<p class="muted small">Set the status to <strong>New</strong> or <strong>Existing – change</strong> in step 3 to get the full ' + esc(o.type) + ' designer.</p>' : '');
     }
     const rapIssues = builder && o.type === 'RAP' ? APB.rap.checks(S.get()).filter(function (c) { return c.i === i; }).length : 0;
+    body = sapCurrentHtml(o) + body;
     return '<details class="artifact" id="obj-' + o.id + '"' + detailsAttrs('obj:' + o.id, builder && (!done || rapIssues > 0)) + '>' +
       '<summary><span class="badge s-' + o.status + '">' + esc(D.statusLabel(o.status)) + '</span> <span class="a-type">' + esc(o.type) + (def.tcode ? ' <span class="tcode">' + esc(def.tcode) + '</span>' : '') + '</span> ' +
       '<span class="a-name">' + esc(o.name || '(no name yet)') + '</span>' + (o.purpose ? ' <span class="muted small a-purpose">' + esc(o.purpose) + '</span>' : '') +
+      (o.sap ? ' <span class="sap-badge ok" title="Current state read from SAP, read-only">✓ read from SAP</span>' : '') +
       '<span class="a-state ' + (done && !rapIssues ? 'ok' : 'todo') + '">' + (rapIssues ? '⚠ ' + rapIssues + ' RAP finding' + (rapIssues > 1 ? 's' : '') : done ? '✓ specified' : builder ? 'to specify' : 'optional') + '</span></summary>' +
       '<div class="artifact-body">' + body + '</div></details>';
   }
@@ -16025,6 +16462,33 @@ window.APB_CONFIG = {
   }
 
   const actions = {
+    'devctx-auto': function () { sapStart('auto'); },
+    'devctx-chat': function () { sapStart('chat'); },
+    'devctx-stop': function () { if (sap.mode !== 'chat') H.post({ type: 'stop' }); sap.running = false; sap.mode = ''; sap.status = ''; rerenderSap(); },
+    'devctx-copy': function () {
+      const s = S.get();
+      if (!APB.devSap.checkTargets(s).length) { toast('Name the objects first'); return; }
+      Promise.resolve(X.copy(APB.devSap.prompt(s))).then(function (ok) {
+        ui.open['devctx-paste'] = true;
+        rerenderSap();
+        toast(ok ? 'Prompt copied ✓ Paste it into Copilot Chat in VS Code (dewa-fs-discovery), then paste the answer here' : 'Copy failed', 8000);
+      });
+    },
+    'devctx-review': function () {
+      const ta = $('#devctx-answer');
+      if (ta && sapReview(ta.value)) ui.open['devctx-paste'] = false;
+    },
+    'devctx-apply': function () {
+      const ids = $$('#devctx-list input[name="devctx-part"]:checked').map(function (i) { return i.value; });
+      const dlg = $('#devctx-dialog');
+      if (dlg.close) dlg.close(); else dlg.removeAttribute('open');
+      if (!sap.pending || !ids.length) return;
+      const r = APB.devSap.apply(S.get(), sap.pending, ids);
+      sap.pending = null;
+      S.replace(r.state);
+      renderMain();
+      toast(r.applied.length ? 'Taken over: ' + r.applied.join(', ') + (r.state.objects.some(function (o) { return o.sap; }) ? ' – the current state is shown in step 4' : '') : 'Nothing taken over', 7000);
+    },
     'toggle-type': function (el) {
       const t = el.dataset.type;
       const main = D.types[t].mainObject;

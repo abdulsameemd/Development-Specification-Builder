@@ -266,7 +266,7 @@
     return '<div class="obj-row" role="group" aria-label="Object ' + (i + 1) + '">' +
       '<div class="field"><label for="ot' + i + '">Type</label><select id="ot' + i + '" data-bind="objects.' + i + '.type" data-rerender>' + typeOptions(o.type) + '</select></div>' +
       '<div class="field"><label for="on' + i + '">Name</label><input id="on' + i + '" type="text" data-bind="objects.' + i + '.name" data-name-check="' + i + '" value="' + esc(o.name) + '" placeholder="e.g. ZSD_BILL_BLOCK" spellcheck="false">' +
-      '<span class="name-warn" id="nw' + i + '"' + (namingWarning(o) ? '' : ' hidden') + '>Customer objects normally start with Z, Y or /NAMESPACE/.</span></div>' +
+      '<span class="name-warn" id="nw' + i + '"' + (namingWarning(o) ? '' : ' hidden') + '>Customer objects normally start with Z, Y or /NAMESPACE/.</span>' + sapBadgeHtml(o) + '</div>' +
       '<div class="field"><label for="os' + i + '">Status</label><select id="os' + i + '" class="status-select" data-status="' + o.status + '" data-status-sel data-bind="objects.' + i + '.status">' + optionsHtml(D.statuses, o.status) + '</select></div>' +
       '<div class="field"><label for="op' + i + '">Purpose</label><input id="op' + i + '" type="text" data-bind="objects.' + i + '.purpose" value="' + esc(o.purpose) + '" placeholder="Short purpose"></div>' +
       '<div class="row-actions">' +
@@ -282,6 +282,111 @@
       chips.map(function (c) { return '<button type="button" class="chip" data-action="add-chip" data-type="' + esc(c.type) + '" data-status="' + c.status + '">+ ' + esc(c.label) + '</button>'; }).join('') + '</div></div>';
   }
 
+  /* ---------------- Check & read in SAP (js/dev-sap.js): read-only, through Copilot and the SAP MCP servers */
+  const sap = { running: false, mode: '', status: '', error: '', log: [], pending: null };
+
+  function sapBadgeHtml(o) {
+    const b = APB.devSap.badge(S.get(), o);
+    return b ? '<span class="sap-badge ' + b.cls + '" title="' + esc(b.title) + '">' + esc(b.text) + '</span>' : '';
+  }
+
+  function sapLogHtml() {
+    if (!sap.log.length) return '';
+    const icon = { running: '…', done: '✓', blocked: '⛔', error: '✗', info: '›' };
+    return '<ol class="fs-log" aria-live="polite">' + sap.log.map(function (l) { return '<li class="' + esc(l.status || 'info') + '"><span aria-hidden="true">' + (icon[l.status] || '›') + '</span> ' + esc(l.text) + '</li>'; }).join('') + '</ol>';
+  }
+
+  function sapCardHtml(s) {
+    const n = APB.devSap.checkTargets(s).length;
+    const reads = APB.devSap.readTargets(s).length;
+    const can = n > 0 && !sap.running && (!H.isVscode || FA.copilotReady());
+    const run = H.isVscode
+      ? (sap.running
+        ? '<button type="button" class="btn btn-ghost" data-action="devctx-stop">' + (sap.mode === 'chat' ? 'Stop waiting' : 'Stop') + '</button><span class="muted small sap-status">' + esc(sap.status || 'Reading SAP…') + '</span>'
+        : '<button type="button" class="btn btn-primary" data-action="devctx-auto"' + (can ? '' : ' disabled') + '>Check &amp; read automatically</button>' +
+          '<button type="button" class="btn btn-ghost" data-action="devctx-chat"' + (can ? '' : ' disabled') + '>In Copilot Chat</button>')
+      : '<button type="button" class="btn btn-primary" data-action="devctx-copy"' + (n ? '' : ' disabled') + '>Copy prompt</button>';
+    const chk = s.sapCheck;
+    const last = chk ? (function () {
+      const c = { verified: 0, missing: 0, clash: 0 };
+      chk.results.forEach(function (r) { c[r.result]++; });
+      return '<p class="small sap-last">Last check' + (chk.at ? ' ' + esc(new Date(chk.at).toLocaleString()) : '') + (chk.system ? ' · system ' + esc(chk.system) : '') + ': ' + c.verified + ' in system · ' + c.missing + ' not found' + (c.clash ? ' · ' + c.clash + ' already exist' : '') + '</p>';
+    })() : '';
+    const paste = '<details class="paste"' + detailsAttrs('devctx-paste', false) + '><summary>' + (H.isVscode ? 'Paste an answer instead' : 'Paste the answer') + '</summary>' +
+      (H.isVscode ? '' : '<p class="small muted">Paste the prompt into Copilot Chat in VS Code with the <code class="agent-name">dewa-fs-discovery</code> agent, then paste the whole answer here.</p>') +
+      '<textarea id="devctx-answer" rows="4" spellcheck="false" aria-label="Answer with the SAP check"></textarea>' +
+      '<button type="button" class="btn btn-ghost btn-sm" data-action="devctx-review">Review the answer</button></details>';
+    return '<section class="card sap-card" id="sap-card" aria-labelledby="h-sap"><h3 id="h-sap">Check &amp; read in SAP <span class="hint">read-only</span></h3>' +
+      '<p class="muted small">Copilot checks every name in the SAP system and reads the existing objects – fields and keys, CDS elements, method and parameter signatures, current logic, where-used – <strong>read-only</strong> through the SAP MCP servers. ' +
+      'Unconfirmed objects become Existing or New; the current state is shown next to your design in step 4 and goes into the specification for dewa-abap. You review it first.</p>' +
+      (H.isVscode ? '<div class="chips fs-copilot">' + FA.copilotStatus() + '</div>' : '') +
+      '<div class="gen-actions">' + run + (n ? '<span class="muted small">' + n + ' name' + (n > 1 ? 's' : '') + ' to check' + (reads ? ' · ' + reads + ' existing to read' : '') + '</span>' : '<span class="muted small">Name the objects first.</span>') + '</div>' +
+      sapLogHtml() + (sap.error ? '<p class="field-error" role="alert">' + esc(sap.error) + '</p>' : '') + last + paste + '</section>';
+  }
+
+  function rerenderSap() {
+    const el = document.getElementById('sap-card');
+    if (el) el.outerHTML = sapCardHtml(S.get());
+  }
+
+  function sapStart(mode) {
+    const s = S.get();
+    if (!APB.devSap.checkTargets(s).length) { toast('Name the objects first'); return; }
+    sap.running = true; sap.mode = mode; sap.error = ''; sap.log = [];
+    sap.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Checking ' + APB.devSap.checkTargets(s).length + ' names in SAP (read-only)…';
+    H.post({ type: 'read-dev', mode: mode, prompt: APB.devSap.prompt(s) });
+    rerenderSap();
+  }
+
+  function sapReview(text) {
+    const r = APB.devSap.parse(text);
+    if (!r.ctx) { sap.error = r.error; rerenderSap(); toast(r.error, 6000); return false; }
+    sap.error = '';
+    sap.pending = r.ctx;
+    const parts = APB.devSap.preview(S.get(), r.ctx);
+    $('#devctx-list').innerHTML = parts.map(function (p) {
+      const more = p.items.length > 6 ? '<li class="muted">… and ' + (p.items.length - 6) + ' more</li>' : '';
+      const box = p.info ? '<strong>' + esc(p.label) + '</strong>' : '<label class="check"><input type="checkbox" name="devctx-part" value="' + esc(p.id) + '"' + (p.checked ? ' checked' : '') + '> <strong>' + esc(p.label) + '</strong> <span class="count">' + p.items.length + '</span></label>';
+      return '<li>' + box + '<ul class="small">' + p.items.slice(0, 6).map(function (i) { return '<li>' + esc(String(i).slice(0, 180)) + '</li>'; }).join('') + more + '</ul></li>';
+    }).join('');
+    const dlg = $('#devctx-dialog');
+    if (typeof dlg.showModal === 'function') { if (!dlg.open) dlg.showModal(); } else dlg.setAttribute('open', '');
+    return true;
+  }
+
+  /* Step 4: what the object looks like today, read-only, next to the developer's design. */
+  function sapCurrentHtml(o) {
+    if (!o.sap) return '';
+    const when = o.sap.at ? new Date(o.sap.at).toLocaleDateString() : '';
+    return '<details class="sap-current"' + detailsAttrs('sapcur:' + o.id, o.status !== 'new') + '><summary>Current state in SAP <span class="hint">read-only' + (when ? ' · ' + esc(when) : '') + (o.sap.system ? ' · ' + esc(o.sap.system) : '') + '</span></summary>' +
+      '<div class="sap-current-body">' + M.toHtml(M.sapObjectMd(o, false)) + '</div></details>';
+  }
+
+  if (H.isVscode) {
+    H.on('auth', function () { if (!isFs() && ui.step === 3 && !ui.generated) rerenderSap(); });
+    H.on('devctx-progress', function (m) {
+      const text = String(m.text || '').slice(0, 300);
+      if (m.key) {
+        const last = sap.log.filter(function (l) { return l.key === m.key; })[0];
+        if (last) { last.text = text; last.status = m.status; } else sap.log.push({ key: m.key, text: text, status: m.status });
+        if (sap.log.length > 80) sap.log.shift();
+      } else sap.status = text;
+      rerenderSap();
+    });
+    H.on('devctx-result', function (m) {
+      sap.running = false; sap.status = ''; sap.mode = '';
+      sap.log.push({ text: 'Result received', status: 'done' });
+      const answer = String(m.text || '');
+      rerenderSap();
+      if (!sapReview(answer)) {
+        ui.open['devctx-paste'] = true; rerenderSap();
+        const ta = $('#devctx-answer');
+        if (ta) ta.value = answer;
+      }
+    });
+    H.on('devctx-error', function (m) { sap.running = false; sap.status = ''; sap.error = String(m.message || 'The SAP check failed').slice(0, 400); rerenderSap(); });
+  }
+
   function step3(s) {
     return '<h2 class="step-title">' + STEPS[2].title + '</h2>' +
       '<p class="muted">List what you reuse, what you change and what is new. You specify each object in the next step: fields for tables, parameters for function modules, methods for classes…</p>' +
@@ -289,6 +394,7 @@
       '<div id="obj-rows">' + s.objects.map(function (o, i) { return objectRow(o, i, s.objects.length); }).join('') + '</div>' +
       (s.objects.length ? '' : '<p class="empty">No objects yet. Add the tables, CDS views, classes, function modules… Copilot should reuse or create.</p>') +
       '<button type="button" class="btn btn-ghost" data-action="add-object">+ Add Object</button>' +
+      sapCardHtml(s) +
       '<div id="suggest">' + suggestionsHtml(s) + '</div>' +
       '<h3>Dependency map</h3><p class="muted small">Built from the objects above. Use “used by” to nest an object under the one that uses it.</p>' +
       '<div id="depmap" class="depmap"></div>' +
@@ -323,9 +429,11 @@
         (def.fields.length ? '<p class="muted small">Set the status to <strong>New</strong> or <strong>Existing – change</strong> in step 3 to get the full ' + esc(o.type) + ' designer.</p>' : '');
     }
     const rapIssues = builder && o.type === 'RAP' ? APB.rap.checks(S.get()).filter(function (c) { return c.i === i; }).length : 0;
+    body = sapCurrentHtml(o) + body;
     return '<details class="artifact" id="obj-' + o.id + '"' + detailsAttrs('obj:' + o.id, builder && (!done || rapIssues > 0)) + '>' +
       '<summary><span class="badge s-' + o.status + '">' + esc(D.statusLabel(o.status)) + '</span> <span class="a-type">' + esc(o.type) + (def.tcode ? ' <span class="tcode">' + esc(def.tcode) + '</span>' : '') + '</span> ' +
       '<span class="a-name">' + esc(o.name || '(no name yet)') + '</span>' + (o.purpose ? ' <span class="muted small a-purpose">' + esc(o.purpose) + '</span>' : '') +
+      (o.sap ? ' <span class="sap-badge ok" title="Current state read from SAP, read-only">✓ read from SAP</span>' : '') +
       '<span class="a-state ' + (done && !rapIssues ? 'ok' : 'todo') + '">' + (rapIssues ? '⚠ ' + rapIssues + ' RAP finding' + (rapIssues > 1 ? 's' : '') : done ? '✓ specified' : builder ? 'to specify' : 'optional') + '</span></summary>' +
       '<div class="artifact-body">' + body + '</div></details>';
   }
@@ -652,6 +760,33 @@
   }
 
   const actions = {
+    'devctx-auto': function () { sapStart('auto'); },
+    'devctx-chat': function () { sapStart('chat'); },
+    'devctx-stop': function () { if (sap.mode !== 'chat') H.post({ type: 'stop' }); sap.running = false; sap.mode = ''; sap.status = ''; rerenderSap(); },
+    'devctx-copy': function () {
+      const s = S.get();
+      if (!APB.devSap.checkTargets(s).length) { toast('Name the objects first'); return; }
+      Promise.resolve(X.copy(APB.devSap.prompt(s))).then(function (ok) {
+        ui.open['devctx-paste'] = true;
+        rerenderSap();
+        toast(ok ? 'Prompt copied ✓ Paste it into Copilot Chat in VS Code (dewa-fs-discovery), then paste the answer here' : 'Copy failed', 8000);
+      });
+    },
+    'devctx-review': function () {
+      const ta = $('#devctx-answer');
+      if (ta && sapReview(ta.value)) ui.open['devctx-paste'] = false;
+    },
+    'devctx-apply': function () {
+      const ids = $$('#devctx-list input[name="devctx-part"]:checked').map(function (i) { return i.value; });
+      const dlg = $('#devctx-dialog');
+      if (dlg.close) dlg.close(); else dlg.removeAttribute('open');
+      if (!sap.pending || !ids.length) return;
+      const r = APB.devSap.apply(S.get(), sap.pending, ids);
+      sap.pending = null;
+      S.replace(r.state);
+      renderMain();
+      toast(r.applied.length ? 'Taken over: ' + r.applied.join(', ') + (r.state.objects.some(function (o) { return o.sap; }) ? ' – the current state is shown in step 4' : '') : 'Nothing taken over', 7000);
+    },
     'toggle-type': function (el) {
       const t = el.dataset.type;
       const main = D.types[t].mainObject;

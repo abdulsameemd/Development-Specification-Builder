@@ -43,6 +43,7 @@
       acceptance: [],
       assumptions: '',
       source: null,
+      sapCheck: null,
       quality: { authorization: '', authChecks: [], dataVolume: '', performanceReq: '', testTypes: ['Unit', 'Functional', 'Integration'], testScenarios: '', cleanCore: '', cleanCoreNote: '' },
       dod: defaultDod(),
       meta: { created: now, updated: now }
@@ -65,7 +66,9 @@
         id: str(o.id) || uid(), type: APB.config.definitions.objectTypes[o.type] ? o.type : 'Other', name: str(o.name),
         status: ['existing', 'change', 'new', 'tbc'].indexOf(o.status) >= 0 ? o.status : 'tbc',
         purpose: str(o.purpose), parent: str(o.parent),
-        detail: o.detail && typeof o.detail === 'object' ? clone(o.detail) : {}
+        detail: o.detail && typeof o.detail === 'object' ? clone(o.detail) : {},
+        // current state read from SAP (dev-sap.js) – shown read-only, never mixed into the designer fields
+        sap: o.sap && typeof o.sap === 'object' && !Array.isArray(o.sap) ? clone(o.sap) : null
       };
     });
     s.rules = arr(input.rules).map(function (r) { return { id: str(r.id) || uid(), condition: str(r.condition), behavior: str(r.behavior) }; });
@@ -73,6 +76,10 @@
     s.assumptions = str(input.assumptions);
     // link to the functional spec it was created from (spec-link.js); null for specs written directly
     s.source = APB.specLink ? APB.specLink.normalizeSource(input.source) : null;
+    // last "Check & read in SAP" (dev-sap.js)
+    s.sapCheck = input.sapCheck && typeof input.sapCheck === 'object' && Array.isArray(input.sapCheck.results)
+      ? { at: Number(input.sapCheck.at) || 0, system: str(input.sapCheck.system), results: arr(input.sapCheck.results).map(function (r) { return { name: str(r.name).toUpperCase(), type: str(r.type), result: ['verified', 'missing', 'clash'].indexOf(r.result) >= 0 ? r.result : 'missing', description: str(r.description) }; }), notFound: Array.isArray(input.sapCheck.notFound) ? input.sapCheck.notFound.map(str) : [] }
+      : null;
     if (input.quality && typeof input.quality === 'object') Object.assign(s.quality, clone(input.quality));
     // schema 1 kept a single authorization object text
     if (s.quality.authObject && !s.quality.authChecks.length) s.quality.authChecks = [{ object: s.quality.authObject }];

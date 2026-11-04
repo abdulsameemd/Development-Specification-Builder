@@ -129,6 +129,15 @@
   </dialog>
   <input type="file" id="md-upload" accept=".md,.markdown,text/markdown,text/plain" hidden>
 
+  <dialog id="devctx-dialog" aria-labelledby="devctx-title">
+    <form method="dialog" class="dialog-head">
+      <h2 id="devctx-title">Review the SAP check</h2>
+      <button class="icon-btn" aria-label="Close">✕</button>
+    </form>
+    <p class="muted small">Read from SAP, read-only. Pick what to take over. Your own design in step 4 is never changed – the current state is shown next to it. Check every item – AI can be wrong.</p>
+    <ul id="devctx-list" class="draft-review"></ul>
+    <div class="nav-row"><span class="spacer"></span><button type="button" class="btn btn-primary" data-action="devctx-apply">Take over</button></div>
+  </dialog>
   <dialog id="examples-dialog" aria-labelledby="examples-title">
     <form method="dialog" class="dialog-head">
       <h2 id="examples-title">Worked examples</h2>
@@ -158,6 +167,7 @@
   <script src="js/validation.js"></script>
   <script src="js/completeness.js"></script>
   <script src="js/rap-blueprint.js"></script>
+  <script src="js/dev-sap.js"></script>
   <script src="js/markdown-generator.js"></script>
   <script src="js/templates.js"></script>
   <script src="js/storage.js"></script>

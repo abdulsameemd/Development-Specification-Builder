@@ -116,6 +116,7 @@
     });
 
     if (APB.rap) APB.rap.checks(state).forEach(function (c) { q.push(c.text); });
+    if (APB.devSap) APB.devSap.questions(state).forEach(function (x) { q.push(x); });
 
     const qa = state.quality;
     if (qa.authorization === 'tbc') q.push('Whether authority checks are required.');
