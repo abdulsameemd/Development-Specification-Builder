@@ -258,9 +258,9 @@ The model in `state.js` does not depend on Copilot; Copilot is just an **output 
 
 ## Walkthrough videos
 
-[`docs/media/SAP-Spec-Builder-Functional.mp4`](docs/media/SAP-Spec-Builder-Functional.mp4) (3:41, 1080p, voice-over) is the Functional walkthrough inside VS Code, for one FI-AP requirement (vendor open items ageing), from the business need to the signed-off spec. The narration and captions follow the builder's own three steps:
+[`docs/media/SAP-Spec-Builder-Functional.mp4`](docs/media/SAP-Spec-Builder-Functional.mp4) (3:44, 1080p, voice-over) is the Functional walkthrough inside VS Code, for one FI-AP requirement (vendor open items ageing), from the business need to the signed-off spec. The narration and captions follow the builder's own three steps:
 
-- **Why it matters** (animated, semi-realistic illustration of a functional consultant in the office): without a spec, Copilot has to guess – invented tables and fields, follow-up questions, the requirement explained again prompt after prompt, more time and tokens. With `BUSINESS_REQUIREMENTS.md`, one prompt carries the objects checked in SAP, rules, acceptance criteria and tests. What the team gains: fewer prompts, no invented objects, lower token use, consistent quality, traceability.
+- **Why it matters** (animated, semi-realistic illustration of a functional consultant in the office): without the Spec Builder – a blank Word template, the old program's logic found by hand, table names typed from memory (some do not exist), questions back and forth with the developer, rewrites after every change. With it – describe the need in your own words, Copilot drafts the whole spec, the old program's logic is read and every name is checked in SAP (read-only), Word for sign-off plus a linked technical spec. What functional consultants gain: faster first draft, correct SAP names, fewer questions, consistent structure, changes in sync.
 - **Before you start:** install the VSIX, run *DEWA: Open SAP Spec Builder*, switch to Functional, sign in to GitHub Copilot.
 - **Step 1 · Requirement:** SAP and module, the business need; *Read an existing program* (read-only) → review; *Generate the whole spec with Copilot* → review → document.
 - **Step 2 · Process & requirements:** TO-BE process, FRs with priority and fit-gap, rules; the program's current logic under *More details*.
