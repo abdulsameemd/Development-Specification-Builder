@@ -163,9 +163,18 @@
   /* → [{ id, label, items[], checked }] for the review dialog */
   function preview(s, ctx) {
     const parts = [];
-    const res = { verified: 0, missing: 0, clash: 0 };
-    ctx.checked.forEach(function (c) { res[c.result]++; });
-    parts.push({ id: 'check', label: 'Reference check: ' + res.verified + ' ✓ in system · ' + res.missing + ' ✗ not found' + (res.clash ? ' · ' + res.clash + ' ⚠ already exists' : ''), items: ctx.checked.map(function (c) { return c.name + ' – ' + ({ verified: '✓ in system', missing: '✗ not found', clash: '⚠ already exists' })[c.result] + (c.description ? ' (' + c.description + ')' : ''); }), checked: true });
+    // same wording as the badges: for a new object "not found" means the name is free
+    const statusOf = function (n) { const o = s.objects.filter(function (x) { return x.name.trim().toUpperCase() === n; })[0]; return o ? o.status : ''; };
+    const word = function (c) {
+      const st = statusOf(c.name);
+      if (c.result === 'clash' || (c.result === 'verified' && st === 'new')) return '⚠ already exists';
+      if (c.result === 'verified') return '✓ in system';
+      return st === 'new' ? '✓ name free' : '✗ not found';
+    };
+    const count = {};
+    ctx.checked.forEach(function (c) { const w = word(c); count[w] = (count[w] || 0) + 1; });
+    const order = ['✓ in system', '✓ name free', '✗ not found', '⚠ already exists'];
+    parts.push({ id: 'check', label: 'Reference check: ' + order.filter(function (w) { return count[w]; }).map(function (w) { return count[w] + ' ' + w; }).join(' · '), items: ctx.checked.map(function (c) { return c.name + ' – ' + word(c) + (c.description && !/^name free$/i.test(c.description) ? ' (' + c.description + ')' : ''); }), checked: true });
     const status = [];
     s.objects.forEach(function (o) {
       const c = find(ctx.checked, o.name);

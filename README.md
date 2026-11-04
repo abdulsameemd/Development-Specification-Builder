@@ -285,13 +285,14 @@ The model in `state.js` does not depend on Copilot; Copilot is just an **output 
 
 The VS Code workbench and the builder are real (code-server with a demo build of the extension). The Copilot sign-in, the AI answers and the SAP answers are simulated from the sample "DEMO" system; the illustrated consultant and the "Why" chats are illustrations, as the on-screen tags say.
 
-[`docs/media/SAP-Spec-Builder-Technical.mp4`](docs/media/SAP-Spec-Builder-Technical.mp4) (4:34, 1080p, voice-over) is the Technical (development spec) walkthrough inside VS Code. The intro is general – the builder is for ABAP objects and Fiori apps (reports, classes, RFCs, CDS, RAP, OData, CAP, Fiori) – and the demo builds a RAP business object (SD billing block rules, managed, with draft). It ends with *Powered by MORO*. The narration and captions follow the Technical builder's own five steps:
+[`docs/media/SAP-Spec-Builder-Technical.mp4`](docs/media/SAP-Spec-Builder-Technical.mp4) (5:07, 1080p, voice-over) is the Technical (development spec) walkthrough inside VS Code. The intro is general – the builder is for ABAP objects and Fiori apps (reports, classes, RFCs, CDS, RAP, OData, CAP, Fiori) – and the demo builds a RAP business object (SD billing block rules, managed, with draft). It ends with *Powered by MORO*. The narration and captions follow the Technical builder's own five steps:
 
 - **Why it matters** (animated, semi-realistic illustration of an ABAP developer in the office): without a spec, Copilot has to guess – questions, then activation errors (behavior pool missing, draft table missing, ETag field wrong) and "activate this object?" one by one, with time and tokens climbing. With `BUSINESS_REQUIREMENTS.md`, one prompt carries every object, the rules and the activation order, and the `dewa-abap` Copilot agent activates group by group. What developers gain: fewer prompts, the right objects first time, the right activation order, lower token use, tests and review built in.
 - **Before you start:** *DEWA: Open SAP Spec Builder* → Technical.
 - **Step 1 · Build:** requirement and the *RAP Application* template.
 - **Step 2 · Requirement:** objective, users, a business rule, an acceptance criterion.
 - **Step 3 · Objects:** the object names and the dependency map.
+- **Check & read in SAP** (step 3, read-only): every name checked – the new names are free – and the customer table `KNVV` (To Be Confirmed) is found and read; after the review it becomes *Existing – reuse* with its fields and keys shown next to the design.
 - **Step 4 · Specify:** the RAP readiness check lists what would break activation with the proposed names; once filled in: *no findings*.
 - **Step 5 · Review:** the RAP Implementation Blueprint; `BUSINESS_REQUIREMENTS.md` saved into the project.
 - **The `dewa-abap` Copilot agent builds** group by group (one activation per group) and the generated objects open in VS Code: table, root and projection CDS views, behavior definition, behavior pool with the `validateDuplicate` validation, service definition – plus the Fiori elements app with the duplicate-rule check.
