@@ -86,6 +86,15 @@ interface and the pain point where the code shows manual work (Excel downloads, 
 it first; steps you typed stay and are not duplicated. The step list is drawn as an **AS-IS flow**, and the document shows
 the table and the flow under *Process → Current process (AS-IS)*.
 
+### TO-BE process from the AS-IS and the requirement (any system)
+
+Under the AS-IS, **Proposed process (TO-BE)** has **✦ Generate TO-BE** (VS Code, or *In Copilot Chat*; *Copy TO-BE prompt*
+in the browser). Copilot designs the process after the change from the AS-IS steps and their pain points, the business
+requirement, objectives, scope, the current logic and the existing objects – no system access. Each step gets the role,
+the transaction / app (only names already in the spec; something to be built is named by what it is, e.g. "New ageing
+report") and a change mark: unchanged, changed, new or automated. You review it first; steps you typed stay. The TO-BE is
+drawn as a flow in step 2 and in the document.
+
 ### Functional ↔ Technical
 
 A Technical spec created from an FS (a RICEFW item, or *→ Technical spec: change …* after reading a program) stays
@@ -127,7 +136,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.12.vsix`](dist/dewa-sap-spec-builder-1.0.12.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.12.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.13.vsix`](dist/dewa-sap-spec-builder-1.0.13.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.13.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **DEWA: Open SAP Spec Builder** (command palette or *Spec Builder* in the status bar) opens this same app as a tab inside VS Code:
 

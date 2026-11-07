@@ -13996,7 +13996,7 @@ window.APB_CONFIG = {
     { id: 'outOfScope', label: 'Out of scope', path: 'context.outOfScope', kind: 'lines' },
     { id: 'stakeholders', label: 'Stakeholders', path: 'context.stakeholders', kind: 'rows', keys: ['role', 'responsibility'], show: 'role' },
     { id: 'asIs', label: 'AS-IS steps', path: 'process.asIs', kind: 'rows', keys: ['step', 'role', 'tx', 'pain'], show: 'step' },
-    { id: 'toBe', label: 'TO-BE steps', path: 'process.toBe', kind: 'rows', keys: ['step', 'role', 'change'], enums: { change: ['process', 'toBe', 'change'] }, show: 'step' },
+    { id: 'toBe', label: 'TO-BE steps', path: 'process.toBe', kind: 'rows', keys: ['step', 'role', 'tx', 'change'], enums: { change: ['process', 'toBe', 'change'] }, show: 'step' },
     { id: 'currentLogic', label: 'Current program logic', path: 'process.currentLogic', kind: 'text', max: 6000 },
     { id: 'programs', label: 'Programs and objects read', path: 'process.programs', kind: 'rows', keys: ['type', 'name', 'description', 'role'], enums: { role: ['process', 'programs', 'role'] }, show: 'name' },
     { id: 'frs', label: 'Functional requirements', path: 'reqs.frs', kind: 'rows', keys: ['title', 'priority', 'fit', 'description', 'acceptance'], enums: { priority: ['reqs', 'frs', 'priority'], fit: ['reqs', 'frs', 'fit'] }, show: 'title' },
@@ -14176,6 +14176,45 @@ window.APB_CONFIG = {
       '```'].filter(function (l, i, a) { return l !== '' || a[i - 1] !== ''; }).join('\n');
   }
 
+  /* TO-BE process from the AS-IS steps and the requirement: an AI draft (no system access), same marker as prompt(). */
+  function toBePrompt(s) {
+    const c = s.context;
+    const sap = F.isSap(s);
+    const sys = sap ? 'SAP' + (c.module ? ' (module ' + c.module + ')' : '')
+      : c.system === 'other' ? 'Other system' + ((c.systemName || '').trim() ? ': ' + c.systemName.trim() : '') : 'Not decided yet';
+    const asIs = (s.process.asIs || []).filter(function (r) { return r && (r.step || '').trim(); });
+    const toBe = (s.process.toBe || []).filter(function (r) { return r && (r.step || '').trim(); });
+    const frs = (s.reqs.frs || []).filter(function (f) { return f && (f.title || '').trim(); });
+    const objs = (c.objects || []).filter(function (o) { return o && (o.name || '').trim(); });
+    const line = function (r, i) { return (i + 1) + '. ' + r.step.trim() + [r.role && ' [' + r.role.trim() + ']', r.tx && ' · ' + r.tx.trim(), r.pain && ' – pain: ' + r.pain.trim()].filter(Boolean).join(''); };
+    return [MARK,
+      'Design the PROPOSED BUSINESS PROCESS (TO-BE) for a functional specification, from the current process (AS-IS) and the business requirement below.',
+      '',
+      'System: ' + sys,
+      'Business requirement:\n' + (c.requirement || '').trim(),
+      (c.objectives || '').trim() ? 'Objectives:\n' + c.objectives.trim() : '',
+      (c.inScope || '').trim() ? 'In scope:\n' + c.inScope.trim() : '',
+      (c.outOfScope || '').trim() ? 'Out of scope:\n' + c.outOfScope.trim() : '',
+      asIs.length ? 'Current process (AS-IS):\n' + asIs.map(line).join('\n') : 'Current process (AS-IS): not described – derive the TO-BE from the requirement only.',
+      (s.process.currentLogic || '').trim() ? 'What the existing objects do today:\n' + s.process.currentLogic.trim().slice(0, 3000) : '',
+      sap && objs.length ? 'Existing SAP objects: ' + objs.map(function (o) { return o.name.trim().toUpperCase() + (o.type ? ' (' + o.type + ')' : ''); }).join(', ') : '',
+      frs.length ? 'Functional requirements:\n' + frs.map(function (f, i) { return 'FR-' + (i < 9 ? '0' : '') + (i + 1) + ' ' + f.title.trim(); }).join('\n') : '',
+      toBe.length ? 'TO-BE steps already in the spec (keep them, add only what is missing):\n' + toBe.map(line).join('\n') : '',
+      '',
+      'Rules:',
+      '- toBe: the process after the change, in the order it happens, one action per step, 4–12 steps, in business words.',
+      '- Go through the AS-IS steps: keep a step as "unchanged", rework it as "changed", replace manual work by the system as "automated", drop it when the requirement removes it, and add steps the requirement needs as "new". Every AS-IS pain point is solved or still visible.',
+      '- role: who does the step (a business role, or "System" / "Batch job" for automated steps).',
+      '- tx: the transaction, app, job or interface' + (sap ? '. Reuse names from the AS-IS and the existing objects; for something to be built, write what it is (e.g. "New ageing report") – never invent technical names or transaction codes.' : ' (system or screen); never invent technical names.'),
+      '- change: unchanged | changed | new | automated.',
+      '- Do not invent people, numbers or systems that are not in the input.',
+      '',
+      'Answer with a short summary and then exactly one ```json block:',
+      '```json',
+      JSON.stringify({ kind: KIND, version: 1, toBe: [{ step: '', role: '', tx: '', change: 'changed' }] }, null, 2),
+      '```'].filter(function (l, i, a) { return l !== '' || a[i - 1] !== ''; }).join('\n');
+  }
+
   /* ---------------------------------------------------- review and merge */
   /* What the draft would add to this spec, per part (only parts with something new). */
   function preview(s, d) {
@@ -14222,7 +14261,7 @@ window.APB_CONFIG = {
     return { state: F.model.migrate(next), added: added };
   }
 
-  APB.fsDraft = { MARK: MARK, PROGRAM_MARK: PROGRAM_MARK, KIND: KIND, PARTS: PARTS, prompt: prompt, programPrompt: programPrompt, asIsPrompt: asIsPrompt, parse: parse, preview: preview, merge: merge };
+  APB.fsDraft = { MARK: MARK, PROGRAM_MARK: PROGRAM_MARK, KIND: KIND, PARTS: PARTS, prompt: prompt, programPrompt: programPrompt, asIsPrompt: asIsPrompt, toBePrompt: toBePrompt, parse: parse, preview: preview, merge: merge };
 })(window.APB = window.APB || {});
 
 </script>
@@ -15019,7 +15058,7 @@ window.APB_CONFIG = {
       '<p class="muted small">From your requirement, Copilot writes the complete specification: objectives, scope, process, functional requirements with acceptance criteria, rules, data, roles, interfaces, test scenarios and risks. You review it before anything is added, nothing you typed is overwritten, and the document opens right after.' +
       (H.isVscode ? ' Uses your GitHub Copilot in VS Code – no system access. <strong>Generate in Copilot Chat</strong> lets you watch and steer it.' : ' Copy the prompt, paste it into an AI chat your organisation allows (for example Copilot Chat), then paste the answer below.') + '</p>' +
       vs + '<div class="gen-actions">' + run + (ready ? '' : '<span class="muted small">Describe the requirement first.</span>') + '</div>' +
-      (drf.error && drf.kind !== 'program' && drf.kind !== 'asis' ? '<p class="field-error" role="alert">' + esc(drf.error) + '</p>' : '') + paste + '</section>';
+      (drf.error && ['program', 'asis', 'tobe'].indexOf(drf.kind) < 0 ? '<p class="field-error" role="alert">' + esc(drf.error) + '</p>' : '') + paste + '</section>';
   }
 
   /* SAP only: read an existing program (and what it uses) read-only, and bring its logic into the spec. */
@@ -15109,6 +15148,34 @@ window.APB_CONFIG = {
       blockAll('process', ['asIs']) + (asIs.length > 1 ? '<h4 class="fs-flow-h">AS-IS flow</h4>' + flowHtml(s.process.asIs) : '') + '</section>';
   }
 
+  /* Step 2: the proposed process, generated by Copilot from the AS-IS steps and the requirement (no system access). */
+  function toBeCard(s) {
+    const asIs = (s.process.asIs || []).filter(V.isFilled);
+    const toBe = (s.process.toBe || []).filter(V.isFilled);
+    const ready = (s.context.requirement || '').trim().length >= 10;
+    const can = ready && copilotReady() && !drf.running;
+    const run = drf.running && drf.kind === 'tobe' ? runningHtml()
+      : H.isVscode
+        ? '<button type="button" class="btn btn-primary" data-action="fs-tobe-auto"' + (can ? '' : ' disabled') + '>✦ Generate TO-BE</button>' +
+          '<button type="button" class="btn btn-ghost" data-action="fs-tobe-chat"' + (can ? '' : ' disabled') + '>In Copilot Chat</button>'
+        : '<button type="button" class="btn btn-primary" data-action="fs-tobe-copy"' + (ready ? '' : ' disabled') + '>✦ Copy TO-BE prompt</button>';
+    return '<section class="card fs-tobe" aria-labelledby="h-tobe"><h3 id="h-tobe">Proposed process (TO-BE) <span class="hint">from the AS-IS and the requirement</span></h3>' +
+      '<p class="muted small">Copilot designs the process after the change from ' + (asIs.length ? 'the ' + asIs.length + ' AS-IS step' + (asIs.length > 1 ? 's' : '') + ' above' : 'the requirement (add AS-IS steps above for a better result)') +
+      ' and your requirement: each step marked unchanged, changed, new or automated, with the role and the transaction or app. Every pain point is addressed. You review it before it is added; steps you typed stay.' +
+      (H.isVscode ? ' Uses your GitHub Copilot – no system access.' : '') + '</p>' +
+      (H.isVscode ? '<div class="chips fs-copilot">' + copilotStatus() + '</div>' : '') +
+      '<div class="gen-actions">' + run + (asIs.length && !toBe.length ? '<button type="button" class="btn btn-ghost" data-action="fs-copy-asis">Start from the AS-IS steps</button>' : '') +
+      (ready ? '' : '<span class="muted small">Describe the requirement in step 1 first.</span>') + '</div>' +
+      (drf.kind === 'tobe' ? draftLogHtml() : '') +
+      (drf.error && drf.kind === 'tobe' ? '<p class="field-error" role="alert">' + esc(drf.error) + '</p>' : '') +
+      '<details class="paste"' + U().detailsAttrs('fs-tobe-paste', false) + '><summary>' + (H.isVscode ? 'Use another AI chat instead' : 'Paste the AI answer') + '</summary>' +
+      (H.isVscode ? '<p class="small muted"><button type="button" class="link" data-action="fs-tobe-copy">Copy the prompt</button>, paste it into an AI chat your organisation allows, then paste the whole answer here.</p>' : '<p class="small muted">Paste the prompt into an AI chat your organisation allows (for example Copilot Chat), then paste the whole answer here.</p>') +
+      '<textarea id="fs-tobe-answer" rows="4" spellcheck="false" aria-label="AI answer with the TO-BE process"></textarea>' +
+      '<button type="button" class="btn btn-ghost btn-sm" data-action="fs-tobe-review">Review the answer</button></details>' +
+      block('process', ['toBe']) +
+      (toBe.length > 1 ? '<h4 class="fs-flow-h">TO-BE flow</h4>' + flowHtml(s.process.toBe) : '') + '</section>';
+  }
+
   function step2(s) {
     const p = s.process;
     const asIs = (p.asIs || []).filter(V.isFilled);
@@ -15118,9 +15185,7 @@ window.APB_CONFIG = {
     const moreFilled = V.isFilled(p.variants) || V.isFilled(p.currentLogic) || V.isFilled(p.programs) || V.isFilled(s.reqs.data);
     return header(2) +
       asIsCard(s) +
-      block('process', ['toBe']) +
-      (asIs.length && !toBe.length ? '<p><button type="button" class="btn btn-ghost btn-sm" data-action="fs-copy-asis">Start TO-BE from the AS-IS steps</button></p>' : '') +
-      (toBe.length ? '<h3>TO-BE flow</h3>' + flowHtml(p.toBe) : '') +
+      toBeCard(s) +
       summary + block('reqs', ['frs', 'rules']) +
       more('fs-more-proc', 'More details – current program logic, objects read, variants, data', blockAll('process', ['currentLogic', 'programs', 'variants']) + blockAll('reqs', ['data']), moreFilled) +
       U().nav(true, 'Continue');
@@ -15486,7 +15551,7 @@ window.APB_CONFIG = {
         const last = drf.log.filter(function (l) { return l.key === m.key; })[0];
         if (last) { last.text = text; last.status = m.status; } else drf.log.push({ key: m.key, text: text, status: m.status });
         if (drf.log.length > 80) drf.log.shift();
-        const el = document.querySelector('.fs-prog .fs-log, .fs-asis .fs-log');
+        const el = document.querySelector('.fs-prog .fs-log, .fs-asis .fs-log, .fs-tobe .fs-log');
         if (el) el.outerHTML = draftLogHtml(); else rerenderStep1();
         return;
       }
@@ -15499,9 +15564,9 @@ window.APB_CONFIG = {
       drf.log.push({ text: 'Result received', status: 'done' });
       const answer = String(m.text || '');
       if (!reviewDraft(answer)) {
-        const asis = drf.kind === 'asis';
-        U().ui.open[asis ? 'fs-asis-paste' : 'fs-draft-paste'] = true; rerenderStep1();
-        const ta = document.getElementById(asis ? 'fs-asis-answer' : 'fs-draft-answer');
+        const box = { asis: 'fs-asis', tobe: 'fs-tobe' }[drf.kind] || 'fs-draft';
+        U().ui.open[box + '-paste'] = true; rerenderStep1();
+        const ta = document.getElementById(box + '-answer');
         if (ta) ta.value = answer;
       } else rerenderStep1();
     });
@@ -15533,6 +15598,15 @@ window.APB_CONFIG = {
     rerenderStep1();
   }
 
+  function draftToBe(mode) {
+    const s = S.get();
+    if ((s.context.requirement || '').trim().length < 10) { U().toast('Describe the business requirement in step 1 first'); return; }
+    drf.running = true; drf.kind = 'tobe'; drf.mode = mode; drf.error = ''; drf.log = [];
+    drf.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Copilot is designing the TO-BE process…';
+    H.post({ type: 'draft', mode: mode === 'chat' ? 'chat' : undefined, prompt: APB.fsDraft.toBePrompt(s) });
+    rerenderStep1();
+  }
+
   function readAsIs(mode) {
     const s = S.get();
     const labels = programLabels();
@@ -15544,6 +15618,22 @@ window.APB_CONFIG = {
   }
 
   const actions = {
+    'fs-tobe-auto': function () { draftToBe('auto'); },
+    'fs-tobe-chat': function () { draftToBe('chat'); },
+    'fs-tobe-copy': function () {
+      const s = S.get();
+      if ((s.context.requirement || '').trim().length < 10) { U().toast('Describe the business requirement in step 1 first'); return; }
+      Promise.resolve(APB.exporter.copy(APB.fsDraft.toBePrompt(s))).then(function (ok) {
+        U().ui.open['fs-tobe-paste'] = true;
+        rerenderStep1();
+        U().toast(ok ? 'Prompt copied ✓ Paste it into an AI chat your organisation allows, then paste the answer here' : 'Copy failed', 7000);
+      });
+    },
+    'fs-tobe-review': function () {
+      const ta = document.getElementById('fs-tobe-answer');
+      drf.kind = 'tobe';
+      if (ta && reviewDraft(ta.value)) U().ui.open['fs-tobe-paste'] = false;
+    },
     'fs-asis-auto': function () { readAsIs('auto'); },
     'fs-asis-chat': function () { readAsIs('chat'); },
     'fs-asis-copy': function () {
@@ -15647,12 +15737,12 @@ window.APB_CONFIG = {
         // the program logic belongs to the current process: show it in step 2
         U().ui.step = 2;
         U().ui.open['fs-more-proc'] = true;
-      } else if (kind === 'asis') {
+      } else if (kind === 'asis' || kind === 'tobe') {
         U().ui.step = 2;
       } else if (r.added.length && !FC.checkMandatory(r.state).length) U().ui.generated = true;
       U().renderMain();
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      U().toast(r.added.length ? 'Added ' + r.added.join(', ') + (kind === 'program' ? ' – see More details in this step' : kind === 'asis' ? ' – the AS-IS process is at the top of this step' : ' – use Review Details to change anything') : 'Nothing new to add', 7000);
+      U().toast(r.added.length ? 'Added ' + r.added.join(', ') + (kind === 'program' ? ' – see More details in this step' : kind === 'asis' ? ' – the AS-IS process is at the top of this step' : kind === 'tobe' ? ' – mark what changes, then add the requirements' : ' – use Review Details to change anything') : 'Nothing new to add', 7000);
     },
     'fs-template': function (el) {
       const t = F.templates.fromTemplate(el.dataset.id, S.get());

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.13
+
+- **Functional spec, step 2: TO-BE process from the AS-IS and the requirement.** *Proposed process (TO-BE)* has **Generate TO-BE**: Copilot designs the process after the change from the AS-IS steps, their pain points, the requirement, scope and the existing objects. Each step comes with role, transaction / app and a change mark (unchanged, changed, new, automated). You review it first; steps you typed stay. Works for SAP and non-SAP specs, without system access.
+- AI answers now keep the transaction / app of TO-BE steps.
+
 ## 1.0.12
 
 - **Functional spec, step 2: AS-IS process from the existing objects.** Step 2 opens with *Current process (AS-IS)*. With the existing objects listed in step 1, **Generate AS-IS from the objects** has Copilot read them read-only and write the current business process: steps in order, with the role, the transaction / app / job / interface and the pain points where the code shows manual work. You review it first; steps you typed stay.

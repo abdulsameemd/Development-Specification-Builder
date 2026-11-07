@@ -34,7 +34,7 @@
     { id: 'outOfScope', label: 'Out of scope', path: 'context.outOfScope', kind: 'lines' },
     { id: 'stakeholders', label: 'Stakeholders', path: 'context.stakeholders', kind: 'rows', keys: ['role', 'responsibility'], show: 'role' },
     { id: 'asIs', label: 'AS-IS steps', path: 'process.asIs', kind: 'rows', keys: ['step', 'role', 'tx', 'pain'], show: 'step' },
-    { id: 'toBe', label: 'TO-BE steps', path: 'process.toBe', kind: 'rows', keys: ['step', 'role', 'change'], enums: { change: ['process', 'toBe', 'change'] }, show: 'step' },
+    { id: 'toBe', label: 'TO-BE steps', path: 'process.toBe', kind: 'rows', keys: ['step', 'role', 'tx', 'change'], enums: { change: ['process', 'toBe', 'change'] }, show: 'step' },
     { id: 'currentLogic', label: 'Current program logic', path: 'process.currentLogic', kind: 'text', max: 6000 },
     { id: 'programs', label: 'Programs and objects read', path: 'process.programs', kind: 'rows', keys: ['type', 'name', 'description', 'role'], enums: { role: ['process', 'programs', 'role'] }, show: 'name' },
     { id: 'frs', label: 'Functional requirements', path: 'reqs.frs', kind: 'rows', keys: ['title', 'priority', 'fit', 'description', 'acceptance'], enums: { priority: ['reqs', 'frs', 'priority'], fit: ['reqs', 'frs', 'fit'] }, show: 'title' },
@@ -214,6 +214,45 @@
       '```'].filter(function (l, i, a) { return l !== '' || a[i - 1] !== ''; }).join('\n');
   }
 
+  /* TO-BE process from the AS-IS steps and the requirement: an AI draft (no system access), same marker as prompt(). */
+  function toBePrompt(s) {
+    const c = s.context;
+    const sap = F.isSap(s);
+    const sys = sap ? 'SAP' + (c.module ? ' (module ' + c.module + ')' : '')
+      : c.system === 'other' ? 'Other system' + ((c.systemName || '').trim() ? ': ' + c.systemName.trim() : '') : 'Not decided yet';
+    const asIs = (s.process.asIs || []).filter(function (r) { return r && (r.step || '').trim(); });
+    const toBe = (s.process.toBe || []).filter(function (r) { return r && (r.step || '').trim(); });
+    const frs = (s.reqs.frs || []).filter(function (f) { return f && (f.title || '').trim(); });
+    const objs = (c.objects || []).filter(function (o) { return o && (o.name || '').trim(); });
+    const line = function (r, i) { return (i + 1) + '. ' + r.step.trim() + [r.role && ' [' + r.role.trim() + ']', r.tx && ' · ' + r.tx.trim(), r.pain && ' – pain: ' + r.pain.trim()].filter(Boolean).join(''); };
+    return [MARK,
+      'Design the PROPOSED BUSINESS PROCESS (TO-BE) for a functional specification, from the current process (AS-IS) and the business requirement below.',
+      '',
+      'System: ' + sys,
+      'Business requirement:\n' + (c.requirement || '').trim(),
+      (c.objectives || '').trim() ? 'Objectives:\n' + c.objectives.trim() : '',
+      (c.inScope || '').trim() ? 'In scope:\n' + c.inScope.trim() : '',
+      (c.outOfScope || '').trim() ? 'Out of scope:\n' + c.outOfScope.trim() : '',
+      asIs.length ? 'Current process (AS-IS):\n' + asIs.map(line).join('\n') : 'Current process (AS-IS): not described – derive the TO-BE from the requirement only.',
+      (s.process.currentLogic || '').trim() ? 'What the existing objects do today:\n' + s.process.currentLogic.trim().slice(0, 3000) : '',
+      sap && objs.length ? 'Existing SAP objects: ' + objs.map(function (o) { return o.name.trim().toUpperCase() + (o.type ? ' (' + o.type + ')' : ''); }).join(', ') : '',
+      frs.length ? 'Functional requirements:\n' + frs.map(function (f, i) { return 'FR-' + (i < 9 ? '0' : '') + (i + 1) + ' ' + f.title.trim(); }).join('\n') : '',
+      toBe.length ? 'TO-BE steps already in the spec (keep them, add only what is missing):\n' + toBe.map(line).join('\n') : '',
+      '',
+      'Rules:',
+      '- toBe: the process after the change, in the order it happens, one action per step, 4–12 steps, in business words.',
+      '- Go through the AS-IS steps: keep a step as "unchanged", rework it as "changed", replace manual work by the system as "automated", drop it when the requirement removes it, and add steps the requirement needs as "new". Every AS-IS pain point is solved or still visible.',
+      '- role: who does the step (a business role, or "System" / "Batch job" for automated steps).',
+      '- tx: the transaction, app, job or interface' + (sap ? '. Reuse names from the AS-IS and the existing objects; for something to be built, write what it is (e.g. "New ageing report") – never invent technical names or transaction codes.' : ' (system or screen); never invent technical names.'),
+      '- change: unchanged | changed | new | automated.',
+      '- Do not invent people, numbers or systems that are not in the input.',
+      '',
+      'Answer with a short summary and then exactly one ```json block:',
+      '```json',
+      JSON.stringify({ kind: KIND, version: 1, toBe: [{ step: '', role: '', tx: '', change: 'changed' }] }, null, 2),
+      '```'].filter(function (l, i, a) { return l !== '' || a[i - 1] !== ''; }).join('\n');
+  }
+
   /* ---------------------------------------------------- review and merge */
   /* What the draft would add to this spec, per part (only parts with something new). */
   function preview(s, d) {
@@ -260,5 +299,5 @@
     return { state: F.model.migrate(next), added: added };
   }
 
-  APB.fsDraft = { MARK: MARK, PROGRAM_MARK: PROGRAM_MARK, KIND: KIND, PARTS: PARTS, prompt: prompt, programPrompt: programPrompt, asIsPrompt: asIsPrompt, parse: parse, preview: preview, merge: merge };
+  APB.fsDraft = { MARK: MARK, PROGRAM_MARK: PROGRAM_MARK, KIND: KIND, PARTS: PARTS, prompt: prompt, programPrompt: programPrompt, asIsPrompt: asIsPrompt, toBePrompt: toBePrompt, parse: parse, preview: preview, merge: merge };
 })(window.APB = window.APB || {});

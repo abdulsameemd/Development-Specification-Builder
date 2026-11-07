@@ -52,3 +52,28 @@ test('the answer adds the missing steps with transaction and pain point, without
     ['Run the open items report | ZFI_AGE | ', 'Download the list to Excel | ZFI_AGE (ALV export) | Manual export']);
   assert.strictEqual(m.state.process.currentLogic, 'Lists open items.');
 });
+
+test('the TO-BE prompt is an AI draft built from the AS-IS, the pain points and the requirement', () => {
+  const s = spec();
+  s.process.asIs.push({ step: 'Sort items into buckets in Excel', role: 'AP accountant', tx: 'Excel', pain: 'Two days of manual work' });
+  const p = APB.fsDraft.toBePrompt(s);
+  assert.ok(p.startsWith(APB.fsDraft.MARK)); // the VS Code extension accepts only this marker for drafts
+  assert.match(p, /PROPOSED BUSINESS PROCESS \(TO-BE\)/);
+  assert.match(p, /2\. Sort items into buckets in Excel \[AP accountant\] · Excel – pain: Two days of manual work/);
+  assert.match(p, /Month-end vendor ageing without Excel/);
+  assert.match(p, /Existing SAP objects: ZFI_AP_OPEN_ITEMS_OLD \(PROG\), ZFI_AGE \(TRAN\)/);
+  assert.match(p, /never invent technical names or transaction codes/);
+});
+
+test('the TO-BE answer keeps transaction and change, and does not duplicate typed steps', () => {
+  const s = spec();
+  s.process.toBe = [{ step: 'Run the ageing report', role: 'AP accountant', tx: 'New ageing report', change: 'changed' }];
+  const answer = '```json\n' + JSON.stringify({ kind: 'fs-draft', version: 1, toBe: [
+    { step: 'Run the ageing report', role: 'AP accountant', tx: 'New ageing report', change: 'changed' },
+    { step: 'Ageing is e-mailed to the finance manager', role: 'Batch job', tx: 'Background job', change: 'Automated' }] }) + '\n```';
+  const r = APB.fsDraft.parse(answer);
+  assert.ok(r.draft, r.error);
+  const m = APB.fsDraft.merge(APB.fs.model.migrate(s), r.draft, ['toBe']);
+  assert.deepStrictEqual(plain(m.state.process.toBe).map((x) => x.step + ' | ' + x.tx + ' | ' + x.change),
+    ['Run the ageing report | New ageing report | changed', 'Ageing is e-mailed to the finance manager | Background job | automated']);
+});
