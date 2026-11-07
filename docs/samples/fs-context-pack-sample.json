@@ -1,0 +1,163 @@
+{
+  "kind": "dewa-sap-context-pack",
+  "version": 1,
+  "sample": true,
+  "generatedAt": "2026-10-20T09:30:00Z",
+  "system": {
+    "sid": "DEMO",
+    "client": "100",
+    "release": "S/4HANA 2023 FPS02 (sample)",
+    "components": [
+      {
+        "name": "S4CORE",
+        "release": "108"
+      },
+      {
+        "name": "SAP_BASIS",
+        "release": "758"
+      }
+    ]
+  },
+  "objects": [
+    {
+      "type": "VIEW",
+      "name": "BSIK",
+      "description": "Vendor open items (compatibility view)",
+      "package": "FBAS",
+      "origin": "standard",
+      "released": false
+    },
+    {
+      "type": "TABL",
+      "name": "LFA1",
+      "description": "Supplier master (general section)",
+      "package": "BF00",
+      "origin": "standard",
+      "released": false
+    },
+    {
+      "type": "DDLS",
+      "name": "I_OPERATIONALACCTGDOCITEM",
+      "description": "Operational accounting document item",
+      "package": "ODATA_GLO_FIN_ACCOUNTING",
+      "origin": "standard",
+      "released": true
+    },
+    {
+      "type": "DDLS",
+      "name": "I_SUPPLIER",
+      "description": "Supplier",
+      "package": "VDM_MD_BP",
+      "origin": "standard",
+      "released": true
+    },
+    {
+      "type": "SUSO",
+      "name": "F_BKPF_BUK",
+      "description": "Accounting document: authorization for company codes",
+      "package": "FBAS",
+      "origin": "standard",
+      "released": false
+    },
+    {
+      "type": "PROG",
+      "name": "ZFI_AP_OPEN_ITEMS_OLD",
+      "description": "Legacy AP open items list (custom)",
+      "package": "ZFI_AP",
+      "origin": "custom",
+      "released": false
+    }
+  ],
+  "transactions": [
+    {
+      "code": "FBL1N",
+      "description": "Supplier line items"
+    },
+    {
+      "code": "MIRO",
+      "description": "Enter incoming invoice"
+    },
+    {
+      "code": "FB60",
+      "description": "Enter incoming invoices"
+    },
+    {
+      "code": "F110",
+      "description": "Automatic payment transactions"
+    }
+  ],
+  "fioriApps": [
+    {
+      "appId": "F0712",
+      "title": "Manage Supplier Line Items",
+      "semanticObject": "Supplier",
+      "action": "manageLineItems",
+      "odataService": "FAP_MANAGE_SUPPLIER_LINE_ITEMS_SRV"
+    },
+    {
+      "appId": "F1747",
+      "title": "Aging Analysis",
+      "semanticObject": "AccountsPayable",
+      "action": "analyzeAging",
+      "odataService": ""
+    }
+  ],
+  "ui5Apps": [],
+  "capServices": [],
+  "enhancements": [
+    {
+      "type": "BAdI",
+      "name": "FI_ITEMS_CH_DATA",
+      "description": "Change line item data in FBL1N/FBL3N/FBL5N",
+      "implemented": false
+    }
+  ],
+  "customizingHints": [
+    {
+      "path": "SPRO › Financial Accounting › AR and AP › Business Transactions › Incoming Invoices › Payment terms",
+      "note": "Net due date depends on the payment terms"
+    }
+  ],
+  "notFound": [
+    {
+      "name": "ZFI_AGEING",
+      "reason": "No transaction with this name (expected – it is new)"
+    },
+    {
+      "name": "ZFI_AP_AGEING",
+      "reason": "No object with this name"
+    }
+  ],
+  "stepMatches": [
+    {
+      "step": "asIs.0",
+      "candidates": [
+        {
+          "kind": "transaction",
+          "id": "FBL1N",
+          "title": "Supplier line items"
+        },
+        {
+          "kind": "fioriApp",
+          "id": "F0712",
+          "title": "Manage Supplier Line Items"
+        }
+      ]
+    },
+    {
+      "step": "toBe.1",
+      "candidates": [
+        {
+          "kind": "transaction",
+          "id": "FBL1N",
+          "title": "Supplier line items"
+        },
+        {
+          "kind": "fioriApp",
+          "id": "F0712",
+          "title": "Manage Supplier Line Items"
+        }
+      ]
+    }
+  ]
+}

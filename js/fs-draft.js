@@ -1,0 +1,303 @@
+/* AI draft for functional specifications: a prompt built from the business requirement, the answer's JSON
+   parsed and size-limited (untrusted text), and a merge that only fills what is still empty. The consultant
+   reviews every section before anything is added; nothing typed by hand is overwritten. */
+(function (APB) {
+  'use strict';
+  const F = APB.fs, V = APB.validation;
+  const MARK = 'FS-DRAFT v1', KIND = 'fs-draft';
+  const MAX_ITEMS = 30, MAX_LEN = 2000;
+
+  function str(v) { return typeof v === 'string' ? v.trim().slice(0, MAX_LEN) : (typeof v === 'number' ? String(v) : ''); }
+  function lines(v) {
+    return (Array.isArray(v) ? v : typeof v === 'string' ? v.split(/\r?\n/) : []).map(function (l) { return str(l).replace(/^[-*•]\s+/, ''); }).filter(Boolean).slice(0, MAX_ITEMS);
+  }
+
+  /* An option value from what the model wrote ("must", "Must have", "MUST"). */
+  function enumOf(options, v) {
+    v = str(v).toLowerCase();
+    if (!v) return '';
+    const o = (options || []).filter(function (x) { return x.value && (x.value.toLowerCase() === v || x.label.toLowerCase() === v || x.label.toLowerCase().split(/[\s(–-]/)[0] === v.split(/[\s(–-]/)[0]); })[0];
+    return o ? o.value : '';
+  }
+  function colOptions(sectionId, fieldId, colId) {
+    const f = F.field(sectionId, fieldId);
+    const c = f && (f.columns || f.fields || []).filter(function (x) { return x.id === colId; })[0];
+    return c ? c.options : [];
+  }
+
+  /* What a draft can contain, where it goes in the spec, and how it is shown in the review. */
+  const PARTS = [
+    { id: 'title', label: 'Title', path: 'context.title', kind: 'text' },
+    { id: 'objectives', label: 'Business objectives', path: 'context.objectives', kind: 'lines' },
+    { id: 'kpis', label: 'KPIs / success measures', path: 'context.kpis', kind: 'lines' },
+    { id: 'inScope', label: 'In scope', path: 'context.inScope', kind: 'lines' },
+    { id: 'outOfScope', label: 'Out of scope', path: 'context.outOfScope', kind: 'lines' },
+    { id: 'stakeholders', label: 'Stakeholders', path: 'context.stakeholders', kind: 'rows', keys: ['role', 'responsibility'], show: 'role' },
+    { id: 'asIs', label: 'AS-IS steps', path: 'process.asIs', kind: 'rows', keys: ['step', 'role', 'tx', 'pain'], show: 'step' },
+    { id: 'toBe', label: 'TO-BE steps', path: 'process.toBe', kind: 'rows', keys: ['step', 'role', 'tx', 'change'], enums: { change: ['process', 'toBe', 'change'] }, show: 'step' },
+    { id: 'currentLogic', label: 'Current program logic', path: 'process.currentLogic', kind: 'text', max: 6000 },
+    { id: 'programs', label: 'Programs and objects read', path: 'process.programs', kind: 'rows', keys: ['type', 'name', 'description', 'role'], enums: { role: ['process', 'programs', 'role'] }, show: 'name' },
+    { id: 'frs', label: 'Functional requirements', path: 'reqs.frs', kind: 'rows', keys: ['title', 'priority', 'fit', 'description', 'acceptance'], enums: { priority: ['reqs', 'frs', 'priority'], fit: ['reqs', 'frs', 'fit'] }, show: 'title' },
+    { id: 'rules', label: 'Business rules', path: 'reqs.rules', kind: 'rows', keys: ['rule', 'type', 'outcome', 'fr'], enums: { type: ['reqs', 'rules', 'type'] }, show: 'rule', frRefs: 'fr' },
+    { id: 'data', label: 'Data requirements', path: 'reqs.data', kind: 'rows', keys: ['field', 'table', 'sapField', 'validation'], show: 'field' },
+    { id: 'roles', label: 'Roles', path: 'solution.roles', kind: 'rows', keys: ['role', 'tx', 'scope'], show: 'role' },
+    { id: 'interfaces', label: 'Interfaces', path: 'solution.interfaces', kind: 'rows', keys: ['name', 'direction', 'partner'], enums: { direction: ['solution', 'interfaces', 'direction'] }, show: 'name' },
+    { id: 'outputs', label: 'Outputs', path: 'solution.outputs', kind: 'rows', keys: ['name', 'type', 'trigger'], enums: { type: ['solution', 'outputs', 'type'] }, show: 'name' },
+    { id: 'performance', label: 'Performance', path: 'quality.performance', kind: 'text' },
+    { id: 'volume', label: 'Data volumes', path: 'quality.volume', kind: 'text' },
+    { id: 'privacy', label: 'Data privacy', path: 'quality.privacy', kind: 'text' },
+    { id: 'uat', label: 'Test scenarios', path: 'quality.uat', kind: 'rows', keys: ['fr', 'scenario', 'type', 'expected'], enums: { type: ['quality', 'uat', 'type'] }, show: 'scenario', frRefs: 'fr' },
+    { id: 'risks', label: 'Risks & assumptions', path: 'quality.risks', kind: 'rows', keys: ['type', 'text'], enums: { type: ['quality', 'risks', 'type'] }, show: 'text' }
+  ];
+
+  function normalize(raw) {
+    const d = {};
+    PARTS.forEach(function (p) {
+      const v = raw[p.id];
+      if (p.kind === 'text') d[p.id] = (typeof v === 'string' ? v.trim() : Array.isArray(v) ? lines(v).join('\n') : '').slice(0, p.max || 400);
+      else if (p.kind === 'lines') d[p.id] = lines(v);
+      else {
+        d[p.id] = (Array.isArray(v) ? v : []).slice(0, MAX_ITEMS).filter(function (r) { return r && typeof r === 'object'; }).map(function (r) {
+          const o = {};
+          p.keys.forEach(function (k) {
+            const e = p.enums && p.enums[k];
+            o[k] = e ? enumOf(colOptions(e[0], e[1], e[2]), r[k]) : Array.isArray(r[k]) ? lines(r[k]).join('\n') : str(r[k]);
+          });
+          return o;
+        }).filter(function (o) { return str(o[p.show]); });
+      }
+    });
+    return d;
+  }
+
+  function isEmptyDraft(d) { return PARTS.every(function (p) { return p.kind === 'text' ? !d[p.id] : !d[p.id].length; }); }
+
+  /* The last JSON object in the answer (```json block first, else the outermost braces). */
+  function parse(text) {
+    text = String(text || '');
+    if (text.length > 400000) return { draft: null, error: 'The answer is too long.' };
+    const cands = [];
+    text.replace(/```(?:json)?\s*([\s\S]*?)```/gi, function (_, b) { cands.push(b); return _; });
+    const a = text.indexOf('{'), b = text.lastIndexOf('}');
+    if (a >= 0 && b > a) cands.push(text.slice(a, b + 1));
+    for (let i = cands.length - 1; i >= 0; i--) {
+      let raw;
+      try { raw = JSON.parse(cands[i]); } catch (e) { continue; }
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
+      if (raw.kind && raw.kind !== KIND) continue;
+      const d = normalize(raw);
+      if (!isEmptyDraft(d)) return { draft: d, error: '' };
+    }
+    return { draft: null, error: 'No draft found in the answer – paste the whole answer including the ```json block.' };
+  }
+
+  /* -------------------------------------------------------------- prompt */
+  function prompt(s) {
+    const c = s.context;
+    const sys = F.isSap(s) ? 'SAP' + (c.module ? ' (module ' + c.module + ')' : '')
+      : c.system === 'other' ? 'Other system' + ((c.systemName || '').trim() ? ': ' + c.systemName.trim() : '') : 'Not decided yet';
+    const have = [];
+    PARTS.forEach(function (p) {
+      const v = APB.state.getPath(s, p.path);
+      if (p.kind === 'rows') { const l = (v || []).filter(V.isFilled); if (l.length) have.push(p.label + ': ' + l.map(function (r) { return (r[p.show] || '').trim(); }).filter(Boolean).join(' | ')); }
+      else if (str(v)) have.push(p.label + ': ' + str(v).replace(/\s*\n\s*/g, ' | '));
+    });
+    const out = [MARK,
+      'You help a business analyst write a functional specification. Draft the parts that are still missing from the business requirement below.',
+      '',
+      'System: ' + sys,
+      (c.processArea || '').trim() ? 'Process area: ' + c.processArea.trim() : '',
+      'Business requirement:',
+      (c.requirement || '').trim(),
+      '',
+      have.length ? 'Already written (keep it, do not repeat it; leave those lists empty):\n' + have.map(function (h) { return '- ' + h; }).join('\n') + '\n' : '',
+      'Rules:',
+      '- Plain business language for business readers; short, concrete sentences.',
+      '- Use only what the requirement says or what such a solution clearly needs. Mark every assumption with [TO BE CONFIRMED].',
+      '- Do not invent technical names (transactions, tables, programs, apps, APIs), people or numbers that are not in the requirement.',
+      '- No personal data.',
+      '- 3 to 8 functional requirements, each one testable, with 1 to 3 acceptance criteria ("When …, then …"). Reference them as FR-01, FR-02 … in the order you list them.',
+      '- Allowed values: priority must|should|could|wont' + (F.isSap(s) ? ' · fit standard|config|custom|tbc (SAP standard, configuration, custom development)' : '') + ' · change unchanged|changed|new|automated · rule type validation|derivation|calculation|authorization|approval · direction inbound|outbound|both · output type form|email|report|file|notification · test type positive|negative · risk type risk|assumption|open|dependency.',
+      '- Fill every part that applies; leave a list empty when the requirement gives no basis for it.',
+      '',
+      'Answer with a one-line summary and then exactly one ```json block:',
+      '```json',
+      JSON.stringify({
+        kind: KIND, version: 1, title: '', objectives: [''], kpis: [''], inScope: [''], outOfScope: [''],
+        stakeholders: [{ role: '', responsibility: '' }],
+        asIs: [{ step: '', role: '', pain: '' }], toBe: [{ step: '', role: '', change: 'new' }],
+        frs: [F.isSap(s) ? { title: '', priority: 'must', fit: 'tbc', description: '', acceptance: [''] } : { title: '', priority: 'must', description: '', acceptance: [''] }],
+        rules: [{ rule: '', type: 'validation', outcome: '', fr: 'FR-01' }],
+        data: [{ field: '', validation: '' }],
+        roles: [{ role: '', scope: '' }],
+        interfaces: [{ name: '', direction: 'inbound', partner: '' }],
+        outputs: [{ name: '', type: 'email', trigger: '' }],
+        performance: '', volume: '', privacy: '',
+        uat: [{ fr: 'FR-01', scenario: '', type: 'positive', expected: '' }],
+        risks: [{ type: 'assumption', text: '' }]
+      }, null, 2),
+      '```'];
+    return out.filter(function (l, i) { return l !== '' || out[i - 1] !== ''; }).join('\n');
+  }
+
+  /* ------------------------------------------- read an existing program */
+  const PROGRAM_MARK = 'FS-PROGRAM v1';
+
+  function programPrompt(s, names) {
+    const c = s.context;
+    return [PROGRAM_MARK,
+      'Read the existing SAP objects below (programs, transactions, classes, function modules, CDS views, RAP objects, services, proxies …) and the SAP system READ-ONLY, and describe what they do today, for a functional specification.',
+      '',
+      'Objects to read: ' + names.join(', '),
+      c.module ? 'Module: ' + c.module : '',
+      (c.requirement || '').trim() ? 'Why the consultant asks (the planned change):\n' + c.requirement.trim() : '',
+      '',
+      'Read:',
+      '- for a transaction code, the program or app behind it first;',
+      '- the source, includes, selection screen / parameters, and the function modules, classes, BAdIs and CDS views it calls;',
+      '- the tables it reads and writes, its messages and its authorization checks.',
+      '',
+      'Rules:',
+      '- READ ONLY: never create, change, activate, run or transport anything. Do not read table contents.',
+      '- Describe the logic in business words for a functional consultant; name the technical objects only in "programs" and in data.table / data.sapField.',
+      '- Only report what you read. List objects you could not read in "currentLogic" under "Not read:".',
+      '- asIs: the current process steps the program supports. rules: the validations, derivations and calculations in the code.',
+      '- frs: the current behaviour as functional requirements ("The report shows …"), each with acceptance criteria, fit "custom".',
+      '- data: the main fields (business name, table or CDS view, field, validation). programs: every object read (type PROG|CLAS|FUGR|FUNC|TABL|DDLS|BADI|TRAN|…, role main|used).',
+      '',
+      'Answer with a short summary and then exactly one ```json block:',
+      '```json',
+      JSON.stringify({
+        kind: KIND, version: 1, currentLogic: '',
+        programs: [{ type: 'PROG', name: '', description: '', role: 'main' }],
+        asIs: [{ step: '', role: '', pain: '' }],
+        rules: [{ rule: '', type: 'validation', outcome: '', fr: 'FR-01' }],
+        data: [{ field: '', table: 'TABLE', sapField: 'FIELD', validation: '' }],
+        frs: [{ title: '', priority: 'must', fit: 'custom', description: '', acceptance: [''] }]
+      }, null, 2),
+      '```'].filter(function (l, i, a) { return l !== '' || a[i - 1] !== ''; }).join('\n');
+  }
+
+  /* AS-IS process from the existing objects: the same read-only reading as programPrompt (same marker, so the VS Code
+     extension runs it unchanged), focused on the business process the objects support today. */
+  function asIsPrompt(s, names) {
+    const c = s.context;
+    const have = (s.process.asIs || []).filter(function (r) { return r && (r.step || '').trim(); });
+    return [PROGRAM_MARK,
+      'Read the existing SAP objects below and the SAP system READ-ONLY, and describe the CURRENT BUSINESS PROCESS (AS-IS) they support today, step by step, for a functional specification.',
+      '',
+      'Existing objects: ' + names.join(', '),
+      c.module ? 'Module: ' + c.module : '',
+      (c.processArea || '').trim() ? 'Process area: ' + c.processArea.trim() : '',
+      (c.requirement || '').trim() ? 'Why the consultant asks (the planned change):\n' + c.requirement.trim() : '',
+      have.length ? 'AS-IS steps already in the spec (keep them, add only what is missing):\n' + have.map(function (r, i) { return (i + 1) + '. ' + r.step.trim(); }).join('\n') : '',
+      '',
+      'Read:',
+      '- for a transaction code, the program or app behind it first; for a class, function module, RFC, CDS view, RAP object, OData service or proxy, who calls it and from where;',
+      '- the selection screen / parameters, the main processing, the outputs (ALV, file, IDoc, e-mail, posting, interface call) and the follow-up steps users take;',
+      '- the transactions, apps, jobs and interfaces that start or follow the processing.',
+      '',
+      'Rules:',
+      '- READ ONLY: never create, change, activate, run or transport anything. Do not read table contents.',
+      '- asIs: the business process in the order it happens: who does what (role), in which transaction / app / job / interface (tx), and the pain point where the code shows manual work (downloads to Excel, manual entry, re-keying, waiting for a batch job, e-mail hand-offs). Business words, one action per step, 4–12 steps.',
+      '- Include the steps before and after the system (e.g. "Download to Excel", "Send the list to the treasurer") only when the objects show them (file download, e-mail, spool).',
+      '- currentLogic: a short summary of what the objects do today, in business words. programs: every object read (type PROG|CLAS|FUGR|FUNC|TABL|DDLS|BDEF|SRVB|TRAN|…, role main|used).',
+      '- Only report what you read. List objects you could not read in "currentLogic" under "Not read:". Leave a field empty when the code does not show it.',
+      '',
+      'Answer with a short summary and then exactly one ```json block:',
+      '```json',
+      JSON.stringify({
+        kind: KIND, version: 1, currentLogic: '',
+        programs: [{ type: 'PROG', name: '', description: '', role: 'main' }],
+        asIs: [{ step: '', role: '', tx: '', pain: '' }]
+      }, null, 2),
+      '```'].filter(function (l, i, a) { return l !== '' || a[i - 1] !== ''; }).join('\n');
+  }
+
+  /* TO-BE process from the AS-IS steps and the requirement: an AI draft (no system access), same marker as prompt(). */
+  function toBePrompt(s) {
+    const c = s.context;
+    const sap = F.isSap(s);
+    const sys = sap ? 'SAP' + (c.module ? ' (module ' + c.module + ')' : '')
+      : c.system === 'other' ? 'Other system' + ((c.systemName || '').trim() ? ': ' + c.systemName.trim() : '') : 'Not decided yet';
+    const asIs = (s.process.asIs || []).filter(function (r) { return r && (r.step || '').trim(); });
+    const toBe = (s.process.toBe || []).filter(function (r) { return r && (r.step || '').trim(); });
+    const frs = (s.reqs.frs || []).filter(function (f) { return f && (f.title || '').trim(); });
+    const objs = (c.objects || []).filter(function (o) { return o && (o.name || '').trim(); });
+    const line = function (r, i) { return (i + 1) + '. ' + r.step.trim() + [r.role && ' [' + r.role.trim() + ']', r.tx && ' · ' + r.tx.trim(), r.pain && ' – pain: ' + r.pain.trim()].filter(Boolean).join(''); };
+    return [MARK,
+      'Design the PROPOSED BUSINESS PROCESS (TO-BE) for a functional specification, from the current process (AS-IS) and the business requirement below.',
+      '',
+      'System: ' + sys,
+      'Business requirement:\n' + (c.requirement || '').trim(),
+      (c.objectives || '').trim() ? 'Objectives:\n' + c.objectives.trim() : '',
+      (c.inScope || '').trim() ? 'In scope:\n' + c.inScope.trim() : '',
+      (c.outOfScope || '').trim() ? 'Out of scope:\n' + c.outOfScope.trim() : '',
+      asIs.length ? 'Current process (AS-IS):\n' + asIs.map(line).join('\n') : 'Current process (AS-IS): not described – derive the TO-BE from the requirement only.',
+      (s.process.currentLogic || '').trim() ? 'What the existing objects do today:\n' + s.process.currentLogic.trim().slice(0, 3000) : '',
+      sap && objs.length ? 'Existing SAP objects: ' + objs.map(function (o) { return o.name.trim().toUpperCase() + (o.type ? ' (' + o.type + ')' : ''); }).join(', ') : '',
+      frs.length ? 'Functional requirements:\n' + frs.map(function (f, i) { return 'FR-' + (i < 9 ? '0' : '') + (i + 1) + ' ' + f.title.trim(); }).join('\n') : '',
+      toBe.length ? 'TO-BE steps already in the spec (keep them, add only what is missing):\n' + toBe.map(line).join('\n') : '',
+      '',
+      'Rules:',
+      '- toBe: the process after the change, in the order it happens, one action per step, 4–12 steps, in business words.',
+      '- Go through the AS-IS steps: keep a step as "unchanged", rework it as "changed", replace manual work by the system as "automated", drop it when the requirement removes it, and add steps the requirement needs as "new". Every AS-IS pain point is solved or still visible.',
+      '- role: who does the step (a business role, or "System" / "Batch job" for automated steps).',
+      '- tx: the transaction, app, job or interface' + (sap ? '. Reuse names from the AS-IS and the existing objects; for something to be built, write what it is (e.g. "New ageing report") – never invent technical names or transaction codes.' : ' (system or screen); never invent technical names.'),
+      '- change: unchanged | changed | new | automated.',
+      '- Do not invent people, numbers or systems that are not in the input.',
+      '',
+      'Answer with a short summary and then exactly one ```json block:',
+      '```json',
+      JSON.stringify({ kind: KIND, version: 1, toBe: [{ step: '', role: '', tx: '', change: 'changed' }] }, null, 2),
+      '```'].filter(function (l, i, a) { return l !== '' || a[i - 1] !== ''; }).join('\n');
+  }
+
+  /* ---------------------------------------------------- review and merge */
+  /* What the draft would add to this spec, per part (only parts with something new). */
+  function preview(s, d) {
+    return PARTS.map(function (p) {
+      const cur = APB.state.getPath(s, p.path);
+      let items = [];
+      if (p.kind === 'text') items = !str(cur) && d[p.id] ? [d[p.id]] : [];
+      else if (p.kind === 'lines') { const have = lines(cur).map(function (l) { return l.toLowerCase(); }); items = d[p.id].filter(function (l) { return have.indexOf(l.toLowerCase()) < 0; }); }
+      else {
+        const have = (cur || []).filter(V.isFilled).map(function (r) { return str(r[p.show]).toLowerCase(); });
+        items = d[p.id].filter(function (r) { return have.indexOf(str(r[p.show]).toLowerCase()) < 0; }).map(function (r) { return r[p.show]; });
+      }
+      return { id: p.id, label: p.label, items: items };
+    }).filter(function (x) { return x.items.length; });
+  }
+
+  function merge(s, d, ids) {
+    const next = JSON.parse(JSON.stringify(s));
+    const frOffset = (next.reqs.frs || []).filter(V.isFilled).length;
+    const shift = function (text) {
+      return frOffset ? String(text || '').replace(/FR[\s-]*0*(\d+)/gi, function (_, n) { return F.frId(Number(n) - 1 + frOffset); }) : text;
+    };
+    const added = [];
+    PARTS.forEach(function (p) {
+      if (ids.indexOf(p.id) < 0) return;
+      const cur = APB.state.getPath(next, p.path);
+      if (p.kind === 'text') { if (!str(cur) && d[p.id]) { APB.state.setPath(next, p.path, d[p.id]); added.push(p.label.toLowerCase()); } return; }
+      if (p.kind === 'lines') {
+        const have = lines(cur);
+        const lower = have.map(function (l) { return l.toLowerCase(); });
+        const extra = d[p.id].filter(function (l) { return lower.indexOf(l.toLowerCase()) < 0; });
+        if (extra.length) { APB.state.setPath(next, p.path, have.concat(extra).join('\n')); added.push(extra.length + ' ' + p.label.toLowerCase()); }
+        return;
+      }
+      const list = (cur || []).filter(V.isFilled);
+      const have = list.map(function (r) { return str(r[p.show]).toLowerCase(); });
+      const extra = d[p.id].filter(function (r) { return have.indexOf(str(r[p.show]).toLowerCase()) < 0; }).map(function (r) {
+        const o = Object.assign({}, r);
+        if (p.frRefs) o[p.frRefs] = shift(o[p.frRefs]);
+        return o;
+      });
+      if (extra.length) { APB.state.setPath(next, p.path, list.concat(extra)); added.push(extra.length + ' ' + p.label.toLowerCase()); }
+    });
+    return { state: F.model.migrate(next), added: added };
+  }
+
+  APB.fsDraft = { MARK: MARK, PROGRAM_MARK: PROGRAM_MARK, KIND: KIND, PARTS: PARTS, prompt: prompt, programPrompt: programPrompt, asIsPrompt: asIsPrompt, toBePrompt: toBePrompt, parse: parse, preview: preview, merge: merge };
+})(window.APB = window.APB || {});
