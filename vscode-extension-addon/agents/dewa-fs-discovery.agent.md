@@ -87,6 +87,8 @@ hard rules above apply unchanged (read only, never invent, no table contents).
   and `frs`, exactly as the prompt shows. List objects you could not read under "Not read:" in `currentLogic`.
 - **In Copilot Chat:** then call the `dewa_submitFsDraft` tool once with the same JSON object. The builder shows it to
   the consultant for review.
+- When the prompt asks for the **current business process (AS-IS)**, return only the parts its JSON shows (`currentLogic`,
+  `programs`, `asIs` with `step`, `role`, `tx` and `pain`): the process in the order it happens, as the objects show it.
 
 ## Development spec mode (`DEV-CONTEXT v1`)
 

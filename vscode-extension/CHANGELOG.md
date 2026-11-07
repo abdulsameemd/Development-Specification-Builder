@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.12
+
+- **Functional spec, step 2: AS-IS process from the existing objects.** Step 2 opens with *Current process (AS-IS)*. With the existing objects listed in step 1, **Generate AS-IS from the objects** has Copilot read them read-only and write the current business process: steps in order, with the role, the transaction / app / job / interface and the pain points where the code shows manual work. You review it first; steps you typed stay.
+- The AS-IS steps are drawn as a flow in the builder and in the document, next to the table.
+- AI answers now keep the transaction / app of each AS-IS step.
+
 ## 1.0.11
 
 - **Functional spec, step 1: Existing SAP objects.** List several existing objects, each with its type: report / program, transaction code, ABAP class or interface, function module, RFC, function group, CDS view, RAP business object, OData service, proxy class, table, BAdI, form, IDoc type, Fiori app or background job. Rows can be pasted from Excel.

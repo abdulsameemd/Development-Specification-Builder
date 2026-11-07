@@ -112,7 +112,7 @@
       '<p class="muted small">From your requirement, Copilot writes the complete specification: objectives, scope, process, functional requirements with acceptance criteria, rules, data, roles, interfaces, test scenarios and risks. You review it before anything is added, nothing you typed is overwritten, and the document opens right after.' +
       (H.isVscode ? ' Uses your GitHub Copilot in VS Code – no system access. <strong>Generate in Copilot Chat</strong> lets you watch and steer it.' : ' Copy the prompt, paste it into an AI chat your organisation allows (for example Copilot Chat), then paste the answer below.') + '</p>' +
       vs + '<div class="gen-actions">' + run + (ready ? '' : '<span class="muted small">Describe the requirement first.</span>') + '</div>' +
-      (drf.error && drf.kind !== 'program' ? '<p class="field-error" role="alert">' + esc(drf.error) + '</p>' : '') + paste + '</section>';
+      (drf.error && drf.kind !== 'program' && drf.kind !== 'asis' ? '<p class="field-error" role="alert">' + esc(drf.error) + '</p>' : '') + paste + '</section>';
   }
 
   /* SAP only: read an existing program (and what it uses) read-only, and bring its logic into the spec. */
@@ -172,19 +172,50 @@
       '<button type="button" class="btn btn-primary" data-action="next">Continue <span aria-hidden="true">→</span></button></div>';
   }
 
+  /* Step 2: the current process. For SAP, Copilot can generate it from the existing objects listed in step 1. */
+  function asIsCard(s) {
+    const sap = F.isSap(s);
+    const objs = sap ? programObjects(s) : [];
+    const asIs = (s.process.asIs || []).filter(V.isFilled);
+    let gen = '';
+    if (sap) {
+      const can = copilotReady() && !drf.running && objs.length > 0;
+      const run = drf.running && drf.kind === 'asis' ? runningHtml()
+        : H.isVscode
+          ? '<button type="button" class="btn btn-primary" data-action="fs-asis-auto"' + (can ? '' : ' disabled') + '>✦ Generate AS-IS from the objects</button>' +
+            '<button type="button" class="btn btn-ghost" data-action="fs-asis-chat"' + (can ? '' : ' disabled') + '>In Copilot Chat</button>'
+          : '<button type="button" class="btn btn-primary" data-action="fs-asis-copy"' + (objs.length ? '' : ' disabled') + '>✦ Copy AS-IS prompt</button>';
+      gen = (objs.length
+        ? '<p class="muted small">Copilot reads the existing objects and the SAP system <strong>read-only</strong> and writes the current process: who does what, in which transaction or app, and where the manual work is. You review it before it is added; steps you typed stay.</p>' +
+          '<div class="chips fs-objs" aria-label="Existing objects">' + objs.map(function (o) { return '<span class="chip chip-static">' + (o.label ? '<small>' + esc(o.label) + '</small> ' : '') + esc(o.name) + '</span>'; }).join('') +
+          ' <button type="button" class="link" data-action="goto" data-step="1">Change in step 1</button></div>'
+        : '<p class="muted small">List the existing reports, transactions, classes, function modules, CDS views, services… in <button type="button" class="link" data-action="goto" data-step="1">step 1 – Existing SAP objects</button>, and Copilot can generate the current process from them.</p>') +
+        (H.isVscode && objs.length ? '<div class="chips fs-copilot">' + copilotStatus() + '</div>' : '') +
+        '<div class="gen-actions">' + run + '</div>' + (drf.kind === 'asis' ? draftLogHtml() : '') +
+        (drf.error && drf.kind === 'asis' ? '<p class="field-error" role="alert">' + esc(drf.error) + '</p>' : '') +
+        (objs.length ? '<details class="paste"' + U().detailsAttrs('fs-asis-paste', false) + '><summary>' + (H.isVscode ? 'Paste an answer instead' : 'Paste the AI answer') + '</summary>' +
+          (H.isVscode ? '' : '<p class="small muted">Paste the prompt into Copilot Chat in VS Code with the <code class="agent-name">' + esc(DS.cfg.agent) + '</code> agent, then paste the whole answer here.</p>') +
+          '<textarea id="fs-asis-answer" rows="4" spellcheck="false" aria-label="AI answer with the AS-IS process"></textarea>' +
+          '<button type="button" class="btn btn-ghost btn-sm" data-action="fs-asis-review">Review the answer</button></details>' : '');
+    }
+    return '<section class="card fs-asis" aria-labelledby="h-asis"><h3 id="h-asis">Current process (AS-IS)' + (sap ? ' <span class="hint">from the existing objects</span>' : '') + '</h3>' + gen +
+      blockAll('process', ['asIs']) + (asIs.length > 1 ? '<h4 class="fs-flow-h">AS-IS flow</h4>' + flowHtml(s.process.asIs) : '') + '</section>';
+  }
+
   function step2(s) {
     const p = s.process;
     const asIs = (p.asIs || []).filter(V.isFilled);
     const toBe = (p.toBe || []).filter(V.isFilled);
     const c = FC.evaluate(s).counts;
     const summary = c.frs ? '<div class="fs-fit" aria-label="Fit-gap summary"><span><b>' + c.frs + '</b> FRs</span><span><b>' + c.must + '</b> must-have</span><span class="ok"><b>' + c.standard + '</b> standard / config</span><span class="gap"><b>' + c.gaps + '</b> gaps</span></div>' : '';
-    const moreFilled = asIs.length || V.isFilled(p.variants) || V.isFilled(p.currentLogic) || V.isFilled(p.programs) || V.isFilled(s.reqs.data);
+    const moreFilled = V.isFilled(p.variants) || V.isFilled(p.currentLogic) || V.isFilled(p.programs) || V.isFilled(s.reqs.data);
     return header(2) +
+      asIsCard(s) +
       block('process', ['toBe']) +
       (asIs.length && !toBe.length ? '<p><button type="button" class="btn btn-ghost btn-sm" data-action="fs-copy-asis">Start TO-BE from the AS-IS steps</button></p>' : '') +
       (toBe.length ? '<h3>TO-BE flow</h3>' + flowHtml(p.toBe) : '') +
       summary + block('reqs', ['frs', 'rules']) +
-      more('fs-more-proc', 'More details – current process (AS-IS), current program logic, variants, data', blockAll('process', ['asIs', 'currentLogic', 'programs', 'variants']) + blockAll('reqs', ['data']), moreFilled) +
+      more('fs-more-proc', 'More details – current program logic, objects read, variants, data', blockAll('process', ['currentLogic', 'programs', 'variants']) + blockAll('reqs', ['data']), moreFilled) +
       U().nav(true, 'Continue');
   }
 
@@ -520,7 +551,7 @@
   }
 
   function rerenderStep1() {
-    if (S.isFs() && !U().ui.generated && U().ui.step === 1 && !U().ui.view) U().renderMain();
+    if (S.isFs() && !U().ui.generated && U().ui.step <= 2 && !U().ui.view) U().renderMain();
   }
 
   function reviewDraft(text) {
@@ -548,7 +579,7 @@
         const last = drf.log.filter(function (l) { return l.key === m.key; })[0];
         if (last) { last.text = text; last.status = m.status; } else drf.log.push({ key: m.key, text: text, status: m.status });
         if (drf.log.length > 80) drf.log.shift();
-        const el = document.querySelector('.fs-prog .fs-log');
+        const el = document.querySelector('.fs-prog .fs-log, .fs-asis .fs-log');
         if (el) el.outerHTML = draftLogHtml(); else rerenderStep1();
         return;
       }
@@ -561,8 +592,9 @@
       drf.log.push({ text: 'Result received', status: 'done' });
       const answer = String(m.text || '');
       if (!reviewDraft(answer)) {
-        U().ui.open['fs-draft-paste'] = true; rerenderStep1();
-        const ta = document.getElementById('fs-draft-answer');
+        const asis = drf.kind === 'asis';
+        U().ui.open[asis ? 'fs-asis-paste' : 'fs-draft-paste'] = true; rerenderStep1();
+        const ta = document.getElementById(asis ? 'fs-asis-answer' : 'fs-draft-answer');
         if (ta) ta.value = answer;
       } else rerenderStep1();
     });
@@ -594,7 +626,33 @@
     rerenderStep1();
   }
 
+  function readAsIs(mode) {
+    const s = S.get();
+    const labels = programLabels();
+    if (!labels.length) { U().toast('List the existing objects in step 1 first'); return; }
+    drf.running = true; drf.kind = 'asis'; drf.mode = mode; drf.error = ''; drf.log = [];
+    drf.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Reading ' + programNames().join(', ') + ' for the AS-IS process (read-only)…';
+    H.post({ type: 'read-program', mode: mode, prompt: APB.fsDraft.asIsPrompt(s, labels) });
+    rerenderStep1();
+  }
+
   const actions = {
+    'fs-asis-auto': function () { readAsIs('auto'); },
+    'fs-asis-chat': function () { readAsIs('chat'); },
+    'fs-asis-copy': function () {
+      const labels = programLabels();
+      if (!labels.length) { U().toast('List the existing objects in step 1 first'); return; }
+      Promise.resolve(APB.exporter.copy(APB.fsDraft.asIsPrompt(S.get(), labels))).then(function (ok) {
+        U().ui.open['fs-asis-paste'] = true;
+        rerenderStep1();
+        U().toast(ok ? 'Prompt copied ✓ Paste it into Copilot Chat in VS Code (' + DS.cfg.agent + '), then paste the answer here' : 'Copy failed', 8000);
+      });
+    },
+    'fs-asis-review': function () {
+      const ta = document.getElementById('fs-asis-answer');
+      drf.kind = 'asis';
+      if (ta && reviewDraft(ta.value)) U().ui.open['fs-asis-paste'] = false;
+    },
     'fs-system': function (el) {
       const v = el.dataset.v;
       U().updateSteps(function (st) { st.context.system = st.context.system === v ? '' : v; });
@@ -682,10 +740,12 @@
         // the program logic belongs to the current process: show it in step 2
         U().ui.step = 2;
         U().ui.open['fs-more-proc'] = true;
+      } else if (kind === 'asis') {
+        U().ui.step = 2;
       } else if (r.added.length && !FC.checkMandatory(r.state).length) U().ui.generated = true;
       U().renderMain();
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      U().toast(r.added.length ? 'Added ' + r.added.join(', ') + (kind === 'program' ? ' – see More details in this step' : ' – use Review Details to change anything') : 'Nothing new to add', 7000);
+      U().toast(r.added.length ? 'Added ' + r.added.join(', ') + (kind === 'program' ? ' – see More details in this step' : kind === 'asis' ? ' – the AS-IS process is at the top of this step' : ' – use Review Details to change anything') : 'Nothing new to add', 7000);
     },
     'fs-template': function (el) {
       const t = F.templates.fromTemplate(el.dataset.id, S.get());

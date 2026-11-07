@@ -33,7 +33,7 @@
     { id: 'inScope', label: 'In scope', path: 'context.inScope', kind: 'lines' },
     { id: 'outOfScope', label: 'Out of scope', path: 'context.outOfScope', kind: 'lines' },
     { id: 'stakeholders', label: 'Stakeholders', path: 'context.stakeholders', kind: 'rows', keys: ['role', 'responsibility'], show: 'role' },
-    { id: 'asIs', label: 'AS-IS steps', path: 'process.asIs', kind: 'rows', keys: ['step', 'role', 'pain'], show: 'step' },
+    { id: 'asIs', label: 'AS-IS steps', path: 'process.asIs', kind: 'rows', keys: ['step', 'role', 'tx', 'pain'], show: 'step' },
     { id: 'toBe', label: 'TO-BE steps', path: 'process.toBe', kind: 'rows', keys: ['step', 'role', 'change'], enums: { change: ['process', 'toBe', 'change'] }, show: 'step' },
     { id: 'currentLogic', label: 'Current program logic', path: 'process.currentLogic', kind: 'text', max: 6000 },
     { id: 'programs', label: 'Programs and objects read', path: 'process.programs', kind: 'rows', keys: ['type', 'name', 'description', 'role'], enums: { role: ['process', 'programs', 'role'] }, show: 'name' },
@@ -178,6 +178,42 @@
       '```'].filter(function (l, i, a) { return l !== '' || a[i - 1] !== ''; }).join('\n');
   }
 
+  /* AS-IS process from the existing objects: the same read-only reading as programPrompt (same marker, so the VS Code
+     extension runs it unchanged), focused on the business process the objects support today. */
+  function asIsPrompt(s, names) {
+    const c = s.context;
+    const have = (s.process.asIs || []).filter(function (r) { return r && (r.step || '').trim(); });
+    return [PROGRAM_MARK,
+      'Read the existing SAP objects below and the SAP system READ-ONLY, and describe the CURRENT BUSINESS PROCESS (AS-IS) they support today, step by step, for a functional specification.',
+      '',
+      'Existing objects: ' + names.join(', '),
+      c.module ? 'Module: ' + c.module : '',
+      (c.processArea || '').trim() ? 'Process area: ' + c.processArea.trim() : '',
+      (c.requirement || '').trim() ? 'Why the consultant asks (the planned change):\n' + c.requirement.trim() : '',
+      have.length ? 'AS-IS steps already in the spec (keep them, add only what is missing):\n' + have.map(function (r, i) { return (i + 1) + '. ' + r.step.trim(); }).join('\n') : '',
+      '',
+      'Read:',
+      '- for a transaction code, the program or app behind it first; for a class, function module, RFC, CDS view, RAP object, OData service or proxy, who calls it and from where;',
+      '- the selection screen / parameters, the main processing, the outputs (ALV, file, IDoc, e-mail, posting, interface call) and the follow-up steps users take;',
+      '- the transactions, apps, jobs and interfaces that start or follow the processing.',
+      '',
+      'Rules:',
+      '- READ ONLY: never create, change, activate, run or transport anything. Do not read table contents.',
+      '- asIs: the business process in the order it happens: who does what (role), in which transaction / app / job / interface (tx), and the pain point where the code shows manual work (downloads to Excel, manual entry, re-keying, waiting for a batch job, e-mail hand-offs). Business words, one action per step, 4–12 steps.',
+      '- Include the steps before and after the system (e.g. "Download to Excel", "Send the list to the treasurer") only when the objects show them (file download, e-mail, spool).',
+      '- currentLogic: a short summary of what the objects do today, in business words. programs: every object read (type PROG|CLAS|FUGR|FUNC|TABL|DDLS|BDEF|SRVB|TRAN|…, role main|used).',
+      '- Only report what you read. List objects you could not read in "currentLogic" under "Not read:". Leave a field empty when the code does not show it.',
+      '',
+      'Answer with a short summary and then exactly one ```json block:',
+      '```json',
+      JSON.stringify({
+        kind: KIND, version: 1, currentLogic: '',
+        programs: [{ type: 'PROG', name: '', description: '', role: 'main' }],
+        asIs: [{ step: '', role: '', tx: '', pain: '' }]
+      }, null, 2),
+      '```'].filter(function (l, i, a) { return l !== '' || a[i - 1] !== ''; }).join('\n');
+  }
+
   /* ---------------------------------------------------- review and merge */
   /* What the draft would add to this spec, per part (only parts with something new). */
   function preview(s, d) {
@@ -224,5 +260,5 @@
     return { state: F.model.migrate(next), added: added };
   }
 
-  APB.fsDraft = { MARK: MARK, PROGRAM_MARK: PROGRAM_MARK, KIND: KIND, PARTS: PARTS, prompt: prompt, programPrompt: programPrompt, parse: parse, preview: preview, merge: merge };
+  APB.fsDraft = { MARK: MARK, PROGRAM_MARK: PROGRAM_MARK, KIND: KIND, PARTS: PARTS, prompt: prompt, programPrompt: programPrompt, asIsPrompt: asIsPrompt, parse: parse, preview: preview, merge: merge };
 })(window.APB = window.APB || {});

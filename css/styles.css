@@ -645,3 +645,8 @@ body.is-info .preview-panel, body.is-info .view-tabs, body.is-info .stepper { di
 .link-banner { margin: 0 0 14px; }
 div.link-banner p { margin: 0 0 6px; }
 .chip.chip-warn { border-color: var(--amber); }
+
+/* Functional spec step 2: AS-IS from the existing objects */
+.fs-asis .fs-objs { align-items: center; margin: 6px 0 10px; }
+.fs-asis .fs-objs .chip small { color: var(--muted); font-weight: 600; margin-right: 4px; }
+.fs-asis .fs-flow-h { margin: 14px 0 6px; font-size: .9rem; }

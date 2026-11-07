@@ -57,7 +57,7 @@
     }));
   }
 
-  /* TO-BE steps as a simple text flow (Markdown) – Word shows the same block. */
+  /* AS-IS and TO-BE steps as a simple text flow (Markdown) – Word shows the same block. */
   function flow(list) {
     list = rows(list).filter(function (r) { return (r.step || '').trim(); });
     if (list.length < 2) return '';
@@ -236,7 +236,7 @@
     function add(t, body) { if (body && body.trim()) sections.push({ title: t, body: body.trim() }); }
     add('Business Requirement & Scope', join([businessRequirement(s), scope(s), sub('Stakeholders', simpleGrid('context', 'stakeholders', s.context.stakeholders))]));
     add('Process', join([
-      sub('Current process (AS-IS)', processTable(s.process.asIs, 'pain', 'Pain point')),
+      sub('Current process (AS-IS)', join([processTable(s.process.asIs, 'pain', 'Pain point'), flow(s.process.asIs)])),
       sub('Proposed process (TO-BE)', join([processTable(s.process.toBe, 'change', 'Change', 'toBe'), flow(s.process.toBe)])),
       sub('Variants & exceptions', bullets(s.process.variants))]));
     add('Functional Requirements', join([frSection(s), sub('Business rules & validations', rulesTable(s)), sub('Data requirements', dataTable(s))]));
