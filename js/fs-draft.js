@@ -146,7 +146,7 @@
   function programPrompt(s, names) {
     const c = s.context;
     return [PROGRAM_MARK,
-      'Read the existing SAP program(s) below and the SAP system READ-ONLY, and describe what they do today, for a functional specification.',
+      'Read the existing SAP objects below (programs, transactions, classes, function modules, CDS views, RAP objects, services, proxies …) and the SAP system READ-ONLY, and describe what they do today, for a functional specification.',
       '',
       'Objects to read: ' + names.join(', '),
       c.module ? 'Module: ' + c.module : '',

@@ -8167,6 +8167,114 @@ window.APB_CONFIG = {
       }
      },
      {
+      "id": "objects",
+      "label": "Existing SAP objects",
+      "kind": "grid",
+      "custom": true,
+      "sapOnly": true,
+      "addLabel": "+ Add object",
+      "paste": true,
+      "hint": "The reports, classes, function modules, CDS views, services, proxies and transactions this requirement touches today. Copilot can read them read-only; they are checked in discovery and handed to the developer.",
+      "columns": [
+       {
+        "id": "type",
+        "label": "Type",
+        "kind": "select",
+        "w": 210,
+        "options": [
+         {
+          "value": "",
+          "label": "— type —"
+         },
+         {
+          "value": "PROG",
+          "label": "Report / program"
+         },
+         {
+          "value": "TRAN",
+          "label": "Transaction code"
+         },
+         {
+          "value": "CLAS",
+          "label": "ABAP class"
+         },
+         {
+          "value": "INTF",
+          "label": "ABAP interface"
+         },
+         {
+          "value": "FUNC",
+          "label": "Function module"
+         },
+         {
+          "value": "RFC",
+          "label": "RFC function module"
+         },
+         {
+          "value": "FUGR",
+          "label": "Function group"
+         },
+         {
+          "value": "DDLS",
+          "label": "CDS view"
+         },
+         {
+          "value": "BDEF",
+          "label": "RAP business object"
+         },
+         {
+          "value": "SRVB",
+          "label": "OData service"
+         },
+         {
+          "value": "PROXY",
+          "label": "Proxy class (SPROXY)"
+         },
+         {
+          "value": "TABL",
+          "label": "Table"
+         },
+         {
+          "value": "BADI",
+          "label": "BAdI / enhancement"
+         },
+         {
+          "value": "FORM",
+          "label": "Form (Smart Form / Adobe)"
+         },
+         {
+          "value": "IDOC",
+          "label": "IDoc type"
+         },
+         {
+          "value": "WAPA",
+          "label": "Fiori app"
+         },
+         {
+          "value": "JOB",
+          "label": "Background job"
+         },
+         {
+          "value": "OTHER",
+          "label": "Other"
+         }
+        ]
+       },
+       {
+        "id": "name",
+        "label": "Name",
+        "w": 220,
+        "placeholder": "e.g. ZFI_AP_OPEN_ITEMS_OLD"
+       },
+       {
+        "id": "note",
+        "label": "Note",
+        "w": 260,
+        "placeholder": "e.g. current ageing report – to be replaced"
+       }
+      ]
+     },
+     {
       "id": "objectives",
       "label": "Business objectives",
       "kind": "lines",
@@ -9433,7 +9541,11 @@ window.APB_CONFIG = {
     "FORM": "Form",
     "SFPF": "Form",
     "PDTS": "Workflow",
-    "CAP": "CAPM"
+    "CAP": "CAPM",
+    "RFC": "RFC",
+    "PROXY": "Class",
+    "IDOC": "API",
+    "JOB": "Background Job"
    }
   }
  },
@@ -13311,6 +13423,7 @@ window.APB_CONFIG = {
     function add(text, where) {
       names(text).forEach(function (n) { if (!out.some(function (r) { return r.name === n; })) out.push({ name: n, where: where, kind: proposed[n] ? 'new' : 'ref' }); });
     }
+    ((st.context && st.context.objects) || []).forEach(function (r) { if (r) add(r.name, 'existing object' + (r.type ? ' (' + r.type + ')' : '')); });
     (st.process.asIs || []).forEach(function (r, i) { add(r && r.tx, 'AS-IS step ' + (i + 1)); });
     (st.process.toBe || []).forEach(function (r, i) { add(r && r.tx, 'TO-BE step ' + (i + 1)); });
     (st.reqs.data || []).forEach(function (r) { if (r) add(r.table, 'data: ' + (r.field || r.table)); });
@@ -13728,6 +13841,12 @@ window.APB_CONFIG = {
     }));
   }
 
+  /* Current System: the existing SAP objects the requirement touches (step 1), with their type. */
+  function existingObjects(s) {
+    const objs = rows(s.context.objects).filter(function (o) { return (o.name || '').trim(); });
+    return objs.length ? sub('Existing SAP objects', table(['Type', 'Name', 'Note'], objs.map(function (o) { return [dash(opt('context', 'objects', o.type, 'type')), cell(o.name.trim().toUpperCase()), dash((o.note || '').trim())]; }))) : '';
+  }
+
   /* Current System: what the existing program does (Read an existing program). */
   function programLogic(s) {
     const p = s.process;
@@ -13781,7 +13900,7 @@ window.APB_CONFIG = {
       sub('Proposed process (TO-BE)', join([processTable(s.process.toBe, 'change', 'Change', 'toBe'), flow(s.process.toBe)])),
       sub('Variants & exceptions', bullets(s.process.variants))]));
     add('Functional Requirements', join([frSection(s), sub('Business rules & validations', rulesTable(s)), sub('Data requirements', dataTable(s))]));
-    add('Current System', join([programLogic(s), sap() ? sub('SAP system context', systemContext(s).replace(/^### /gm, '#### ')) : '']));
+    add('Current System', join([sap() ? existingObjects(s) : '', programLogic(s), sap() ? sub('SAP system context', systemContext(s).replace(/^### /gm, '#### ')) : '']));
     add('Solution', join([sub('Fit-gap & traceability', fitGap(s)), sap() ? solution(s) : '',
       sub(sap() ? 'Roles & authorizations' : 'Roles & access', simpleGrid('solution', 'roles', s.solution.roles)),
       sub('Interfaces', simpleGrid('solution', 'interfaces', s.solution.interfaces)),
@@ -13984,7 +14103,7 @@ window.APB_CONFIG = {
   function programPrompt(s, names) {
     const c = s.context;
     return [PROGRAM_MARK,
-      'Read the existing SAP program(s) below and the SAP system READ-ONLY, and describe what they do today, for a functional specification.',
+      'Read the existing SAP objects below (programs, transactions, classes, function modules, CDS views, RAP objects, services, proxies …) and the SAP system READ-ONLY, and describe what they do today, for a functional specification.',
       '',
       'Objects to read: ' + names.join(', '),
       c.module ? 'Module: ' + c.module : '',
@@ -14501,6 +14620,11 @@ window.APB_CONFIG = {
     };
     s.process.asIs = procRows(sec['Current Process (AS-IS)'] || sub(sec.Process, 'Current process (AS-IS)'), 'pain');
     s.process.toBe = procRows(sec['Proposed Process (TO-BE)'] || sub(sec.Process, 'Proposed process (TO-BE)'), 'change');
+    // existing SAP objects (Current System section): type label back to its value
+    const objField = F.field('context', 'objects');
+    s.context.objects = table(sub(sec['Current System'] || '', 'Existing SAP objects')).map(function (r) {
+      return { type: optionValue(col(objField, 'type'), r.Type === '–' ? '' : r.Type), name: r.Name || '', note: r.Note && r.Note !== '–' ? r.Note : '' };
+    }).filter(function (r) { return r.name; });
     const frSec = sec['Functional Requirements'] || '';
     const frField = F.field('reqs', 'frs');
     s.reqs.frs = table(frSec).map(function (r) {
@@ -14858,8 +14982,10 @@ window.APB_CONFIG = {
   }
 
   /* SAP only: read an existing program (and what it uses) read-only, and bring its logic into the spec. */
+  /* SAP only: the existing objects the requirement touches (type + name). Copilot can read them read-only and bring
+     their logic into the spec; discovery checks them and the Technical spec takes them over. */
   function programCard(s) {
-    const names = APB.storage.getPref('programNames', '');
+    const field = F.field('context', 'objects');
     const can = copilotReady() && !drf.running;
     const run = H.isVscode
       ? (drf.running && drf.kind === 'program'
@@ -14867,11 +14993,12 @@ window.APB_CONFIG = {
         : '<button type="button" class="btn btn-primary" data-action="fs-prog-auto"' + (can ? '' : ' disabled') + '>Read automatically</button>' +
           '<button type="button" class="btn btn-ghost" data-action="fs-prog-chat"' + (can ? '' : ' disabled') + '>Read in Copilot Chat</button>')
       : '<button type="button" class="btn btn-primary" data-action="fs-prog-copy">Copy prompt</button>';
-    return '<section class="card fs-prog" aria-labelledby="h-prog"><h3 id="h-prog">Read an existing program <span class="hint">optional</span></h3>' +
-      '<p class="muted small">Copilot reads the program, the objects it uses and the SAP system <strong>read-only</strong> through the SAP MCP servers, and describes the current logic in business words: current process, business rules, data, current behaviour as requirements. You review it before it is added. Afterwards you can create a Technical spec that changes the program.' +
+    return '<section class="card fs-prog" aria-labelledby="h-prog"><h3 id="h-prog">Existing SAP objects <span class="hint">optional</span></h3>' +
+      '<p class="muted small">Add the reports, transactions, classes, function modules, RFCs, CDS views, RAP objects, OData services, proxies… this requirement touches today, with their type. ' +
+      'Copilot can read them and the SAP system <strong>read-only</strong> through the SAP MCP servers, and describe the current logic in business words for your review. They are also checked in discovery and handed to the developer with the Technical spec.' +
       (H.isVscode ? '' : ' In the browser: copy the prompt, paste it into Copilot Chat in VS Code with the <code class="agent-name">' + esc(DS.cfg.agent) + '</code> agent, then paste the answer under <em>Paste the AI answer</em> above.') + '</p>' +
-      '<div class="field narrow"><label for="fs-prog-names">Programs, transactions, classes or function modules</label><input id="fs-prog-names" type="text" data-pref="programNames" value="' + esc(names) + '" placeholder="e.g. ZFI_AGEING, FBL1N" spellcheck="false"></div>' +
-      '<div class="gen-actions">' + run + '</div>' + (drf.kind === 'program' ? draftLogHtml() : '') +
+      U().fieldsBlock([Object.assign({}, field, { label: 'Objects', hint: '' })], s.context, 'context') +
+      '<div class="gen-actions">' + run + '<span class="muted small">Reads the current logic of the objects above</span></div>' + (drf.kind === 'program' ? draftLogHtml() : '') +
       (drf.error && drf.kind === 'program' ? '<p class="field-error" role="alert">' + esc(drf.error) + '</p>' : '') + '</section>';
   }
 
@@ -15152,6 +15279,7 @@ window.APB_CONFIG = {
       if (objects.some(function (o) { return o.name.toUpperCase() === n; })) return;
       objects.push({ type: known[n] || 'Other', name: n, status: known[n] ? 'existing' : 'tbc', purpose: known[n] ? 'Verified in system (FS discovery)' : 'Named in the FS – confirm in the system' });
     });
+    addFsObjects(s, objects, known);
     const reqText = [(r.description || '').trim() || (s.context.requirement || '').trim()]
       .concat(frs.map(function (x) { return x.id + ' ' + (x.f.title || '').trim() + ((x.f.description || '').trim() ? ': ' + x.f.description.trim() : ''); })).filter(Boolean).join('\n\n');
     const rules = (s.reqs.rules || []).filter(function (b) { return V.isFilled(b) && (!b.fr || F.parseFrRefs(b.fr).some(function (x) { return frRefs.indexOf(x) >= 0; })); })
@@ -15188,6 +15316,16 @@ window.APB_CONFIG = {
     return APB.defs.objectTypes.indexOf(v) >= 0 ? v : 'Other';
   }
 
+  /* The existing SAP objects listed in step 1 go to the Technical spec as existing objects, with their type. */
+  function addFsObjects(s, objects, known) {
+    (s.context.objects || []).forEach(function (r) {
+      const n = String((r && r.name) || '').trim().toUpperCase();
+      if (!n || objects.some(function (o) { return o.name.toUpperCase() === n; })) return;
+      const type = r.type ? devObjectType(r.type) : (known[n] || 'Other');
+      objects.push({ type: type, name: n, status: 'existing', purpose: [(r.note || '').trim(), 'Existing object listed in the FS' + (r.type === 'TRAN' ? ' (transaction code)' : '')].filter(Boolean).join(' · ') });
+    });
+  }
+
   /* The program read by "Read an existing program" becomes the object to change; what it uses stays existing. */
   function toDevSpecFromProgram(s) {
     const main = mainProgram(s);
@@ -15200,6 +15338,7 @@ window.APB_CONFIG = {
       if (objects.some(function (o) { return o.name === p.name.trim().toUpperCase(); })) return;
       objects.push({ type: devObjectType(p.type), name: p.name.trim().toUpperCase(), status: 'existing', purpose: (p.description || '').trim() || 'Used by ' + main.name });
     });
+    addFsObjects(s, objects, {});
     const frs = (s.reqs.frs || []).map(function (f, k) { return { f: f, id: F.frId(k) }; }).filter(function (x) { return V.isFilled(x.f); });
     const reqText = [(s.context.requirement || '').trim(),
       (s.process.currentLogic || '').trim() && 'Current logic of ' + main.name + ':\n' + s.process.currentLogic.trim()]
@@ -15296,17 +15435,28 @@ window.APB_CONFIG = {
     H.on('draft-error', function (m) { drf.running = false; drf.status = ''; drf.error = String(m.message || 'Drafting failed').slice(0, 400); rerenderStep1(); });
   }
 
-  function programNames() {
-    return APB.storage.getPref('programNames', '').split(/[\s,;]+/).map(function (n) { return n.trim().toUpperCase(); }).filter(function (n) { return /^[A-Z0-9_\/]{2,40}$/.test(n); }).slice(0, 10);
+  /* Objects to read: the typed list in step 1 (older drafts: the names typed in the former single field). */
+  function programObjects(s) {
+    const col = F.field('context', 'objects').columns[0];
+    const label = function (t) { const o = col.options.filter(function (x) { return x.value === t; })[0]; return o && t ? o.label : ''; };
+    const out = [];
+    (s.context.objects || []).forEach(function (r) {
+      const n = String((r && r.name) || '').trim().toUpperCase();
+      if (/^[A-Z0-9_\/]{2,40}$/.test(n) && !out.some(function (x) { return x.name === n; })) out.push({ name: n, type: r.type || '', label: label(r.type) });
+    });
+    if (!out.length) APB.storage.getPref('programNames', '').split(/[\s,;]+/).forEach(function (x) { const n = x.trim().toUpperCase(); if (/^[A-Z0-9_\/]{2,40}$/.test(n)) out.push({ name: n, type: '', label: '' }); });
+    return out.slice(0, 15);
   }
+  function programNames() { return programObjects(S.get()).map(function (o) { return o.name; }); }
+  function programLabels() { return programObjects(S.get()).map(function (o) { return o.name + (o.label ? ' (' + o.label + ')' : ''); }); }
 
   function readProgram(mode) {
     const s = S.get();
     const names = programNames();
-    if (!names.length) { U().toast('Name the program or transaction first'); return; }
+    if (!names.length) { U().toast('Add an existing object first'); return; }
     drf.running = true; drf.kind = 'program'; drf.mode = mode; drf.error = ''; drf.log = [];
     drf.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Reading ' + names.join(', ') + ' (read-only)…';
-    H.post({ type: 'read-program', mode: mode, prompt: APB.fsDraft.programPrompt(s, names) });
+    H.post({ type: 'read-program', mode: mode, prompt: APB.fsDraft.programPrompt(s, programLabels()) });
     rerenderStep1();
   }
 
@@ -15359,8 +15509,8 @@ window.APB_CONFIG = {
     'fs-prog-chat': function () { readProgram('chat'); },
     'fs-prog-copy': function () {
       const names = programNames();
-      if (!names.length) { U().toast('Name the program or transaction first'); return; }
-      Promise.resolve(APB.exporter.copy(APB.fsDraft.programPrompt(S.get(), names))).then(function (ok) {
+      if (!names.length) { U().toast('Add an existing object first'); return; }
+      Promise.resolve(APB.exporter.copy(APB.fsDraft.programPrompt(S.get(), programLabels()))).then(function (ok) {
         U().ui.open['fs-draft-paste'] = true;
         rerenderStep1();
         U().toast(ok ? 'Prompt copied ✓ Paste it into Copilot Chat in VS Code (' + DS.cfg.agent + '), then paste the answer under Paste the AI answer' : 'Copy failed', 8000);

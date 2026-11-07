@@ -181,6 +181,12 @@
     }));
   }
 
+  /* Current System: the existing SAP objects the requirement touches (step 1), with their type. */
+  function existingObjects(s) {
+    const objs = rows(s.context.objects).filter(function (o) { return (o.name || '').trim(); });
+    return objs.length ? sub('Existing SAP objects', table(['Type', 'Name', 'Note'], objs.map(function (o) { return [dash(opt('context', 'objects', o.type, 'type')), cell(o.name.trim().toUpperCase()), dash((o.note || '').trim())]; }))) : '';
+  }
+
   /* Current System: what the existing program does (Read an existing program). */
   function programLogic(s) {
     const p = s.process;
@@ -234,7 +240,7 @@
       sub('Proposed process (TO-BE)', join([processTable(s.process.toBe, 'change', 'Change', 'toBe'), flow(s.process.toBe)])),
       sub('Variants & exceptions', bullets(s.process.variants))]));
     add('Functional Requirements', join([frSection(s), sub('Business rules & validations', rulesTable(s)), sub('Data requirements', dataTable(s))]));
-    add('Current System', join([programLogic(s), sap() ? sub('SAP system context', systemContext(s).replace(/^### /gm, '#### ')) : '']));
+    add('Current System', join([sap() ? existingObjects(s) : '', programLogic(s), sap() ? sub('SAP system context', systemContext(s).replace(/^### /gm, '#### ')) : '']));
     add('Solution', join([sub('Fit-gap & traceability', fitGap(s)), sap() ? solution(s) : '',
       sub(sap() ? 'Roles & authorizations' : 'Roles & access', simpleGrid('solution', 'roles', s.solution.roles)),
       sub('Interfaces', simpleGrid('solution', 'interfaces', s.solution.interfaces)),

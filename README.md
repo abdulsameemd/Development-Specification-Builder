@@ -59,11 +59,18 @@ Only the **business requirement** is mandatory for a non-SAP spec. Drafts from b
   - A **review dialog** shows what would be added per section; pick what to keep. Only empty fields are filled and new rows are appended – nothing typed by hand is changed. Assumptions are marked `[TO BE CONFIRMED]`. The document opens right after; *Review Details* goes back to the steps.
 - **Create document now** creates the document from what is there; everything missing is listed under *Open questions*.
 
-### Read an existing program (SAP)
+### Existing SAP objects and reading them (SAP)
 
-Name programs, transactions, classes or function modules (e.g. `ZFI_AGEING, FBL1N`) in step 1. Copilot reads them, the
+In step 1, list the existing objects the requirement touches, each with its type: report / program, transaction code,
+ABAP class or interface, function module, RFC function module, function group, CDS view, RAP business object, OData
+service, proxy class (SPROXY), table, BAdI / enhancement, form, IDoc type, Fiori app, background job. Add rows one by
+one or paste them from Excel (type and name columns; type as its name or code, e.g. `PROG`, `RFC`, `PROXY`). Copilot reads them, the
 objects they use and the SAP system **read-only** through the SAP MCP servers (same tool filter as discovery: read
 tools only, write verbs always excluded) and describes the current logic in business words.
+
+The list also goes into the document (*Current System → Existing SAP objects*), into discovery's reference check, and
+into every Technical spec created from the FS, as existing objects with the matching type (report, class, RFC, CDS,
+RAP, OData …).
 
 - **In VS Code:** *Read automatically* (progress log in the panel) or *Read in Copilot Chat* (`dewa-fs-discovery`, which hands the result back with `dewa_submitFsDraft`).
 - **In the browser:** *Copy prompt* → Copilot Chat in VS Code with `dewa-fs-discovery` → paste the answer under *Paste the AI answer*.
@@ -111,7 +118,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.10.vsix`](dist/dewa-sap-spec-builder-1.0.10.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.10.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.11.vsix`](dist/dewa-sap-spec-builder-1.0.11.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.11.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **DEWA: Open SAP Spec Builder** (command palette or *Spec Builder* in the status bar) opens this same app as a tab inside VS Code:
 

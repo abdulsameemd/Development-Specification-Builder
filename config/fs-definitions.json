@@ -41,6 +41,31 @@
       { "id": "module", "label": "Module", "kind": "select", "optionsRef": "modules", "sapOnly": true },
       { "id": "processArea", "label": "Process area", "kind": "text", "placeholder": "e.g. Accounts Payable – period-end closing", "generic": { "placeholder": "e.g. Customer service – complaints" } },
       { "id": "requirement", "label": "Business requirement", "kind": "textarea", "placeholder": "Describe the business need in the business's words, e.g.\nAP accountants need to see overdue vendor items per company code grouped into ageing buckets (0-30 / 31-60 / 61-90 / >90 days) for the month-end review.", "generic": { "placeholder": "Describe the business need in your own words, e.g.\nCustomer service needs one place to log, assign and track customer complaints so that every complaint is answered within 5 working days." } },
+      { "id": "objects", "label": "Existing SAP objects", "kind": "grid", "custom": true, "sapOnly": true, "addLabel": "+ Add object", "paste": true, "hint": "The reports, classes, function modules, CDS views, services, proxies and transactions this requirement touches today. Copilot can read them read-only; they are checked in discovery and handed to the developer.", "columns": [
+        { "id": "type", "label": "Type", "kind": "select", "w": 210, "options": [
+          { "value": "", "label": "— type —" },
+          { "value": "PROG", "label": "Report / program" },
+          { "value": "TRAN", "label": "Transaction code" },
+          { "value": "CLAS", "label": "ABAP class" },
+          { "value": "INTF", "label": "ABAP interface" },
+          { "value": "FUNC", "label": "Function module" },
+          { "value": "RFC", "label": "RFC function module" },
+          { "value": "FUGR", "label": "Function group" },
+          { "value": "DDLS", "label": "CDS view" },
+          { "value": "BDEF", "label": "RAP business object" },
+          { "value": "SRVB", "label": "OData service" },
+          { "value": "PROXY", "label": "Proxy class (SPROXY)" },
+          { "value": "TABL", "label": "Table" },
+          { "value": "BADI", "label": "BAdI / enhancement" },
+          { "value": "FORM", "label": "Form (Smart Form / Adobe)" },
+          { "value": "IDOC", "label": "IDoc type" },
+          { "value": "WAPA", "label": "Fiori app" },
+          { "value": "JOB", "label": "Background job" },
+          { "value": "OTHER", "label": "Other" }
+        ] },
+        { "id": "name", "label": "Name", "w": 220, "placeholder": "e.g. ZFI_AP_OPEN_ITEMS_OLD" },
+        { "id": "note", "label": "Note", "w": 260, "placeholder": "e.g. current ageing report – to be replaced" }
+      ] },
       { "id": "objectives", "label": "Business objectives", "kind": "lines", "placeholder": "e.g. Reduce month-end AP review from 2 days to 2 hours\nIdentify overdue vendors before the payment run", "generic": { "placeholder": "e.g. Answer every complaint within 5 working days\nNo complaint is lost between e-mail inboxes" } },
       { "id": "kpis", "label": "KPIs / success measures", "kind": "lines", "placeholder": "e.g. Ageing available on working day 1 of the close", "generic": { "placeholder": "e.g. 95 % of complaints closed within 5 working days" } },
       { "id": "inScope", "label": "In scope", "kind": "lines", "placeholder": "e.g. Company codes 1000 and 2000\nVendor open items in local currency", "generic": { "placeholder": "e.g. Complaints by phone and e-mail\nAll customer service teams" } },
@@ -228,7 +253,7 @@
       "TABL": "Table", "VIEW": "Table", "DTEL": "Data Element", "DOMA": "Domain", "TTYP": "Table Type", "SHLP": "Search Help", "ENQU": "Lock Object",
       "MSAG": "Message Class", "SUSO": "Authorization Object", "PROG": "Report", "CLAS": "Class", "INTF": "Interface",
       "FUGR": "Function Module", "FUNC": "Function Module", "ENHS": "BAdI / Enhancement", "ENHO": "BAdI / Enhancement", "BADI": "BAdI / Enhancement", "SXSD": "BAdI / Enhancement",
-      "DDLS": "CDS", "BDEF": "RAP", "SRVD": "OData", "SRVB": "OData", "IWSV": "OData", "WAPA": "Fiori/UI5", "UI5": "Fiori/UI5", "FORM": "Form", "SFPF": "Form", "PDTS": "Workflow", "CAP": "CAPM"
+      "DDLS": "CDS", "BDEF": "RAP", "SRVD": "OData", "SRVB": "OData", "IWSV": "OData", "WAPA": "Fiori/UI5", "UI5": "Fiori/UI5", "FORM": "Form", "SFPF": "Form", "PDTS": "Workflow", "CAP": "CAPM", "RFC": "RFC", "PROXY": "Class", "IDOC": "API", "JOB": "Background Job"
     }
   }
 }

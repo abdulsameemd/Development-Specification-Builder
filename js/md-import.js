@@ -101,6 +101,11 @@
     };
     s.process.asIs = procRows(sec['Current Process (AS-IS)'] || sub(sec.Process, 'Current process (AS-IS)'), 'pain');
     s.process.toBe = procRows(sec['Proposed Process (TO-BE)'] || sub(sec.Process, 'Proposed process (TO-BE)'), 'change');
+    // existing SAP objects (Current System section): type label back to its value
+    const objField = F.field('context', 'objects');
+    s.context.objects = table(sub(sec['Current System'] || '', 'Existing SAP objects')).map(function (r) {
+      return { type: optionValue(col(objField, 'type'), r.Type === '–' ? '' : r.Type), name: r.Name || '', note: r.Note && r.Note !== '–' ? r.Note : '' };
+    }).filter(function (r) { return r.name; });
     const frSec = sec['Functional Requirements'] || '';
     const frField = F.field('reqs', 'frs');
     s.reqs.frs = table(frSec).map(function (r) {

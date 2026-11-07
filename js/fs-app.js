@@ -116,8 +116,10 @@
   }
 
   /* SAP only: read an existing program (and what it uses) read-only, and bring its logic into the spec. */
+  /* SAP only: the existing objects the requirement touches (type + name). Copilot can read them read-only and bring
+     their logic into the spec; discovery checks them and the Technical spec takes them over. */
   function programCard(s) {
-    const names = APB.storage.getPref('programNames', '');
+    const field = F.field('context', 'objects');
     const can = copilotReady() && !drf.running;
     const run = H.isVscode
       ? (drf.running && drf.kind === 'program'
@@ -125,11 +127,12 @@
         : '<button type="button" class="btn btn-primary" data-action="fs-prog-auto"' + (can ? '' : ' disabled') + '>Read automatically</button>' +
           '<button type="button" class="btn btn-ghost" data-action="fs-prog-chat"' + (can ? '' : ' disabled') + '>Read in Copilot Chat</button>')
       : '<button type="button" class="btn btn-primary" data-action="fs-prog-copy">Copy prompt</button>';
-    return '<section class="card fs-prog" aria-labelledby="h-prog"><h3 id="h-prog">Read an existing program <span class="hint">optional</span></h3>' +
-      '<p class="muted small">Copilot reads the program, the objects it uses and the SAP system <strong>read-only</strong> through the SAP MCP servers, and describes the current logic in business words: current process, business rules, data, current behaviour as requirements. You review it before it is added. Afterwards you can create a Technical spec that changes the program.' +
+    return '<section class="card fs-prog" aria-labelledby="h-prog"><h3 id="h-prog">Existing SAP objects <span class="hint">optional</span></h3>' +
+      '<p class="muted small">Add the reports, transactions, classes, function modules, RFCs, CDS views, RAP objects, OData services, proxies… this requirement touches today, with their type. ' +
+      'Copilot can read them and the SAP system <strong>read-only</strong> through the SAP MCP servers, and describe the current logic in business words for your review. They are also checked in discovery and handed to the developer with the Technical spec.' +
       (H.isVscode ? '' : ' In the browser: copy the prompt, paste it into Copilot Chat in VS Code with the <code class="agent-name">' + esc(DS.cfg.agent) + '</code> agent, then paste the answer under <em>Paste the AI answer</em> above.') + '</p>' +
-      '<div class="field narrow"><label for="fs-prog-names">Programs, transactions, classes or function modules</label><input id="fs-prog-names" type="text" data-pref="programNames" value="' + esc(names) + '" placeholder="e.g. ZFI_AGEING, FBL1N" spellcheck="false"></div>' +
-      '<div class="gen-actions">' + run + '</div>' + (drf.kind === 'program' ? draftLogHtml() : '') +
+      U().fieldsBlock([Object.assign({}, field, { label: 'Objects', hint: '' })], s.context, 'context') +
+      '<div class="gen-actions">' + run + '<span class="muted small">Reads the current logic of the objects above</span></div>' + (drf.kind === 'program' ? draftLogHtml() : '') +
       (drf.error && drf.kind === 'program' ? '<p class="field-error" role="alert">' + esc(drf.error) + '</p>' : '') + '</section>';
   }
 
@@ -410,6 +413,7 @@
       if (objects.some(function (o) { return o.name.toUpperCase() === n; })) return;
       objects.push({ type: known[n] || 'Other', name: n, status: known[n] ? 'existing' : 'tbc', purpose: known[n] ? 'Verified in system (FS discovery)' : 'Named in the FS – confirm in the system' });
     });
+    addFsObjects(s, objects, known);
     const reqText = [(r.description || '').trim() || (s.context.requirement || '').trim()]
       .concat(frs.map(function (x) { return x.id + ' ' + (x.f.title || '').trim() + ((x.f.description || '').trim() ? ': ' + x.f.description.trim() : ''); })).filter(Boolean).join('\n\n');
     const rules = (s.reqs.rules || []).filter(function (b) { return V.isFilled(b) && (!b.fr || F.parseFrRefs(b.fr).some(function (x) { return frRefs.indexOf(x) >= 0; })); })
@@ -446,6 +450,16 @@
     return APB.defs.objectTypes.indexOf(v) >= 0 ? v : 'Other';
   }
 
+  /* The existing SAP objects listed in step 1 go to the Technical spec as existing objects, with their type. */
+  function addFsObjects(s, objects, known) {
+    (s.context.objects || []).forEach(function (r) {
+      const n = String((r && r.name) || '').trim().toUpperCase();
+      if (!n || objects.some(function (o) { return o.name.toUpperCase() === n; })) return;
+      const type = r.type ? devObjectType(r.type) : (known[n] || 'Other');
+      objects.push({ type: type, name: n, status: 'existing', purpose: [(r.note || '').trim(), 'Existing object listed in the FS' + (r.type === 'TRAN' ? ' (transaction code)' : '')].filter(Boolean).join(' · ') });
+    });
+  }
+
   /* The program read by "Read an existing program" becomes the object to change; what it uses stays existing. */
   function toDevSpecFromProgram(s) {
     const main = mainProgram(s);
@@ -458,6 +472,7 @@
       if (objects.some(function (o) { return o.name === p.name.trim().toUpperCase(); })) return;
       objects.push({ type: devObjectType(p.type), name: p.name.trim().toUpperCase(), status: 'existing', purpose: (p.description || '').trim() || 'Used by ' + main.name });
     });
+    addFsObjects(s, objects, {});
     const frs = (s.reqs.frs || []).map(function (f, k) { return { f: f, id: F.frId(k) }; }).filter(function (x) { return V.isFilled(x.f); });
     const reqText = [(s.context.requirement || '').trim(),
       (s.process.currentLogic || '').trim() && 'Current logic of ' + main.name + ':\n' + s.process.currentLogic.trim()]
@@ -554,17 +569,28 @@
     H.on('draft-error', function (m) { drf.running = false; drf.status = ''; drf.error = String(m.message || 'Drafting failed').slice(0, 400); rerenderStep1(); });
   }
 
-  function programNames() {
-    return APB.storage.getPref('programNames', '').split(/[\s,;]+/).map(function (n) { return n.trim().toUpperCase(); }).filter(function (n) { return /^[A-Z0-9_\/]{2,40}$/.test(n); }).slice(0, 10);
+  /* Objects to read: the typed list in step 1 (older drafts: the names typed in the former single field). */
+  function programObjects(s) {
+    const col = F.field('context', 'objects').columns[0];
+    const label = function (t) { const o = col.options.filter(function (x) { return x.value === t; })[0]; return o && t ? o.label : ''; };
+    const out = [];
+    (s.context.objects || []).forEach(function (r) {
+      const n = String((r && r.name) || '').trim().toUpperCase();
+      if (/^[A-Z0-9_\/]{2,40}$/.test(n) && !out.some(function (x) { return x.name === n; })) out.push({ name: n, type: r.type || '', label: label(r.type) });
+    });
+    if (!out.length) APB.storage.getPref('programNames', '').split(/[\s,;]+/).forEach(function (x) { const n = x.trim().toUpperCase(); if (/^[A-Z0-9_\/]{2,40}$/.test(n)) out.push({ name: n, type: '', label: '' }); });
+    return out.slice(0, 15);
   }
+  function programNames() { return programObjects(S.get()).map(function (o) { return o.name; }); }
+  function programLabels() { return programObjects(S.get()).map(function (o) { return o.name + (o.label ? ' (' + o.label + ')' : ''); }); }
 
   function readProgram(mode) {
     const s = S.get();
     const names = programNames();
-    if (!names.length) { U().toast('Name the program or transaction first'); return; }
+    if (!names.length) { U().toast('Add an existing object first'); return; }
     drf.running = true; drf.kind = 'program'; drf.mode = mode; drf.error = ''; drf.log = [];
     drf.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Reading ' + names.join(', ') + ' (read-only)…';
-    H.post({ type: 'read-program', mode: mode, prompt: APB.fsDraft.programPrompt(s, names) });
+    H.post({ type: 'read-program', mode: mode, prompt: APB.fsDraft.programPrompt(s, programLabels()) });
     rerenderStep1();
   }
 
@@ -617,8 +643,8 @@
     'fs-prog-chat': function () { readProgram('chat'); },
     'fs-prog-copy': function () {
       const names = programNames();
-      if (!names.length) { U().toast('Name the program or transaction first'); return; }
-      Promise.resolve(APB.exporter.copy(APB.fsDraft.programPrompt(S.get(), names))).then(function (ok) {
+      if (!names.length) { U().toast('Add an existing object first'); return; }
+      Promise.resolve(APB.exporter.copy(APB.fsDraft.programPrompt(S.get(), programLabels()))).then(function (ok) {
         U().ui.open['fs-draft-paste'] = true;
         rerenderStep1();
         U().toast(ok ? 'Prompt copied ✓ Paste it into Copilot Chat in VS Code (' + DS.cfg.agent + '), then paste the answer under Paste the AI answer' : 'Copy failed', 8000);

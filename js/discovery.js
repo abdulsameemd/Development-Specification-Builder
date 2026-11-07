@@ -105,6 +105,7 @@
     function add(text, where) {
       names(text).forEach(function (n) { if (!out.some(function (r) { return r.name === n; })) out.push({ name: n, where: where, kind: proposed[n] ? 'new' : 'ref' }); });
     }
+    ((st.context && st.context.objects) || []).forEach(function (r) { if (r) add(r.name, 'existing object' + (r.type ? ' (' + r.type + ')' : '')); });
     (st.process.asIs || []).forEach(function (r, i) { add(r && r.tx, 'AS-IS step ' + (i + 1)); });
     (st.process.toBe || []).forEach(function (r, i) { add(r && r.tx, 'TO-BE step ' + (i + 1)); });
     (st.reqs.data || []).forEach(function (r) { if (r) add(r.table, 'data: ' + (r.field || r.table)); });

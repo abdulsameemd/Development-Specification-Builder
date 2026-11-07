@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.11
+
+- **Functional spec, step 1: Existing SAP objects.** List several existing objects, each with its type: report / program, transaction code, ABAP class or interface, function module, RFC, function group, CDS view, RAP business object, OData service, proxy class, table, BAdI, form, IDoc type, Fiori app or background job. Rows can be pasted from Excel.
+  - *Read automatically* / *Read in Copilot Chat* read all of them (read-only) and describe the current logic.
+  - The list is in the document (*Current System → Existing SAP objects*), is checked by discovery, and goes to every Technical spec created from the FS with the matching object type.
+  - Replaces the single "Programs, transactions, classes or function modules" text field; names typed there before are still read.
+
 ## 1.0.10
 
 - **Check & read in SAP for Technical specs** (step 3 Objects), read-only through the SAP MCP servers:

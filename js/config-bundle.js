@@ -7355,6 +7355,114 @@ window.APB_CONFIG = {
       }
      },
      {
+      "id": "objects",
+      "label": "Existing SAP objects",
+      "kind": "grid",
+      "custom": true,
+      "sapOnly": true,
+      "addLabel": "+ Add object",
+      "paste": true,
+      "hint": "The reports, classes, function modules, CDS views, services, proxies and transactions this requirement touches today. Copilot can read them read-only; they are checked in discovery and handed to the developer.",
+      "columns": [
+       {
+        "id": "type",
+        "label": "Type",
+        "kind": "select",
+        "w": 210,
+        "options": [
+         {
+          "value": "",
+          "label": "— type —"
+         },
+         {
+          "value": "PROG",
+          "label": "Report / program"
+         },
+         {
+          "value": "TRAN",
+          "label": "Transaction code"
+         },
+         {
+          "value": "CLAS",
+          "label": "ABAP class"
+         },
+         {
+          "value": "INTF",
+          "label": "ABAP interface"
+         },
+         {
+          "value": "FUNC",
+          "label": "Function module"
+         },
+         {
+          "value": "RFC",
+          "label": "RFC function module"
+         },
+         {
+          "value": "FUGR",
+          "label": "Function group"
+         },
+         {
+          "value": "DDLS",
+          "label": "CDS view"
+         },
+         {
+          "value": "BDEF",
+          "label": "RAP business object"
+         },
+         {
+          "value": "SRVB",
+          "label": "OData service"
+         },
+         {
+          "value": "PROXY",
+          "label": "Proxy class (SPROXY)"
+         },
+         {
+          "value": "TABL",
+          "label": "Table"
+         },
+         {
+          "value": "BADI",
+          "label": "BAdI / enhancement"
+         },
+         {
+          "value": "FORM",
+          "label": "Form (Smart Form / Adobe)"
+         },
+         {
+          "value": "IDOC",
+          "label": "IDoc type"
+         },
+         {
+          "value": "WAPA",
+          "label": "Fiori app"
+         },
+         {
+          "value": "JOB",
+          "label": "Background job"
+         },
+         {
+          "value": "OTHER",
+          "label": "Other"
+         }
+        ]
+       },
+       {
+        "id": "name",
+        "label": "Name",
+        "w": 220,
+        "placeholder": "e.g. ZFI_AP_OPEN_ITEMS_OLD"
+       },
+       {
+        "id": "note",
+        "label": "Note",
+        "w": 260,
+        "placeholder": "e.g. current ageing report – to be replaced"
+       }
+      ]
+     },
+     {
       "id": "objectives",
       "label": "Business objectives",
       "kind": "lines",
@@ -8621,7 +8729,11 @@ window.APB_CONFIG = {
     "FORM": "Form",
     "SFPF": "Form",
     "PDTS": "Workflow",
-    "CAP": "CAPM"
+    "CAP": "CAPM",
+    "RFC": "RFC",
+    "PROXY": "Class",
+    "IDOC": "API",
+    "JOB": "Background Job"
    }
   }
  },
