@@ -3,7 +3,9 @@
 //   1. builds the single-file builder (scripts/build-single.js)
 //   2. stages vscode-extension/ + vscode-extension-addon/{src,agents} + the builder as media/spec-builder.html in build/vsix/
 //   3. merges vscode-extension-addon/package.contributes.json into the manifest
-//   4. packages with @vscode/vsce (needs npm registry access; --no-dependencies, the extension has none)
+//   4. packages with @vscode/vsce
+//   5. unpacks the .vsix to dist/vscode-extension/<publisher.name-version>/ for networks that block .vsix downloads
+//      (re-zipped on the user's PC with scripts/install-extension.ps1, see README) (needs npm registry access; --no-dependencies, the extension has none)
 // Run: node scripts/build-vsix.js            (add --stage-only to skip packaging)
 const fs = require('fs');
 const path = require('path');
@@ -51,8 +53,39 @@ if (fsDefs.discovery.extensionId !== id) {
 }
 console.log('staged ' + path.relative(root, stage) + ' (' + id + ' ' + manifest.version + ')');
 
+
 if (process.argv.includes('--stage-only')) process.exit(0);
 const out = path.join(root, 'dist', manifest.name + '-' + manifest.version + '.vsix');
 const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 execFileSync(npx, ['--yes', VSCE, 'package', '--no-dependencies', '--skip-license', '--out', out], { cwd: stage, stdio: 'inherit' });
 console.log('wrote ' + path.relative(root, out));
+
+/* The .vsix unpacked, byte for byte (minimal zip reader: stored and deflated entries). Zipping this folder again
+   gives an installable .vsix, so the extension reaches PCs whose network blocks .vsix downloads. */
+const zlib = require('zlib');
+function unzip(file, dir) {
+  const buf = fs.readFileSync(file);
+  let eocd = buf.length - 22;
+  while (eocd >= 0 && buf.readUInt32LE(eocd) !== 0x06054b50) eocd--;
+  if (eocd < 0) throw new Error('not a zip file: ' + file);
+  const count = buf.readUInt16LE(eocd + 10);
+  let p = buf.readUInt32LE(eocd + 16);
+  for (let i = 0; i < count; i++) {
+    const method = buf.readUInt16LE(p + 10), csize = buf.readUInt32LE(p + 20);
+    const nlen = buf.readUInt16LE(p + 28), xlen = buf.readUInt16LE(p + 30), clen = buf.readUInt16LE(p + 32), off = buf.readUInt32LE(p + 42);
+    const name = buf.toString('utf8', p + 46, p + 46 + nlen);
+    p += 46 + nlen + xlen + clen;
+    if (name.endsWith('/')) continue;
+    const target = path.join(dir, name);
+    if (!target.startsWith(dir + path.sep)) throw new Error('bad entry ' + name);
+    const start = off + 30 + buf.readUInt16LE(off + 26) + buf.readUInt16LE(off + 28);
+    const data = buf.subarray(start, start + csize);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, method === 0 ? data : zlib.inflateRawSync(data));
+  }
+}
+const unpackedRoot = path.join(root, 'dist', 'vscode-extension');
+const unpacked = path.join(unpackedRoot, id + '-' + manifest.version);
+fs.rmSync(unpackedRoot, { recursive: true, force: true });
+unzip(out, unpacked);
+console.log('wrote ' + path.relative(root, unpacked) + path.sep + ' (the .vsix unpacked)');

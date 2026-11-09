@@ -1,0 +1,6 @@
+# Packages and images are binary; the unpacked extension must stay byte-identical on every OS.
+*.vsix binary
+*.png binary
+*.docx binary
+*.mp4 binary
+dist/vscode-extension/** -text

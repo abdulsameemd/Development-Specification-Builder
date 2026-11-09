@@ -33,6 +33,11 @@ is a ready-to-install extension, `dewa.dewa-sap-spec-builder`, that runs next to
 installs `dewa-fs-discovery.agent.md` into the VS Code prompts folder (setting `dewaSpecBuilder.installAgent`; an edited
 copy is never replaced; *DEWA: Reinstall dewa-fs-discovery agent*). Install it with *Extensions → … → Install from VSIX…*.
 
+If your network blocks `.vsix` downloads (the file arrives as a few KB), use the unpacked copy in
+`dist/vscode-extension/` instead: clone or pull the repository, then run
+`powershell -ExecutionPolicy Bypass -File scripts\install-extension.ps1` in the repository folder. It rebuilds the `.vsix`
+locally and installs it (details in the main README, *Inside VS Code*).
+
 The rest of this guide is for merging the add-on into DEWA's own extension instead (optional).
 
 ```text

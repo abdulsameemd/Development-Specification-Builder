@@ -138,6 +138,18 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 **Install:** [`dist/dewa-sap-spec-builder-1.0.13.vsix`](dist/dewa-sap-spec-builder-1.0.13.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.13.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
+**If the .vsix download is blocked** (the downloaded file is only a few KB, and VS Code says *End of central directory record signature not found*): some company networks replace `.vsix` downloads with a web page. The repository also holds the extension **unpacked** in `dist/vscode-extension/dewa.dewa-sap-spec-builder-<version>/`, as plain files, so no `.vsix` is downloaded:
+
+1. In VS Code: *Git: Clone* `https://github.com/abdulsameemd/Development-Specification-Builder` (or *Git: Pull* on `main`). Git brings files intact, so first try right-clicking `dist/dewa-sap-spec-builder-<version>.vsix` in the Explorer → *Install Extension VSIX*. If that file is also blocked or removed on your PC, continue:
+2. In VS Code's terminal (PowerShell), in the repository folder:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File scripts\install-extension.ps1
+   ```
+   It zips the unpacked folder into a `.vsix` in your temp folder (Windows' built-in zip) and installs it with `code --install-extension`. If the `code` command is not on the PATH, it prints the file's location: install it with *Extensions → … → Install from VSIX…*.
+3. *Developer: Reload Window*. The status bar shows **Spec Builder**, and *DEWA: Open SAP Spec Builder* opens the builder.
+
+Copying the unpacked folder into `~/.vscode/extensions` does **not** work once other extensions are installed: VS Code only loads extensions registered through an install.
+
 **DEWA: Open SAP Spec Builder** (command palette or *Spec Builder* in the status bar) opens this same app as a tab inside VS Code:
 
 - **Read an existing program** (step 1, SAP) reads it read-only with the Copilot model and the read tools of the SAP MCP servers, or in Copilot Chat with `dewa-fs-discovery`; the logic comes back for review;
