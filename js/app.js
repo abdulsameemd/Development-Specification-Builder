@@ -343,6 +343,7 @@
     const s = S.get();
     if (!APB.devSap.checkTargets(s).length) { toast('Name the objects first'); return; }
     sap.running = true; sap.mode = mode; sap.error = ''; sap.log = [];
+    APB.busy.start('devctx', mode, function () { actions['devctx-stop'](); });
     sap.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Checking ' + APB.devSap.checkTargets(s).length + ' names in SAP (read-only)…';
     H.post({ type: 'read-dev', mode: mode, prompt: APB.devSap.prompt(s) });
     rerenderSap();
@@ -373,12 +374,13 @@
   }
 
   onReset(FA.reset);
-  onReset(function () { if (sap.running && sap.mode !== 'chat') H.post({ type: 'stop' }); sap.running = false; sap.mode = ''; sap.status = ''; sap.error = ''; sap.log = []; sap.pending = null; });
+  onReset(function () { APB.busy.done(); if (sap.running && sap.mode !== 'chat') H.post({ type: 'stop' }); sap.running = false; sap.mode = ''; sap.status = ''; sap.error = ''; sap.log = []; sap.pending = null; });
 
   if (H.isVscode) {
     H.on('auth', function () { if (!isFs() && ui.step === 3 && !ui.generated) rerenderSap(); });
     H.on('devctx-progress', function (m) {
       const text = String(m.text || '').slice(0, 300);
+      APB.busy.progress(text, m.status);
       if (m.key) {
         const last = sap.log.filter(function (l) { return l.key === m.key; })[0];
         if (last) { last.text = text; last.status = m.status; } else sap.log.push({ key: m.key, text: text, status: m.status });
@@ -387,6 +389,7 @@
       rerenderSap();
     });
     H.on('devctx-result', function (m) {
+      APB.busy.done();
       sap.running = false; sap.status = ''; sap.mode = '';
       sap.log.push({ text: 'Result received', status: 'done' });
       const answer = String(m.text || '');
@@ -397,7 +400,7 @@
         if (ta) ta.value = answer;
       }
     });
-    H.on('devctx-error', function (m) { sap.running = false; sap.status = ''; sap.error = String(m.message || 'The SAP check failed').slice(0, 400); rerenderSap(); });
+    H.on('devctx-error', function (m) { APB.busy.done(); sap.running = false; sap.status = ''; sap.error = String(m.message || 'The SAP check failed').slice(0, 400); rerenderSap(); });
   }
 
   function step3(s) {
@@ -791,7 +794,7 @@
   const actions = {
     'devctx-auto': function () { sapStart('auto'); },
     'devctx-chat': function () { sapStart('chat'); },
-    'devctx-stop': function () { if (sap.mode !== 'chat') H.post({ type: 'stop' }); sap.running = false; sap.mode = ''; sap.status = ''; rerenderSap(); },
+    'devctx-stop': function () { APB.busy.done(); if (sap.mode !== 'chat') H.post({ type: 'stop' }); sap.running = false; sap.mode = ''; sap.status = ''; rerenderSap(); },
     'devctx-copy': function () {
       const s = S.get();
       if (!APB.devSap.checkTargets(s).length) { toast('Name the objects first'); return; }
