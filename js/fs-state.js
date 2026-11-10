@@ -89,7 +89,7 @@
     const now = Date.now();
     // key: stable identity of the FS across share links and uploads (id is renewed there); Technical specs made from
     // this FS point to it (spec-link.js)
-    const s = { kind: 'fs', schema: SCHEMA_VERSION, id: uid(), key: uid(), discovery: null, meta: { created: now, updated: now } };
+    const s = { kind: 'fs', schema: SCHEMA_VERSION, id: uid(), key: uid(), discovery: null, approval: null, audit: [], meta: { created: now, updated: now } };
     cfg.sections.forEach(function (sec) { s[sec.id] = {}; });
     s.control.version = '0.1';
     s.control.status = 'draft';
@@ -134,6 +134,9 @@
     // specs from before the system choice were SAP specs whenever a module was set
     if (SYSTEMS.indexOf(s.context.system) < 0) s.context.system = s.context.module ? 'sap' : '';
     s.discovery = input.discovery && APB.discovery ? APB.discovery.normalize(input.discovery).pack : null;
+    // approval (gate G1) and audit trail (governance.js)
+    s.approval = APB.gov ? APB.gov.normalizeApproval(input.approval) : null;
+    s.audit = APB.gov ? APB.gov.audit.normalize(input.audit) : [];
     if (input.meta && typeof input.meta === 'object') {
       s.meta.created = Number(input.meta.created) || s.meta.created;
       s.meta.updated = Number(input.meta.updated) || s.meta.updated;

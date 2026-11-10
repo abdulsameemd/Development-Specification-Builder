@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.16
+
+- **Approval gates.** A functional spec must be **approved** before Technical specs are created from it (gate G1), and a technical spec before `dewa-abap` builds from it (gate G2). The new **Approval** card shows the status, who approved and when, and who may approve. Approvers are GitHub accounts listed in the VS Code settings `dewaSpecBuilder.approvers.functional` / `.technical`; only they see **Approve**.
+- **Any change after approval needs a new approval.** The approval stores a fingerprint of the spec content; editing the spec afterwards closes the gate again. A technical spec handed to Copilot without a valid approval starts with a STOP instruction.
+- **G2 needs the SAP check.** A technical spec can be approved only after *Check & read in SAP* ran without open ✗ findings (setting `dewaSpecBuilder.gates.requireSapCheck`).
+- **Enforced by default, IT can relax it.** `dewaSpecBuilder.gates` = `enforce` blocks the action; `warn` lets the user continue, and that is recorded as an override. In a plain browser the gates only warn (no signed-in identity).
+- **Audit trail.** Each spec records AI jobs (start, end, model, duration, outcome), documents read, review decisions, approvals, gate blocks and overrides, hand-offs and exports. It appears in the documents (*Audit trail* / *Approval & Audit Trail*) and, in VS Code, is also written to `.dewa/audit/<spec-id>.jsonl` in the workspace.
+- **Tests in CI.** Unit tests and browser end-to-end tests (gates, approval, audit, New / Undo) run on every pull request. New [GOVERNANCE.md](https://github.com/abdulsameemd/Development-Specification-Builder/blob/main/GOVERNANCE.md) and [SECURITY.md](https://github.com/abdulsameemd/Development-Specification-Builder/blob/main/SECURITY.md).
+
 ## 1.0.15
 
 - **Busy overlay while the AI works.** Whenever the builder reads the DEWA SAP system or asks Copilot to generate something, an overlay shows what is happening – for example *AI is reading DEWA SAP ABAP artifacts* or *AI is reading your BRD and solution document* – with what the agent is doing right now (reading program source, checking objects read-only, classifying the change …), the latest step from the SAP tools, elapsed time and **Stop**. **Keep working** hides it into a small pill that reopens it. In Copilot Chat mode it says to follow the progress in Chat.

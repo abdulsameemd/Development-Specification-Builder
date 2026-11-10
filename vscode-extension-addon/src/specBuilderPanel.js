@@ -88,6 +88,22 @@ function createRouter(vscode, context, deps) {
       }
       return true;
     },
+    /* Audit trail: one JSON line per entry in <workspace>/.dewa/audit/<spec-id>.jsonl (kept with the project). */
+    audit: async function (m) {
+      if (!str(m.specId, 60) || !/^[\w-]{1,60}$/.test(m.specId) || !m.entry || typeof m.entry !== 'object') return false;
+      const line = JSON.stringify({ spec: m.specId, kind: m.kind === 'functional' ? 'functional' : 'technical', title: String(m.title || '').slice(0, 120), at: String(m.entry.at || ''), by: String(m.entry.by || ''), type: String(m.entry.type || ''), data: m.entry.data || {} });
+      if (line.length > 20000) return false;
+      const folder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0];
+      if (!folder) return true; // no workspace: the trail stays with the spec
+      const dir = vscode.Uri.joinPath(folder.uri, '.dewa', 'audit');
+      const uri = vscode.Uri.joinPath(dir, m.specId + '.jsonl');
+      await vscode.workspace.fs.createDirectory(dir);
+      let old = '';
+      try { old = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf8'); } catch (e) { old = ''; }
+      await vscode.workspace.fs.writeFile(uri, Buffer.from(old + line + '\n', 'utf8'));
+      return true;
+    },
+    'open-settings': async function () { await vscode.commands.executeCommand('workbench.action.openSettings', 'dewaSpecBuilder.approvers'); return true; },
     'auth-status': async function () { deps.post(Object.assign({ type: 'auth' }, await deps.getAuth())); },
     'sign-in': async function () {
       try { await deps.signIn(); } catch (e) { /* user closed the sign-in */ }
@@ -261,7 +277,14 @@ function createSpecBuilder(vscode, context, opts) {
     const copilot = !!vscode.extensions.getExtension(fsDiscovery.COPILOT_CHAT);
     let session = null;
     try { session = await vscode.authentication.getSession('github', ['user:email'], { silent: true }); } catch (e) { session = null; }
-    return { copilot: copilot, signedIn: !!session, account: session && session.account ? session.account.label : '', chatAutoSend: vscode.workspace.getConfiguration('dewaSpecBuilder').get('chatAutoSend', true) !== false };
+    const cfg = vscode.workspace.getConfiguration('dewaSpecBuilder');
+    const list = function (k) { const v = cfg.get(k, []); return Array.isArray(v) ? v.map(String) : []; };
+    return {
+      copilot: copilot, signedIn: !!session, account: session && session.account ? session.account.label : '', chatAutoSend: cfg.get('chatAutoSend', true) !== false,
+      // approval gates (governance.js in the builder); IT can set and lock these settings
+      policy: { gates: cfg.get('gates', 'enforce') === 'warn' ? 'warn' : 'enforce', requireSapCheck: cfg.get('gates.requireSapCheck', true) !== false,
+        approvers: { functional: list('approvers.functional'), technical: list('approvers.technical') } }
+    };
   }
 
   function attach(panel) {
@@ -287,7 +310,7 @@ function createSpecBuilder(vscode, context, opts) {
       vscode.authentication.onDidChangeSessions(async function (e) { if (e.provider && e.provider.id === 'github') post(Object.assign({ type: 'auth' }, await getAuth())); })
     ];
     if (vscode.workspace.onDidChangeConfiguration) {
-      subs.push(vscode.workspace.onDidChangeConfiguration(async function (e) { if (e.affectsConfiguration('dewaSpecBuilder.chatAutoSend')) post(Object.assign({ type: 'auth' }, await getAuth())); }));
+      subs.push(vscode.workspace.onDidChangeConfiguration(async function (e) { if (e.affectsConfiguration('dewaSpecBuilder.chatAutoSend') || e.affectsConfiguration('dewaSpecBuilder.gates') || e.affectsConfiguration('dewaSpecBuilder.approvers')) post(Object.assign({ type: 'auth' }, await getAuth())); }));
     }
     panel.onDidDispose(function () { router.cancel(); subs.forEach(function (d) { d.dispose(); }); if (current && current.panel === panel) current = null; });
     current = { panel: panel, router: router, post: post };

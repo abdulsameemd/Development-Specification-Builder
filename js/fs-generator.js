@@ -250,7 +250,9 @@
     add('Testing & Quality', join([sub('Test scenarios (UAT)', uat(s)), sub('Non-functional requirements', nfr(s))]));
     add('Risks & Open Questions', join([sub('Risks, assumptions & open points', simpleGrid('quality', 'risks', s.quality.risks)),
       sub('Open questions', FC.openQuestions(s).map(function (q, i) { return (i + 1) + '. ' + TBC + ' ' + q; }).join('\n'))]));
-    add('Document Control', join([sub('Version history', simpleGrid('control', 'history', s.control.history)), sub('Approvals', simpleGrid('control', 'approvals', s.control.approvals))]));
+    add('Document Control', join([sub('Version history', simpleGrid('control', 'history', s.control.history)),
+      sub('Approvals', join([APB.gov ? APB.gov.approvalMd(s) : '', simpleGrid('control', 'approvals', s.control.approvals)])),
+      APB.gov && (s.audit || []).length ? sub('Audit trail', APB.gov.audit.md(s)) : '']));
 
     const lines = ['# Functional Specification' + (title(s) ? ': ' + title(s) : ''), '', controlTable(s), ''];
     sections.forEach(function (sec, i) { lines.push('## ' + (i + 1) + '. ' + sec.title, '', sec.body, ''); });

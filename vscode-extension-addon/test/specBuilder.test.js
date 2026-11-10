@@ -61,7 +61,7 @@ function fakeVscode(o) {
       fs: { writeFile: async function (uri, bytes) { calls.saved.push({ uri: uri, bytes: Buffer.from(bytes) }); } },
       getConfiguration: function () { return { get: function (k, d) { return (o.config || {})[k] !== undefined ? o.config[k] : d; } }; }
     },
-    Uri: { joinPath: function (u, n) { return { fsPath: path.join(u.fsPath, n) }; }, file: function (p) { return { fsPath: p }; } },
+    Uri: { joinPath: function (u) { return { fsPath: path.join.apply(path, [u.fsPath].concat([].slice.call(arguments, 1))) }; }, file: function (p) { return { fsPath: p }; } },
     window: {
       showSaveDialog: async function (opt) { calls.saveDialog = opt; return o.cancelSave ? undefined : opt.defaultUri; },
       showInformationMessage: async function () {}, showTextDocument: async function () {},
@@ -560,4 +560,39 @@ test('deliverDev posts the SAP check to the open panel; the tool is registered a
   const agent = fs.readFileSync(path.join(__dirname, '../agents/dewa-fs-discovery.agent.md'), 'utf8');
   assert.match(agent, /tools:.*'dewa_submitDevContext'/);
   assert.match(agent, /DEV-CONTEXT v1/);
+});
+
+/* --------------------------------------------------- approval gates and audit trail */
+test('the auth message carries the approval policy from the settings', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sb-'));
+  const vs = fakeVscode({ config: { gates: 'warn', 'approvers.functional': ['Alice'], 'approvers.technical': ['bob', 7] } });
+  const b = panel.createSpecBuilder(vs, fakeContext(dir), {});
+  const auth = await b.getAuth();
+  assert.deepStrictEqual(auth.policy, { gates: 'warn', requireSapCheck: true, approvers: { functional: ['Alice'], technical: ['bob', '7'] } });
+  const def = await panel.createSpecBuilder(fakeVscode(), fakeContext(dir), {}).getAuth();
+  assert.strictEqual(def.policy.gates, 'enforce'); // enforced unless IT relaxes it
+  assert.deepStrictEqual(def.policy.approvers, { functional: [], technical: [] });
+  const decl = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.contributes.json'), 'utf8')).contributes.configuration.properties;
+  assert.strictEqual(decl['dewaSpecBuilder.gates'].default, 'enforce');
+  assert.ok(decl['dewaSpecBuilder.approvers.functional'] && decl['dewaSpecBuilder.approvers.technical'] && decl['dewaSpecBuilder.gates.requireSapCheck']);
+});
+
+test('audit entries are appended as JSON lines to .dewa/audit/<spec-id>.jsonl; bad input is refused', async () => {
+  const vs = fakeVscode();
+  const files = {};
+  vs.workspace.fs.createDirectory = async function () {};
+  vs.workspace.fs.readFile = async function (uri) { if (!(uri.fsPath in files)) throw new Error('missing'); return files[uri.fsPath]; };
+  vs.workspace.fs.writeFile = async function (uri, bytes) { files[uri.fsPath] = Buffer.from(bytes); };
+  const { r } = router(vs);
+  const entry = (type) => ({ type: 'audit', specId: 'xabc123', kind: 'functional', title: 'Vendor ageing', entry: { at: '2026-11-10T10:00:00Z', by: 'alice', type: type, data: { gate: 'G1' } } });
+  assert.strictEqual(await r.handle(entry('approved')), true);
+  assert.strictEqual(await r.handle(entry('handoff')), true);
+  const file = path.join('/ws', '.dewa', 'audit', 'xabc123.jsonl');
+  const lines = files[file].toString('utf8').trim().split('\n').map(JSON.parse);
+  assert.deepStrictEqual(lines.map((l) => l.type), ['approved', 'handoff']);
+  assert.strictEqual(lines[0].by, 'alice');
+  assert.strictEqual(await r.handle(Object.assign(entry('x'), { specId: '../evil' })), false);
+  assert.strictEqual(await r.handle({ type: 'audit', specId: 'xabc123' }), false);
+  await r.handle({ type: 'open-settings' });
+  assert.ok(vs.calls.commands.some((c) => c.id === 'workbench.action.openSettings'));
 });

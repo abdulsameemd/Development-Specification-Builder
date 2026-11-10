@@ -158,7 +158,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.15.vsix`](dist/dewa-sap-spec-builder-1.0.15.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.15.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.16.vsix`](dist/dewa-sap-spec-builder-1.0.16.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.16.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **If the .vsix download is blocked** (the downloaded file is only a few KB, and VS Code says *End of central directory record signature not found*): some company networks replace `.vsix` downloads with a web page. The repository also holds the extension **unpacked** in `dist/vscode-extension/dewa.dewa-sap-spec-builder-<version>/`, as plain files, so no `.vsix` is downloaded:
 
@@ -184,6 +184,18 @@ Copying the unpacked folder into `~/.vscode/extensions` does **not** work once o
 - Word / Markdown are saved through VS Code's save dialog.
 
 **VS Code extension add-on** – [`vscode-extension-addon/`](vscode-extension-addon/INSTALL.md): the panel, the automatic discovery runner, the submit tool, the `/builder` and `/discover` URI handlers, the agent file, install steps and unit tests (`node --test vscode-extension-addon/test/*.test.js`). In the browser without the add-on, choose *Plain VS Code (copy & paste)* in step 3 → *VS Code launch settings*.
+
+### Approval gates & audit
+
+Specs are **approved before they move on**: a functional spec before Technical specs are created from it (gate **G1**), a technical spec before `dewa-abap` builds from it (gate **G2**); the code itself goes through a reviewed pull request (**G3**).
+
+- The **Approval** card (FS step 3, TS step 5, and the finished documents) shows the status, who approved and when, and who may approve. Approvers are GitHub accounts in the VS Code settings `dewaSpecBuilder.approvers.functional` and `dewaSpecBuilder.approvers.technical`.
+- An approval holds a fingerprint of the content: **any change afterwards needs a new approval**.
+- A technical spec can only be approved after *Check & read in SAP* ran without open findings (`dewaSpecBuilder.gates.requireSapCheck`).
+- `dewaSpecBuilder.gates`: `enforce` (default) blocks; `warn` allows *Continue anyway* and records it. In a plain browser the gates only warn.
+- Every spec keeps an **audit trail** (AI jobs, documents read, review decisions, approvals, gate blocks and overrides, hand-offs, exports), printed in the documents and, in VS Code, written to `.dewa/audit/<spec-id>.jsonl`.
+
+Roles, settings, what IT can and cannot lock, and the release rules: [GOVERNANCE.md](GOVERNANCE.md). Threats and controls: [SECURITY.md](SECURITY.md). Tests: `npm test` (unit) and `npm run test:e2e` (browser, needs `npm install`); both run in CI.
 
 ## How developers use it (Technical mode)
 

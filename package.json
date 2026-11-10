@@ -1,0 +1,14 @@
+{
+  "name": "development-specification-builder",
+  "private": true,
+  "description": "DEWA SAP Spec Builder – build scripts and tests",
+  "scripts": {
+    "build": "node scripts/build-config.js && node scripts/build-single.js",
+    "test": "node --test vscode-extension-addon/test/*.test.js",
+    "test:e2e": "node scripts/build-single.js && node --test tests/e2e/*.test.js",
+    "check": "node scripts/build-config.js --check"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}

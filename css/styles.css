@@ -688,3 +688,16 @@ div.link-banner p { margin: 0 0 6px; }
 .busy-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--lime); animation: busy-pulse 1.4s ease-in-out infinite; }
 @media (max-width: 480px) { .busy-card { grid-template-columns: 1fr; justify-items: start; } }
 @media (prefers-reduced-motion: reduce) { .busy-orb span, .busy-dot, .busy-line { animation: none; } .busy-orb span:nth-child(1) { border-color: var(--lime); } }
+
+/* Approval gates (governance.js) */
+.gov-card { border-left: 4px solid var(--amber); }
+.gov-card.gov-approved { border-left-color: var(--lime); }
+.gov-card.gov-changed { border-left-color: var(--danger); }
+.gov-state { margin: 4px 0 8px; font-weight: 600; }
+.gov-state.ok { color: var(--accent-text); }
+.gov-state.bad { color: var(--danger); }
+.gov-state code { font-size: .78rem; }
+.gov-mode { margin-top: 8px; }
+.gov-flash { animation: gov-flash .5s ease 3; }
+@keyframes gov-flash { 50% { box-shadow: 0 0 0 4px var(--amber); } }
+@media (prefers-reduced-motion: reduce) { .gov-flash { animation: none; outline: 3px solid var(--amber); } }

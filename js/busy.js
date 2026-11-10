@@ -74,7 +74,7 @@
       const b = e.target.closest('[data-busy]');
       if (!b || !job) return;
       if (b.dataset.busy === 'hide') minimize();
-      if (b.dataset.busy === 'stop') { const stop = job.onStop; done(); if (stop) stop(); }
+      if (b.dataset.busy === 'stop') { const stop = job.onStop; done('stopped'); if (stop) stop(); }
     });
     pill.addEventListener('click', function () { if (job) { pill.hidden = true; el.hidden = false; } });
   }
@@ -97,7 +97,9 @@
   function start(kind, mode, onStop) {
     build();
     const cfg = JOBS[kind] || JOBS.draft;
-    job = { kind: kind, cfg: cfg, chat: mode === 'chat', onStop: onStop, last: '' };
+    if (job) done('replaced');
+    job = { kind: kind, cfg: cfg, chat: mode === 'chat', onStop: onStop, last: '', model: '' };
+    audit('ai-start', { job: kind, mode: mode === 'chat' ? 'Copilot Chat' : 'automatic', sapRead: cfg.sap ? 'read-only' : 'no' });
     steps = 0; lineIdx = 0; started = Date.now();
     clearInterval(rot); clearInterval(tick);
     rot = setInterval(function () { lineIdx++; render(); }, 3800);
@@ -112,16 +114,21 @@
   function progress(text, status) {
     if (!job || !text) return;
     job.last = String(text).slice(0, 160);
+    if (/^Model /.test(job.last)) job.model = job.last.replace(/^Model /, '').split(' · ')[0];
     if (status === 'done' || status === 'running') steps = Math.max(steps, status === 'running' ? steps + 1 : steps);
     render();
   }
 
-  function done() {
+  /* outcome: result | error | stopped | reset | replaced (recorded in the audit trail) */
+  function done(outcome) {
+    if (job) audit('ai-end', { job: job.kind, outcome: outcome || 'closed', seconds: Math.round((Date.now() - started) / 1000), steps: steps, model: job.model });
     job = null;
     clearInterval(rot); clearInterval(tick);
     if (el) el.hidden = true;
     if (pill) pill.hidden = true;
   }
+
+  function audit(type, data) { if (APB.ui && APB.ui.auditAdd) APB.ui.auditAdd(type, data); }
 
   APB.busy = { start: start, progress: progress, done: done, isOpen: function () { return !!job; }, JOBS: JOBS };
 })(window.APB = window.APB || {});

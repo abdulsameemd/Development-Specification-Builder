@@ -23,7 +23,9 @@
         const any = function (list) { return s.objects.some(function (o) { return list.indexOf(o.type) >= 0 && o.status !== 'existing'; }); };
         const hasAc = s.acceptance.some(function (a) { return a.text.trim(); });
         const bapi = built.some(function (o) { return o.detail && o.detail.bapiReturn; });
+        const gate = APB.gov ? APB.gov.status(s).state : 'approved';
         return [
+          gate !== 'approved' && 'STOP: this specification is ' + (gate === 'changed' ? 'changed after its approval' : 'not approved') + ' (see Approval & Audit Trail). Do not create, change or activate any object; ask for the approval of the technical specification first.',
           'Read this entire specification.',
           'Inspect the existing project/repository before writing code.',
           'Reuse existing SAP objects (listed here or found in the repository/system). Do not create duplicate functionality.',
@@ -283,6 +285,9 @@
 
     const dod = s.dod.filter(function (d) { return d.on && d.text.trim(); });
     add('Definition of Done', dod.map(function (d) { return '- [ ] ' + d.text.trim(); }).join('\n'));
+
+    // gate G2 and the audit trail (governance.js): dewa-abap builds from approved specifications only
+    if (APB.gov) add('Approval & Audit Trail', [APB.gov.approvalMd(s), (s.audit || []).length ? APB.gov.audit.md(s) : ''].filter(Boolean).join('\n\n'));
 
     add(profile.instructionsTitle, 'Before implementing:\n\n' + profile.instructions(s).map(function (t, i) { return (i + 1) + '. ' + t; }).join('\n') + '\n\n' + profile.closing);
 

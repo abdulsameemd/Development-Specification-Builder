@@ -44,6 +44,8 @@
       assumptions: '',
       source: null,
       sapCheck: null,
+      approval: null,
+      audit: [],
       quality: { authorization: '', authChecks: [], dataVolume: '', performanceReq: '', testTypes: ['Unit', 'Functional', 'Integration'], testScenarios: '', cleanCore: '', cleanCoreNote: '' },
       dod: defaultDod(),
       meta: { created: now, updated: now }
@@ -76,6 +78,9 @@
     s.assumptions = str(input.assumptions);
     // link to the functional spec it was created from (spec-link.js); null for specs written directly
     s.source = APB.specLink ? APB.specLink.normalizeSource(input.source) : null;
+    // approval (gate G2) and audit trail (governance.js)
+    s.approval = APB.gov ? APB.gov.normalizeApproval(input.approval) : null;
+    s.audit = APB.gov ? APB.gov.audit.normalize(input.audit) : [];
     // last "Check & read in SAP" (dev-sap.js)
     s.sapCheck = input.sapCheck && typeof input.sapCheck === 'object' && Array.isArray(input.sapCheck.results)
       ? { at: Number(input.sapCheck.at) || 0, system: str(input.sapCheck.system), results: arr(input.sapCheck.results).map(function (r) { return { name: str(r.name).toUpperCase(), type: str(r.type), result: ['verified', 'missing', 'clash'].indexOf(r.result) >= 0 ? r.result : 'missing', description: str(r.description) }; }), notFound: Array.isArray(input.sapCheck.notFound) ? input.sapCheck.notFound.map(str) : [] }
