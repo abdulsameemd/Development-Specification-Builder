@@ -66,7 +66,7 @@
             "type": "string"
           },
           "default": [],
-          "markdownDescription": "GitHub accounts (as shown in VS Code's Accounts menu) that may **approve functional specifications** (gate G1). Empty = nobody can approve, so enforced gates stay closed. IT can set and lock this setting."
+          "markdownDescription": "GitHub accounts (as shown in VS Code's Accounts menu) that may **approve functional specifications** (gate G1). Empty = nobody can approve, so enforced gates stay closed. Example: `[\"fs-lead\", \"ba-manager\"]`. IT distributes it in user or workspace settings (`.vscode/settings.json`); see GOVERNANCE.md."
         },
         "dewaSpecBuilder.approvers.technical": {
           "type": "array",
@@ -74,7 +74,7 @@
             "type": "string"
           },
           "default": [],
-          "markdownDescription": "GitHub accounts that may **approve technical specifications** (gate G2, before `dewa-abap` builds). IT can set and lock this setting."
+          "markdownDescription": "GitHub accounts that may **approve technical specifications** (gate G2, before `dewa-abap` builds). Example: `[\"tech-lead\"]`. IT distributes it in user or workspace settings (`.vscode/settings.json`); see GOVERNANCE.md."
         }
       }
     },

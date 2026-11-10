@@ -195,6 +195,15 @@ Specs are **approved before they move on**: a functional spec before Technical s
 - `dewaSpecBuilder.gates`: `enforce` (default) blocks; `warn` allows *Continue anyway* and records it. In a plain browser the gates only warn.
 - Every spec keeps an **audit trail** (AI jobs, documents read, review decisions, approvals, gate blocks and overrides, hand-offs, exports), printed in the documents and, in VS Code, written to `.dewa/audit/<spec-id>.jsonl`.
 
+**Add approvers:** VS Code → Settings (`Ctrl+,`) → search `dewaSpecBuilder.approvers` → *Add Item* with the GitHub account shown in the Accounts menu (case does not matter). Use the *Workspace* tab to share the list with the team through `.vscode/settings.json`, or edit the JSON directly:
+
+```json
+"dewaSpecBuilder.approvers.functional": ["fs-lead", "ba-manager"],
+"dewaSpecBuilder.approvers.technical": ["tech-lead"]
+```
+
+Changes apply at once. The Approval card's *Open settings* button (shown while no approvers are set) opens these settings.
+
 Roles, settings, what IT can and cannot lock, and the release rules: [GOVERNANCE.md](GOVERNANCE.md). Threats and controls: [SECURITY.md](SECURITY.md). Tests: `npm test` (unit) and `npm run test:e2e` (browser, needs `npm install`); both run in CI.
 
 ## How developers use it (Technical mode)
