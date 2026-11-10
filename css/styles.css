@@ -660,3 +660,7 @@ div.link-banner p { margin: 0 0 6px; }
 .fs-change { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: var(--ok-bg); border: 1px solid rgba(163, 230, 53, .35); }
 .fs-change select { margin-left: 8px; }
 .fs-change p { margin: 6px 0 0; }
+
+/* toast with an action button (Undo) */
+.toast.has-action { pointer-events: auto; display: flex; gap: 14px; align-items: center; }
+.toast-btn { border: 0; background: none; color: var(--accent-text); font: inherit; font-weight: 800; text-decoration: underline; cursor: pointer; padding: 0; }

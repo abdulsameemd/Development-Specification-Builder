@@ -676,6 +676,10 @@ div.link-banner p { margin: 0 0 6px; }
 .fs-change select { margin-left: 8px; }
 .fs-change p { margin: 6px 0 0; }
 
+/* toast with an action button (Undo) */
+.toast.has-action { pointer-events: auto; display: flex; gap: 14px; align-items: center; }
+.toast-btn { border: 0; background: none; color: var(--accent-text); font: inherit; font-weight: 800; text-decoration: underline; cursor: pointer; padding: 0; }
+
 </style>
 </head>
 <body>
@@ -15593,6 +15597,15 @@ window.APB_CONFIG = {
   const docs = { brd: null, solution: null, busy: '' };
   const DOC_ROLES = [['brd', 'BRD', 'Business requirements: need, scope, requirements, rules, benefits'], ['solution', 'Solution document', 'Process details, design, objects']];
 
+  // nothing of the previous spec stays when another one is opened (New, Drafts, Upload, mode switch); app.js calls it
+  function resetRuntime() {
+    docs.brd = null; docs.solution = null; docs.busy = '';
+    if (drf.running && drf.mode !== 'chat') H.post({ type: 'stop' });
+    drf.running = false; drf.kind = ''; drf.mode = ''; drf.status = ''; drf.error = ''; drf.pending = null; drf.pendingKind = ''; drf.log = [];
+    if (disc.running) H.post({ type: 'stop' });
+    disc.running = false; disc.mode = ''; disc.log = []; disc.error = '';
+  }
+
   function docsList() {
     return DOC_ROLES.map(function (r) { return docs[r[0]] && Object.assign({ role: r[0] }, docs[r[0]]); }).filter(Boolean);
   }
@@ -16192,7 +16205,7 @@ window.APB_CONFIG = {
     H.on('draft-error', function (m) { drf.running = false; drf.status = ''; drf.error = String(m.message || 'Drafting failed').slice(0, 400); rerenderStep1(); });
   }
 
-  /* Objects to read: the typed list in step 1 (older drafts: the names typed in the former single field). */
+  /* Objects to read: the typed list in step 1. */
   function programObjects(s) {
     const col = F.field('context', 'objects').columns[0];
     const label = function (t) { const o = col.options.filter(function (x) { return x.value === t; })[0]; return o && t ? o.label : ''; };
@@ -16201,7 +16214,6 @@ window.APB_CONFIG = {
       const n = String((r && r.name) || '').trim().toUpperCase();
       if (/^[A-Z0-9_\/]{2,40}$/.test(n) && !out.some(function (x) { return x.name === n; })) out.push({ name: n, type: r.type || '', label: label(r.type) });
     });
-    if (!out.length) APB.storage.getPref('programNames', '').split(/[\s,;]+/).forEach(function (x) { const n = x.trim().toUpperCase(); if (/^[A-Z0-9_\/]{2,40}$/.test(n)) out.push({ name: n, type: '', label: '' }); });
     return out.slice(0, 15);
   }
   function programNames() { return programObjects(S.get()).map(function (o) { return o.name; }); }
@@ -16520,6 +16532,7 @@ window.APB_CONFIG = {
     toDevSpec: toDevSpec,
     toDevSpecFromProgram: toDevSpecFromProgram,
     autoSend: function () { return autoSend(); },
+    reset: resetRuntime,
     copilotReady: function () { return copilotReady(); },
     copilotStatus: function () { return copilotStatus(); },
     uatSkeleton: uatSkeleton
@@ -16759,12 +16772,22 @@ window.APB_CONFIG = {
 
   /* ------------------------------------------------------------------ toast */
   let toastTimer;
-  function toast(msg, ms) {
+  const resetHooks = []; // see onReset()
+  /* action: optional { label, run } – a button in the toast (e.g. Undo). Browser dialogs (confirm/alert) are not
+     used: VS Code webviews block them. */
+  function toast(msg, ms, action) {
     const el = $('#toast');
     el.textContent = msg;
+    if (action) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'toast-btn'; b.textContent = action.label;
+      b.onclick = function () { el.classList.remove('show'); action.run(); };
+      el.appendChild(b);
+    }
+    el.classList.toggle('has-action', !!action);
     el.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { el.classList.remove('show'); }, ms || 2800);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, ms || (action ? 8000 : 2800));
   }
 
   /* ------------------------------------------------------ focus-preserving render */
@@ -17072,6 +17095,9 @@ window.APB_CONFIG = {
       '<div class="sap-current-body">' + M.toHtml(M.sapObjectMd(o, false)) + '</div></details>';
   }
 
+  onReset(FA.reset);
+  onReset(function () { if (sap.running && sap.mode !== 'chat') H.post({ type: 'stop' }); sap.running = false; sap.mode = ''; sap.status = ''; sap.error = ''; sap.log = []; sap.pending = null; });
+
   if (H.isVscode) {
     H.on('auth', function () { if (!isFs() && ui.step === 3 && !ui.generated) rerenderSap(); });
     H.on('devctx-progress', function (m) {
@@ -17336,6 +17362,7 @@ window.APB_CONFIG = {
   function scheduleSave() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(function () {
+      if (exampleSnapshot && snapshot(S.get()) === exampleSnapshot) { $('#save-note').textContent = 'Example – saved to Drafts once you change it.'; return; }
       const ok = ST.save(S.get());
       $('#save-note').textContent = ST.isEmpty(S.get()) ? '' : (ok ? 'Draft saved in this browser.' : 'Could not save locally (storage unavailable).');
     }, 400);
@@ -17364,9 +17391,23 @@ window.APB_CONFIG = {
     }
   }
 
-  function loadState(next, msg) {
-    ST.save(S.get());
+  /* Runtime state that belongs to the open spec (uploaded documents, Copilot logs, SAP check results) is cleared
+     whenever another spec is opened, so nothing of the previous one shows (fs-app.js and this file register). */
+  function onReset(fn) { resetHooks.push(fn); }
+  function runReset() { resetHooks.forEach(function (fn) { try { fn(); } catch (e) { console.error(e); } }); }
+
+  /* An example stays out of Drafts until it is edited (otherwise New / the mode switch would bring it back). */
+  let exampleSnapshot = null;
+  function snapshot(s) { const c = JSON.parse(JSON.stringify(s)); delete c.meta; return JSON.stringify(c); }
+
+  function loadState(next, msg, opts) {
+    const cur = S.get();
+    if (!(exampleSnapshot && snapshot(cur) === exampleSnapshot)) ST.save(cur);
+    exampleSnapshot = null;
+    runReset();
+    closeDialogs();
     S.replace(next);
+    if (opts && opts.example) exampleSnapshot = snapshot(S.get());
     ui.view = null;
     ui.step = 1;
     ui.generated = false;
@@ -17374,6 +17415,7 @@ window.APB_CONFIG = {
     ui.open = {};
     ST.setCurrent(S.get().id);
     renderMain();
+    window.scrollTo(0, 0);
     if (msg) toast(msg);
   }
 
@@ -17537,7 +17579,7 @@ window.APB_CONFIG = {
       toast('Template applied — name the objects in step 3');
     },
     examples: openExamples,
-    'load-example': function (el) { closeDialogs(); loadState(isFs() ? APB.fs.templates.example(el.dataset.id) : T.example(el.dataset.id), 'Example loaded'); },
+    'load-example': function (el) { closeDialogs(); loadState(isFs() ? APB.fs.templates.example(el.dataset.id) : T.example(el.dataset.id), 'Example loaded – it is saved to Drafts only when you change it', { example: true }); },
     new: function () { loadState(S.blank(isFs() ? 'fs' : 'dev'), isFs() ? 'Started a new functional specification' : 'Started a new requirement'); },
     mode: function (el) {
       const want = el.dataset.mode === 'fs' ? 'fs' : 'dev';
@@ -17554,7 +17596,7 @@ window.APB_CONFIG = {
     'delete-draft': function (el) {
       const id = el.dataset.id;
       ST.remove(id);
-      if (id === S.get().id) { S.replace(S.blank(isFs() ? 'fs' : 'dev')); ui.step = 1; ui.generated = false; renderMain(); }
+      if (id === S.get().id) { runReset(); exampleSnapshot = null; S.replace(S.blank(isFs() ? 'fs' : 'dev')); ui.step = 1; ui.generated = false; renderMain(); }
       openDrafts();
       toast('Draft deleted');
     },
@@ -17621,8 +17663,11 @@ window.APB_CONFIG = {
     },
     'rec-del': function (el) {
       const i = Number(el.dataset.i);
-      if (!window.confirm('Delete this entry and everything in it?')) return;
-      updateSteps(function (s) { arrayAt(s, el.dataset.path).splice(i, 1); });
+      let removed = null;
+      updateSteps(function (s) { removed = arrayAt(s, el.dataset.path).splice(i, 1)[0]; });
+      if (removed === undefined || removed === null) return;
+      const copy = JSON.parse(JSON.stringify(removed)), path = el.dataset.path;
+      toast('Entry deleted', 8000, { label: 'Undo', run: function () { updateSteps(function (s) { arrayAt(s, path).splice(i, 0, copy); }); toast('Entry restored'); } });
     },
     'rap-fix': function (el) {
       let n = 0;
@@ -18014,11 +18059,13 @@ window.APB_CONFIG = {
     fieldsBlock: fieldsBlock, fieldHtml: fieldHtml, renderMain: renderMain, updateSteps: updateSteps, loadState: loadState,
     renderDatalists: renderDatalists, savedMsg: savedMsg,
     // Check & read in SAP for the open Technical spec (used after a hand-off from the FS)
+    onReset: onReset,
     startSapCheck: function () { if (!isFs() && APB.devSap.checkTargets(S.get()).length) sapStart('auto'); }
   };
 
   async function init() {
     document.body.classList.toggle('host-vscode', H.isVscode);
+    ST.setPref('programNames', ''); // the former single "programs" field: its names must not reappear in new specs
     devHero = $('#hero').innerHTML;
     devPvActions = $('.pv-actions').innerHTML.replace('Open in VS Code', VS_LABEL);
     renderDatalists();

@@ -121,6 +121,15 @@
   const docs = { brd: null, solution: null, busy: '' };
   const DOC_ROLES = [['brd', 'BRD', 'Business requirements: need, scope, requirements, rules, benefits'], ['solution', 'Solution document', 'Process details, design, objects']];
 
+  // nothing of the previous spec stays when another one is opened (New, Drafts, Upload, mode switch); app.js calls it
+  function resetRuntime() {
+    docs.brd = null; docs.solution = null; docs.busy = '';
+    if (drf.running && drf.mode !== 'chat') H.post({ type: 'stop' });
+    drf.running = false; drf.kind = ''; drf.mode = ''; drf.status = ''; drf.error = ''; drf.pending = null; drf.pendingKind = ''; drf.log = [];
+    if (disc.running) H.post({ type: 'stop' });
+    disc.running = false; disc.mode = ''; disc.log = []; disc.error = '';
+  }
+
   function docsList() {
     return DOC_ROLES.map(function (r) { return docs[r[0]] && Object.assign({ role: r[0] }, docs[r[0]]); }).filter(Boolean);
   }
@@ -720,7 +729,7 @@
     H.on('draft-error', function (m) { drf.running = false; drf.status = ''; drf.error = String(m.message || 'Drafting failed').slice(0, 400); rerenderStep1(); });
   }
 
-  /* Objects to read: the typed list in step 1 (older drafts: the names typed in the former single field). */
+  /* Objects to read: the typed list in step 1. */
   function programObjects(s) {
     const col = F.field('context', 'objects').columns[0];
     const label = function (t) { const o = col.options.filter(function (x) { return x.value === t; })[0]; return o && t ? o.label : ''; };
@@ -729,7 +738,6 @@
       const n = String((r && r.name) || '').trim().toUpperCase();
       if (/^[A-Z0-9_\/]{2,40}$/.test(n) && !out.some(function (x) { return x.name === n; })) out.push({ name: n, type: r.type || '', label: label(r.type) });
     });
-    if (!out.length) APB.storage.getPref('programNames', '').split(/[\s,;]+/).forEach(function (x) { const n = x.trim().toUpperCase(); if (/^[A-Z0-9_\/]{2,40}$/.test(n)) out.push({ name: n, type: '', label: '' }); });
     return out.slice(0, 15);
   }
   function programNames() { return programObjects(S.get()).map(function (o) { return o.name; }); }
@@ -1048,6 +1056,7 @@
     toDevSpec: toDevSpec,
     toDevSpecFromProgram: toDevSpecFromProgram,
     autoSend: function () { return autoSend(); },
+    reset: resetRuntime,
     copilotReady: function () { return copilotReady(); },
     copilotStatus: function () { return copilotStatus(); },
     uatSkeleton: uatSkeleton
