@@ -121,6 +121,16 @@
   const docs = { brd: null, solution: null, busy: '' };
   const DOC_ROLES = [['brd', 'BRD', 'Business requirements: need, scope, requirements, rules, benefits'], ['solution', 'Solution document', 'Process details, design, objects']];
 
+  // nothing of the previous spec stays when another one is opened (New, Drafts, Upload, mode switch); app.js calls it
+  function resetRuntime() {
+    APB.busy.done();
+    docs.brd = null; docs.solution = null; docs.busy = '';
+    if (drf.running && drf.mode !== 'chat') H.post({ type: 'stop' });
+    drf.running = false; drf.kind = ''; drf.mode = ''; drf.status = ''; drf.error = ''; drf.pending = null; drf.pendingKind = ''; drf.log = [];
+    if (disc.running) H.post({ type: 'stop' });
+    disc.running = false; disc.mode = ''; disc.log = []; disc.error = '';
+  }
+
   function docsList() {
     return DOC_ROLES.map(function (r) { return docs[r[0]] && Object.assign({ role: r[0] }, docs[r[0]]); }).filter(Boolean);
   }
@@ -371,6 +381,7 @@
     H.on('auth', function (m) { disc.auth = { signedIn: !!m.signedIn, account: String(m.account || ''), copilot: m.copilot !== false, chatAutoSend: m.chatAutoSend !== false }; rerenderDiscovery(); rerenderStep1(); });
     H.on('discovery-progress', function (m) {
       const text = String(m.text || '').slice(0, 300);
+      APB.busy.progress(text, m.status);
       const last = disc.log[disc.log.length - 1];
       if (m.key && last && last.key === m.key) { last.text = text; last.status = m.status; } else disc.log.push({ key: m.key, text: text, status: m.status });
       if (disc.log.length > 80) disc.log.shift();
@@ -378,6 +389,7 @@
       if (el) el.outerHTML = logHtml(); else rerenderDiscovery();
     });
     H.on('discovery-result', function (m) {
+      APB.busy.done();
       disc.running = false;
       const answer = String(m.text || '');
       if (!importText(answer, disc.mode === 'chat' ? 'Copilot Chat' : 'Copilot')) {
@@ -388,7 +400,7 @@
         if (ta) ta.value = answer;
       }
     });
-    H.on('discovery-error', function (m) { disc.running = false; disc.error = String(m.message || 'Discovery failed').slice(0, 400); rerenderDiscovery(); });
+    H.on('discovery-error', function (m) { APB.busy.done(); disc.running = false; disc.error = String(m.message || 'Discovery failed').slice(0, 400); rerenderDiscovery(); });
     H.on('saved', function (m) { U().toast('Saved ' + String(m.path || ''), 5000); });
     H.post({ type: 'auth-status' });
   }
@@ -397,6 +409,7 @@
     const s = S.get();
     if (FC.checkMandatory(s).length) { U().toast(mandatoryMsg(s)); return; }
     disc.running = true; disc.mode = mode; disc.error = ''; disc.log = [];
+    APB.busy.start('discovery', mode, function () { actions['fs-stop'](); });
     disc.log.push({ text: mode === 'chat' ? 'Opening Copilot Chat with ' + DS.cfg.agent + ' — press Enter there' : 'Starting read-only discovery with GitHub Copilot', status: 'info' });
     H.post({ type: 'discover', mode: mode, prompt: DS.prompt(s) });
     rerenderDiscovery();
@@ -694,6 +707,7 @@
   if (H.isVscode) {
     H.on('draft-progress', function (m) {
       const text = String(m.text || '').slice(0, 300);
+      APB.busy.progress(text, m.status);
       if (m.key) {
         const last = drf.log.filter(function (l) { return l.key === m.key; })[0];
         if (last) { last.text = text; last.status = m.status; } else drf.log.push({ key: m.key, text: text, status: m.status });
@@ -707,6 +721,7 @@
       if (el && drf.running) el.textContent = drf.status; else rerenderStep1();
     });
     H.on('draft-result', function (m) {
+      APB.busy.done();
       drf.running = false; drf.status = ''; drf.mode = '';
       drf.log.push({ text: 'Result received', status: 'done' });
       const answer = String(m.text || '');
@@ -717,10 +732,10 @@
         if (ta) ta.value = answer;
       } else rerenderStep1();
     });
-    H.on('draft-error', function (m) { drf.running = false; drf.status = ''; drf.error = String(m.message || 'Drafting failed').slice(0, 400); rerenderStep1(); });
+    H.on('draft-error', function (m) { APB.busy.done(); drf.running = false; drf.status = ''; drf.error = String(m.message || 'Drafting failed').slice(0, 400); rerenderStep1(); });
   }
 
-  /* Objects to read: the typed list in step 1 (older drafts: the names typed in the former single field). */
+  /* Objects to read: the typed list in step 1. */
   function programObjects(s) {
     const col = F.field('context', 'objects').columns[0];
     const label = function (t) { const o = col.options.filter(function (x) { return x.value === t; })[0]; return o && t ? o.label : ''; };
@@ -729,7 +744,6 @@
       const n = String((r && r.name) || '').trim().toUpperCase();
       if (/^[A-Z0-9_\/]{2,40}$/.test(n) && !out.some(function (x) { return x.name === n; })) out.push({ name: n, type: r.type || '', label: label(r.type) });
     });
-    if (!out.length) APB.storage.getPref('programNames', '').split(/[\s,;]+/).forEach(function (x) { const n = x.trim().toUpperCase(); if (/^[A-Z0-9_\/]{2,40}$/.test(n)) out.push({ name: n, type: '', label: '' }); });
     return out.slice(0, 15);
   }
   function programNames() { return programObjects(S.get()).map(function (o) { return o.name; }); }
@@ -740,6 +754,7 @@
     const names = programNames();
     if (!names.length) { U().toast('Add an existing object first'); return; }
     drf.running = true; drf.kind = 'program'; drf.mode = mode; drf.error = ''; drf.log = [];
+    APB.busy.start('program', mode, function () { actions['fs-draft-stop'](); });
     drf.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Reading ' + names.join(', ') + ' (read-only)…';
     H.post({ type: 'read-program', mode: mode, prompt: APB.fsDraft.programPrompt(s, programLabels()) });
     rerenderStep1();
@@ -749,6 +764,7 @@
     const list = docsList();
     if (!list.length) { U().toast('Choose the BRD or the solution document first'); return; }
     drf.running = true; drf.kind = 'docs'; drf.mode = mode; drf.error = ''; drf.log = [];
+    APB.busy.start('docs', mode, function () { actions['fs-draft-stop'](); });
     drf.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Copilot is reading ' + list.map(function (d) { return d.name; }).join(' and ') + ' and checking SAP (read-only)…';
     H.post({ type: 'read-program', mode: mode, prompt: APB.fsDraft.docsPrompt(S.get(), list) });
     rerenderStep1();
@@ -758,6 +774,7 @@
     const s = S.get();
     if ((s.context.requirement || '').trim().length < 10) { U().toast('Describe the business requirement in step 1 first'); return; }
     drf.running = true; drf.kind = 'tobe'; drf.mode = mode; drf.error = ''; drf.log = [];
+    APB.busy.start('tobe', mode, function () { actions['fs-draft-stop'](); });
     drf.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Copilot is designing the TO-BE process…';
     H.post({ type: 'draft', mode: mode === 'chat' ? 'chat' : undefined, prompt: APB.fsDraft.toBePrompt(s) });
     rerenderStep1();
@@ -768,6 +785,7 @@
     const labels = programLabels();
     if (!labels.length) { U().toast('List the existing objects in step 1 first'); return; }
     drf.running = true; drf.kind = 'asis'; drf.mode = mode; drf.error = ''; drf.log = [];
+    APB.busy.start('asis', mode, function () { actions['fs-draft-stop'](); });
     drf.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Reading ' + programNames().join(', ') + ' for the AS-IS process (read-only)…';
     H.post({ type: 'read-program', mode: mode, prompt: APB.fsDraft.asIsPrompt(s, labels) });
     rerenderStep1();
@@ -865,6 +883,7 @@
       const s = S.get();
       if ((s.context.requirement || '').trim().length < 10) { U().toast('Describe the business requirement first'); return; }
       drf.running = true; drf.kind = 'draft'; drf.mode = 'auto'; drf.error = ''; drf.status = 'Copilot is writing the specification…'; drf.log = [];
+      APB.busy.start('draft', 'auto', function () { actions['fs-draft-stop'](); });
       H.post({ type: 'draft', prompt: APB.fsDraft.prompt(s) });
       rerenderStep1();
     },
@@ -872,10 +891,11 @@
       const s = S.get();
       if ((s.context.requirement || '').trim().length < 10) { U().toast('Describe the business requirement first'); return; }
       drf.running = true; drf.kind = 'draft'; drf.mode = 'chat'; drf.error = ''; drf.status = 'Opening Copilot Chat…'; drf.log = [];
+      APB.busy.start('draft', 'chat', function () { actions['fs-draft-stop'](); });
       H.post({ type: 'draft', mode: 'chat', prompt: APB.fsDraft.prompt(s) });
       rerenderStep1();
     },
-    'fs-draft-stop': function () { if (drf.mode !== 'chat') H.post({ type: 'stop' }); drf.running = false; drf.mode = ''; drf.status = ''; rerenderStep1(); },
+    'fs-draft-stop': function () { APB.busy.done(); if (drf.mode !== 'chat') H.post({ type: 'stop' }); drf.running = false; drf.mode = ''; drf.status = ''; rerenderStep1(); },
     'fs-prog-auto': function () { readProgram('auto'); },
     'fs-prog-chat': function () { readProgram('chat'); },
     'fs-prog-copy': function () {
@@ -964,7 +984,7 @@
     'fs-signin': function () { H.post({ type: 'sign-in' }); },
     'fs-auto': function () { startDiscovery('auto'); },
     'fs-chat': function () { startDiscovery('chat'); },
-    'fs-stop': function () { H.post({ type: 'stop' }); disc.running = false; disc.log.push({ text: 'Stopped', status: 'info' }); rerenderDiscovery(); },
+    'fs-stop': function () { APB.busy.done(); H.post({ type: 'stop' }); disc.running = false; disc.log.push({ text: 'Stopped', status: 'info' }); rerenderDiscovery(); },
     'fs-import-clip': function () {
       if (H.isVscode) {
         H.request('clipboard-read').then(function (t) { importText(String(t || ''), 'clipboard'); }, function () { U().toast('Could not read the clipboard'); });
@@ -1048,6 +1068,7 @@
     toDevSpec: toDevSpec,
     toDevSpecFromProgram: toDevSpecFromProgram,
     autoSend: function () { return autoSend(); },
+    reset: resetRuntime,
     copilotReady: function () { return copilotReady(); },
     copilotStatus: function () { return copilotStatus(); },
     uatSkeleton: uatSkeleton

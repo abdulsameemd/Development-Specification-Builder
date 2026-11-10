@@ -49,12 +49,22 @@
 
   /* ------------------------------------------------------------------ toast */
   let toastTimer;
-  function toast(msg, ms) {
+  const resetHooks = []; // see onReset()
+  /* action: optional { label, run } – a button in the toast (e.g. Undo). Browser dialogs (confirm/alert) are not
+     used: VS Code webviews block them. */
+  function toast(msg, ms, action) {
     const el = $('#toast');
     el.textContent = msg;
+    if (action) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'toast-btn'; b.textContent = action.label;
+      b.onclick = function () { el.classList.remove('show'); action.run(); };
+      el.appendChild(b);
+    }
+    el.classList.toggle('has-action', !!action);
     el.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { el.classList.remove('show'); }, ms || 2800);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, ms || (action ? 8000 : 2800));
   }
 
   /* ------------------------------------------------------ focus-preserving render */
@@ -333,6 +343,7 @@
     const s = S.get();
     if (!APB.devSap.checkTargets(s).length) { toast('Name the objects first'); return; }
     sap.running = true; sap.mode = mode; sap.error = ''; sap.log = [];
+    APB.busy.start('devctx', mode, function () { actions['devctx-stop'](); });
     sap.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Checking ' + APB.devSap.checkTargets(s).length + ' names in SAP (read-only)…';
     H.post({ type: 'read-dev', mode: mode, prompt: APB.devSap.prompt(s) });
     rerenderSap();
@@ -362,10 +373,14 @@
       '<div class="sap-current-body">' + M.toHtml(M.sapObjectMd(o, false)) + '</div></details>';
   }
 
+  onReset(FA.reset);
+  onReset(function () { APB.busy.done(); if (sap.running && sap.mode !== 'chat') H.post({ type: 'stop' }); sap.running = false; sap.mode = ''; sap.status = ''; sap.error = ''; sap.log = []; sap.pending = null; });
+
   if (H.isVscode) {
     H.on('auth', function () { if (!isFs() && ui.step === 3 && !ui.generated) rerenderSap(); });
     H.on('devctx-progress', function (m) {
       const text = String(m.text || '').slice(0, 300);
+      APB.busy.progress(text, m.status);
       if (m.key) {
         const last = sap.log.filter(function (l) { return l.key === m.key; })[0];
         if (last) { last.text = text; last.status = m.status; } else sap.log.push({ key: m.key, text: text, status: m.status });
@@ -374,6 +389,7 @@
       rerenderSap();
     });
     H.on('devctx-result', function (m) {
+      APB.busy.done();
       sap.running = false; sap.status = ''; sap.mode = '';
       sap.log.push({ text: 'Result received', status: 'done' });
       const answer = String(m.text || '');
@@ -384,7 +400,7 @@
         if (ta) ta.value = answer;
       }
     });
-    H.on('devctx-error', function (m) { sap.running = false; sap.status = ''; sap.error = String(m.message || 'The SAP check failed').slice(0, 400); rerenderSap(); });
+    H.on('devctx-error', function (m) { APB.busy.done(); sap.running = false; sap.status = ''; sap.error = String(m.message || 'The SAP check failed').slice(0, 400); rerenderSap(); });
   }
 
   function step3(s) {
@@ -626,6 +642,7 @@
   function scheduleSave() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(function () {
+      if (exampleSnapshot && snapshot(S.get()) === exampleSnapshot) { $('#save-note').textContent = 'Example – saved to Drafts once you change it.'; return; }
       const ok = ST.save(S.get());
       $('#save-note').textContent = ST.isEmpty(S.get()) ? '' : (ok ? 'Draft saved in this browser.' : 'Could not save locally (storage unavailable).');
     }, 400);
@@ -654,9 +671,23 @@
     }
   }
 
-  function loadState(next, msg) {
-    ST.save(S.get());
+  /* Runtime state that belongs to the open spec (uploaded documents, Copilot logs, SAP check results) is cleared
+     whenever another spec is opened, so nothing of the previous one shows (fs-app.js and this file register). */
+  function onReset(fn) { resetHooks.push(fn); }
+  function runReset() { resetHooks.forEach(function (fn) { try { fn(); } catch (e) { console.error(e); } }); }
+
+  /* An example stays out of Drafts until it is edited (otherwise New / the mode switch would bring it back). */
+  let exampleSnapshot = null;
+  function snapshot(s) { const c = JSON.parse(JSON.stringify(s)); delete c.meta; return JSON.stringify(c); }
+
+  function loadState(next, msg, opts) {
+    const cur = S.get();
+    if (!(exampleSnapshot && snapshot(cur) === exampleSnapshot)) ST.save(cur);
+    exampleSnapshot = null;
+    runReset();
+    closeDialogs();
     S.replace(next);
+    if (opts && opts.example) exampleSnapshot = snapshot(S.get());
     ui.view = null;
     ui.step = 1;
     ui.generated = false;
@@ -664,6 +695,7 @@
     ui.open = {};
     ST.setCurrent(S.get().id);
     renderMain();
+    window.scrollTo(0, 0);
     if (msg) toast(msg);
   }
 
@@ -762,7 +794,7 @@
   const actions = {
     'devctx-auto': function () { sapStart('auto'); },
     'devctx-chat': function () { sapStart('chat'); },
-    'devctx-stop': function () { if (sap.mode !== 'chat') H.post({ type: 'stop' }); sap.running = false; sap.mode = ''; sap.status = ''; rerenderSap(); },
+    'devctx-stop': function () { APB.busy.done(); if (sap.mode !== 'chat') H.post({ type: 'stop' }); sap.running = false; sap.mode = ''; sap.status = ''; rerenderSap(); },
     'devctx-copy': function () {
       const s = S.get();
       if (!APB.devSap.checkTargets(s).length) { toast('Name the objects first'); return; }
@@ -827,7 +859,7 @@
       toast('Template applied — name the objects in step 3');
     },
     examples: openExamples,
-    'load-example': function (el) { closeDialogs(); loadState(isFs() ? APB.fs.templates.example(el.dataset.id) : T.example(el.dataset.id), 'Example loaded'); },
+    'load-example': function (el) { closeDialogs(); loadState(isFs() ? APB.fs.templates.example(el.dataset.id) : T.example(el.dataset.id), 'Example loaded – it is saved to Drafts only when you change it', { example: true }); },
     new: function () { loadState(S.blank(isFs() ? 'fs' : 'dev'), isFs() ? 'Started a new functional specification' : 'Started a new requirement'); },
     mode: function (el) {
       const want = el.dataset.mode === 'fs' ? 'fs' : 'dev';
@@ -844,7 +876,7 @@
     'delete-draft': function (el) {
       const id = el.dataset.id;
       ST.remove(id);
-      if (id === S.get().id) { S.replace(S.blank(isFs() ? 'fs' : 'dev')); ui.step = 1; ui.generated = false; renderMain(); }
+      if (id === S.get().id) { runReset(); exampleSnapshot = null; S.replace(S.blank(isFs() ? 'fs' : 'dev')); ui.step = 1; ui.generated = false; renderMain(); }
       openDrafts();
       toast('Draft deleted');
     },
@@ -911,8 +943,11 @@
     },
     'rec-del': function (el) {
       const i = Number(el.dataset.i);
-      if (!window.confirm('Delete this entry and everything in it?')) return;
-      updateSteps(function (s) { arrayAt(s, el.dataset.path).splice(i, 1); });
+      let removed = null;
+      updateSteps(function (s) { removed = arrayAt(s, el.dataset.path).splice(i, 1)[0]; });
+      if (removed === undefined || removed === null) return;
+      const copy = JSON.parse(JSON.stringify(removed)), path = el.dataset.path;
+      toast('Entry deleted', 8000, { label: 'Undo', run: function () { updateSteps(function (s) { arrayAt(s, path).splice(i, 0, copy); }); toast('Entry restored'); } });
     },
     'rap-fix': function (el) {
       let n = 0;
@@ -1304,11 +1339,13 @@
     fieldsBlock: fieldsBlock, fieldHtml: fieldHtml, renderMain: renderMain, updateSteps: updateSteps, loadState: loadState,
     renderDatalists: renderDatalists, savedMsg: savedMsg,
     // Check & read in SAP for the open Technical spec (used after a hand-off from the FS)
+    onReset: onReset,
     startSapCheck: function () { if (!isFs() && APB.devSap.checkTargets(S.get()).length) sapStart('auto'); }
   };
 
   async function init() {
     document.body.classList.toggle('host-vscode', H.isVscode);
+    ST.setPref('programNames', ''); // the former single "programs" field: its names must not reappear in new specs
     devHero = $('#hero').innerHTML;
     devPvActions = $('.pv-actions').innerHTML.replace('Open in VS Code', VS_LABEL);
     renderDatalists();

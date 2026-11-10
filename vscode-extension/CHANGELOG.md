@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.15
+
+- **Busy overlay while the AI works.** Whenever the builder reads the DEWA SAP system or asks Copilot to generate something, an overlay shows what is happening – for example *AI is reading DEWA SAP ABAP artifacts* or *AI is reading your BRD and solution document* – with what the agent is doing right now (reading program source, checking objects read-only, classifying the change …), the latest step from the SAP tools, elapsed time and **Stop**. **Keep working** hides it into a small pill that reopens it. In Copilot Chat mode it says to follow the progress in Chat.
+- **Deleting works in VS Code.** The ✕ on a functional requirement (and on any other entry with sub-fields, such as methods or RAP entities) did nothing inside VS Code, because VS Code blocks the browser's confirmation box. It now deletes right away and offers **Undo** for a few seconds.
+- **New starts clean.** Opening another spec (New, Drafts, Upload, switching Functional / Technical) clears what belonged to the previous one: uploaded BRD / solution documents, Copilot progress and errors, discovery and SAP-check results. Object names typed in the old single "programs" field (before 1.0.11) no longer reappear.
+- **Examples are not saved to Drafts unless you change them**, so switching between Functional and Technical no longer reopens an example. Examples saved by earlier versions can be removed in *Drafts*.
+
 ## 1.0.14
 
 - **Functional spec, step 1: Start from documents.** Upload the BRD and/or the solution document – Word (.docx), PDF with text, Excel (.xlsx), Markdown or text. Copilot reads them, checks the SAP objects they name read-only, classifies the change as **new**, **enhancement** or **as-built**, and drafts the whole FS (requirements with their BRD IDs, rules, AS-IS / TO-BE, objects, RICEFW items, tests, risks) for your review.
