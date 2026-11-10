@@ -86,6 +86,11 @@
     s.context.requirement = firstParas(br);
     const pa = /\*\*Process area:\*\*\s*(.+)/.exec(br);
     if (pa) s.context.processArea = pa[1].trim();
+    const ct = /\*\*Type of change:\*\*\s*([^\n–]+?)(?:\s+–\s+(.+))?$/m.exec(br);
+    if (ct) { s.context.changeType = optionValue(F.field('context', 'changeType'), ct[1].trim()); if (ct[2]) s.context.changeNote = ct[2].trim(); }
+    s.context.sources = table(sub(br, 'Source documents')).map(function (r) {
+      return { role: optionValue(col(F.field('context', 'sources'), 'role'), r.Document), name: r.File || '', type: r.Type && r.Type !== '–' ? r.Type : '' };
+    }).filter(function (r) { return r.name; });
     s.context.objectives = bullets(sub(br, 'Objectives')).join('\n');
     s.context.kpis = bullets(sub(br, 'KPIs / success measures')).join('\n');
     const sc = sec.Scope || br;

@@ -650,3 +650,13 @@ div.link-banner p { margin: 0 0 6px; }
 .fs-asis .fs-objs { align-items: center; margin: 6px 0 10px; }
 .fs-asis .fs-objs .chip small { color: var(--muted); font-weight: 600; margin-right: 4px; }
 .fs-asis .fs-flow-h { margin: 14px 0 6px; font-size: .9rem; }
+
+/* Functional spec step 1: start from documents (BRD & solution document) */
+.fs-doc-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin: 10px 0; }
+.fs-doc-slot { border: 1px dashed var(--line); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+.fs-doc-head { margin-bottom: 6px; }
+.fs-doc-file { margin: 4px 0; overflow-wrap: anywhere; }
+.fs-doc-text { max-height: 220px; overflow: auto; white-space: pre-wrap; font: .76rem/1.45 var(--mono); background: var(--input); border-radius: 8px; padding: 8px; }
+.fs-change { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: var(--ok-bg); border: 1px solid rgba(163, 230, 53, .35); }
+.fs-change select { margin-left: 8px; }
+.fs-change p { margin: 6px 0 0; }

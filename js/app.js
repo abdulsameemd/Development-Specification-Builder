@@ -1302,7 +1302,9 @@
   APB.ui = {
     ui: ui, esc: esc, toast: toast, nav: nav, stat: stat, statusHtml: statusHtml, detailsAttrs: detailsAttrs,
     fieldsBlock: fieldsBlock, fieldHtml: fieldHtml, renderMain: renderMain, updateSteps: updateSteps, loadState: loadState,
-    renderDatalists: renderDatalists, savedMsg: savedMsg
+    renderDatalists: renderDatalists, savedMsg: savedMsg,
+    // Check & read in SAP for the open Technical spec (used after a hand-off from the FS)
+    startSapCheck: function () { if (!isFs() && APB.devSap.checkTargets(S.get()).length) sapStart('auto'); }
   };
 
   async function init() {

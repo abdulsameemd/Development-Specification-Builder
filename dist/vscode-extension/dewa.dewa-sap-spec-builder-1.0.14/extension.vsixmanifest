@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 	<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
 		<Metadata>
-			<Identity Language="en-US" Id="dewa-sap-spec-builder" Version="1.0.13" Publisher="dewa" />
+			<Identity Language="en-US" Id="dewa-sap-spec-builder" Version="1.0.14" Publisher="dewa" />
 			<DisplayName>DEWA SAP Spec Builder</DisplayName>
 			<Description xml:space="preserve">Functional and development specifications for SAP, inside VS Code – with read-only SAP system discovery through GitHub Copilot and the SAP MCP servers.</Description>
 			<Tags>SAP,ABAP,functional specification,Copilot,MCP,Fiori,CAP,DEWA,tools,language-model-tools</Tags>

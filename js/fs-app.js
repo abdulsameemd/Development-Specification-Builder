@@ -112,10 +112,82 @@
       '<p class="muted small">From your requirement, Copilot writes the complete specification: objectives, scope, process, functional requirements with acceptance criteria, rules, data, roles, interfaces, test scenarios and risks. You review it before anything is added, nothing you typed is overwritten, and the document opens right after.' +
       (H.isVscode ? ' Uses your GitHub Copilot in VS Code – no system access. <strong>Generate in Copilot Chat</strong> lets you watch and steer it.' : ' Copy the prompt, paste it into an AI chat your organisation allows (for example Copilot Chat), then paste the answer below.') + '</p>' +
       vs + '<div class="gen-actions">' + run + (ready ? '' : '<span class="muted small">Describe the requirement first.</span>') + '</div>' +
-      (drf.error && ['program', 'asis', 'tobe'].indexOf(drf.kind) < 0 ? '<p class="field-error" role="alert">' + esc(drf.error) + '</p>' : '') + paste + '</section>';
+      (drf.error && ['program', 'asis', 'tobe', 'docs'].indexOf(drf.kind) < 0 ? '<p class="field-error" role="alert">' + esc(drf.error) + '</p>' : '') + paste + '</section>';
   }
 
   /* SAP only: read an existing program (and what it uses) read-only, and bring its logic into the spec. */
+  /* Start from documents: the BRD and the solution document are read here (js/doc-reader.js), kept in memory only,
+     and sent to Copilot, which checks the SAP objects they name read-only and drafts the whole FS for review. */
+  const docs = { brd: null, solution: null, busy: '' };
+  const DOC_ROLES = [['brd', 'BRD', 'Business requirements: need, scope, requirements, rules, benefits'], ['solution', 'Solution document', 'Process details, design, objects']];
+
+  function docsList() {
+    return DOC_ROLES.map(function (r) { return docs[r[0]] && Object.assign({ role: r[0] }, docs[r[0]]); }).filter(Boolean);
+  }
+
+  function docsCard(s) {
+    const c = s.context;
+    const list = docsList();
+    const can = list.length > 0 && copilotReady() && !drf.running;
+    const slot = function (r) {
+      const d = docs[r[0]];
+      const id = 'fs-doc-' + r[0];
+      return '<div class="fs-doc-slot"><div class="fs-doc-head"><strong>' + esc(r[1]) + '</strong> <span class="muted small">' + esc(r[2]) + '</span></div>' +
+        (docs.busy === r[0] ? '<p class="muted small">Reading…</p>'
+          : d ? '<p class="fs-doc-file"><span class="chip chip-static">' + esc(d.label) + '</span> ' + esc(d.name) + ' <span class="muted small">' + d.chars.toLocaleString('en') + ' characters</span> ' +
+              '<button type="button" class="link" data-action="fs-doc-remove" data-role="' + r[0] + '">Remove</button></p>' +
+              d.warnings.map(function (w) { return '<p class="field-error small">' + esc(w) + '</p>'; }).join('') +
+              '<details class="paste"><summary>Show the text read</summary><pre class="fs-doc-text">' + esc(d.text.slice(0, 4000)) + (d.text.length > 4000 ? '\n…' : '') + '</pre></details>'
+            : '<label class="btn btn-ghost btn-sm" for="' + id + '">Choose file…</label>') +
+        '<input type="file" id="' + id + '" class="fs-doc-input" data-role="' + r[0] + '" accept="' + APB.docReader.ACCEPT + '" hidden></div>';
+    };
+    const run = drf.running && drf.kind === 'docs' ? runningHtml()
+      : H.isVscode
+        ? '<button type="button" class="btn btn-primary" data-action="fs-docs-auto"' + (can ? '' : ' disabled') + '>✦ Generate FS from the documents</button>' +
+          '<button type="button" class="btn btn-ghost" data-action="fs-docs-chat"' + (can ? '' : ' disabled') + '>In Copilot Chat</button>'
+        : '<button type="button" class="btn btn-primary" data-action="fs-docs-copy"' + (list.length ? '' : ' disabled') + '>✦ Copy prompt</button>';
+    const typeField = F.field('context', 'changeType');
+    const classified = c.changeType
+      ? '<div class="fs-change fs-change-' + esc(c.changeType) + '"><label for="fs-change-type"><strong>Type of change</strong></label> <select id="fs-change-type" data-bind="context.changeType">' +
+        typeField.options.map(function (o) { return '<option value="' + esc(o.value) + '"' + (o.value === c.changeType ? ' selected' : '') + '>' + esc(o.label) + '</option>'; }).join('') + '</select>' +
+        ((c.changeNote || '').trim() ? '<p class="small">' + esc(c.changeNote) + '</p>' : '') + '</div>'
+      : '';
+    return '<section class="card fs-docs" aria-labelledby="h-docs"><h3 id="h-docs">Start from documents <span class="hint">BRD &amp; solution document</span></h3>' +
+      '<p class="muted small">Upload the BRD and/or the solution document (Word, PDF with text, Excel, Markdown or text). Copilot reads them, checks every SAP object they name in the system <strong>read-only</strong>, works out whether this is a <strong>new development</strong>, an <strong>enhancement</strong> of an existing solution or <strong>as-built</strong> documentation, and drafts the whole functional spec – requirements, rules, AS-IS / TO-BE, objects, RICEFW items, tests. You review it before anything is added; from the RICEFW items in step 3 you then create the Technical specs. The documents stay on this computer and are only sent to your GitHub Copilot.</p>' +
+      '<div class="fs-doc-slots">' + DOC_ROLES.map(slot).join('') + '</div>' +
+      (H.isVscode && list.length ? '<div class="chips fs-copilot">' + copilotStatus() + '</div>' : '') +
+      '<div class="gen-actions">' + run + (list.length ? '' : '<span class="muted small">Choose at least one document.</span>') + '</div>' +
+      (drf.kind === 'docs' ? draftLogHtml() : '') +
+      (drf.error && drf.kind === 'docs' ? '<p class="field-error" role="alert">' + esc(drf.error) + '</p>' : '') +
+      (list.length ? '<details class="paste"' + U().detailsAttrs('fs-docs-paste', false) + '><summary>' + (H.isVscode ? 'Paste an answer instead' : 'Paste the AI answer') + '</summary>' +
+        (H.isVscode ? '' : '<p class="small muted">Paste the prompt into Copilot Chat in VS Code with the <code class="agent-name">' + esc(DS.cfg.agent) + '</code> agent (it can then check SAP), then paste the whole answer here.</p>') +
+        '<textarea id="fs-docs-answer" rows="4" spellcheck="false" aria-label="AI answer with the specification"></textarea>' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-action="fs-docs-review">Review the answer</button></details>' : '') +
+      classified + '</section>';
+  }
+
+  function setSource(role, d) {
+    U().updateSteps(function (st) {
+      const rest = (st.context.sources || []).filter(function (x) { return x && x.role !== role; });
+      st.context.sources = d ? rest.concat([{ role: role, name: d.name, type: d.label }]) : rest;
+    });
+  }
+
+  document.addEventListener('change', function (e) {
+    const t = e.target;
+    if (!t || !t.classList || !t.classList.contains('fs-doc-input') || !t.files || !t.files[0]) return;
+    const role = t.dataset.role, file = t.files[0];
+    docs.busy = role; rerenderStep1();
+    APB.docReader.read(file).then(function (d) {
+      docs[role] = d; docs.busy = '';
+      setSource(role, d);
+      U().toast(d.name + ': ' + d.chars.toLocaleString('en') + ' characters read' + (d.warnings.length ? ' – see the note' : ''), 5000);
+    }).catch(function (err) {
+      docs.busy = ''; rerenderStep1();
+      U().toast(String(err && err.message || err), 8000);
+    });
+  });
+
   /* SAP only: the existing objects the requirement touches (type + name). Copilot can read them read-only and bring
      their logic into the spec; discovery checks them and the Technical spec takes them over. */
   function programCard(s) {
@@ -156,7 +228,7 @@
       return '<button type="button" class="chip" data-action="fs-template" data-id="' + esc(t.id) + '" title="' + esc(t.description) + '">' + esc(t.label) + '</button>';
     }).join('');
     const ctxFilled = ['processArea', 'objectives', 'kpis', 'inScope', 'outOfScope', 'stakeholders', 'otherOrg'].some(function (k) { return V.isFilled(c[k]); });
-    return header(1) + systemCards(s) +
+    return header(1) + docsCard(s) + systemCards(s) +
       '<div class="grid-2"><div class="field"><label for="fs-title">Specification title</label><input id="fs-title" type="text" data-bind="context.title" value="' + esc(c.title) + '" placeholder="' + esc(F.view(F.field('context', 'title'), s).placeholder) + '"></div>' +
       (!sap ? '</div>' : '') + (sap ? '<div class="field"><label for="fs-module">Module <span class="req">required</span></label><select id="fs-module" data-bind="context.module"' + (missing.indexOf('module') >= 0 ? ' aria-invalid="true"' : '') + '>' +
       mod.options.map(function (o) { return '<option value="' + esc(o.value) + '"' + (c.module === o.value ? ' selected' : '') + '>' + esc(o.label) + '</option>'; }).join('') + '</select>' +
@@ -379,7 +451,9 @@
     const items = list.map(function (r, i) { return { r: r, i: i, id: ids[i] }; }).filter(function (x) { return V.isFilled(x.r) && x.r.type; });
     if (!items.length) return '';
     return '<div class="suggest fs-handoff"><p class="muted small" id="ho-h">Hand a RICEFW item to the developer as a <strong>Development Specification</strong> for <code class="agent-name">dewa-abap</code> (opens the Technical builder pre-filled; this FS stays in Drafts):</p><div class="chips" aria-labelledby="ho-h">' +
-      items.map(function (x) { return '<button type="button" class="chip" data-action="fs-handoff" data-i="' + x.i + '">→ ' + esc(x.id) + ' ' + esc(x.r.name || F.ricefwType(x.r.type).label) + '</button>'; }).join('') + '</div></div>';
+      items.map(function (x) { return '<button type="button" class="chip" data-action="fs-handoff" data-i="' + x.i + '">→ ' + esc(x.id) + ' ' + esc(x.r.name || F.ricefwType(x.r.type).label) + '</button>'; }).join('') + '</div>' +
+      (items.length > 1 ? '<p><button type="button" class="btn btn-primary btn-sm" data-action="fs-handoff-all">→ Create Technical specs for all ' + items.length + ' RICEFW items</button></p>' : '') +
+      (s.context.changeType ? '<p class="muted small">Type of change: <strong>' + esc(F.field('context', 'changeType').options.filter(function (o) { return o.value === s.context.changeType; })[0].label) + '</strong> – the main object of each Technical spec is ' + ({ enhancement: '<em>Existing – change</em>', asbuilt: '<em>Existing</em> (documented with Check &amp; read in SAP)' }[s.context.changeType] || '<em>New</em>') + '.</p>' : '') + '</div>';
   }
 
   /* Technical specs created from this FS (spec-link.js), with their state. */
@@ -465,10 +539,16 @@
     const known = {};
     if (pack) pack.objects.forEach(function (o) { known[o.name] = PACK_TO_TYPE[o.type] || 'Other'; });
     if (pack) pack.enhancements.forEach(function (e) { known[e.name] = 'BAdI / Enhancement'; });
-    const objects = [{ type: APB.defs.types[devType].mainObject[0], name: (r.name || '').trim(), status: 'new', purpose: 'Main object (' + id + ')' }];
+    const ct = s.context.changeType;
+    const mainStatus = { enhancement: 'change', asbuilt: 'existing' }[ct] || 'new';
+    const objects = [{ type: APB.defs.types[devType].mainObject[0], name: (r.name || '').trim(), status: mainStatus, purpose: 'Main object (' + id + ')' + ({ enhancement: ' – existing, to be changed', asbuilt: ' – existing (as-built)' }[ct] || '') }];
+    // objects the FS lists as existing (step 1, or read from the documents) keep their type
+    const listed = {};
+    (s.context.objects || []).forEach(function (o) { const n = String((o && o.name) || '').trim().toUpperCase(); if (n) listed[n] = devObjectType(o.type); });
     DS.names(r.existing).forEach(function (n) {
       if (objects.some(function (o) { return o.name.toUpperCase() === n; })) return;
-      objects.push({ type: known[n] || 'Other', name: n, status: known[n] ? 'existing' : 'tbc', purpose: known[n] ? 'Verified in system (FS discovery)' : 'Named in the FS – confirm in the system' });
+      const type = known[n] || listed[n];
+      objects.push({ type: type || 'Other', name: n, status: type ? 'existing' : 'tbc', purpose: known[n] ? 'Verified in system (FS discovery)' : listed[n] ? 'Existing object listed in the FS' : 'Named in the FS – confirm in the system' });
     });
     addFsObjects(s, objects, known);
     const reqText = [(r.description || '').trim() || (s.context.requirement || '').trim()]
@@ -483,6 +563,7 @@
     const auth = roles.filter(function (x) { return (x.authObj || '').trim(); });
     const users = roles.map(function (x) { return (x.role || '').trim(); }).filter(Boolean).join(', ');
     const docRef = 'Source: functional specification ' + ([s.control.docId, s.control.version && 'v' + s.control.version].filter(Boolean).join(' ') || '"' + F.model.name(s) + '"') + ', RICEFW item ' + id + (frRefs.length ? ' (' + frRefs.join(', ') + ')' : '') + '.';
+    const ctLabel = ct ? ' Type of change: ' + F.field('context', 'changeType').options.filter(function (o) { return o.value === ct; })[0].label + '.' : '';
     const quality = { authorization: auth.length ? 'yes' : '', authChecks: auth.map(function (x) { return { object: x.authObj.trim(), fields: (x.scope || '').trim(), where: (x.role || '').trim() }; }), dataVolume: '', performanceReq: (s.quality.performance || '').trim(), testTypes: ['Unit', 'Functional', 'Integration'], testScenarios: tests.join('\n'), cleanCore: '', cleanCoreNote: '' };
     return APB.state.migrate({
       project: { name: [s.control.docId, id, (r.name || '').trim()].filter(Boolean).join(' · ') },
@@ -491,9 +572,21 @@
       objects: objects.map(function (o) { o.id = S.uid(); o.detail = {}; return o; }),
       rules: rules.map(function (b) { b.id = S.uid(); return b; }),
       acceptance: acceptance.map(function (a) { a.id = S.uid(); return a; }),
-      assumptions: docRef,
+      assumptions: docRef + ctLabel,
       quality: quality
     });
+  }
+
+  /* Opens a Technical spec made from this FS. In VS Code, with objects named and Copilot ready, it opens on step 3
+     and starts "Check & read in SAP" (read-only); its review dialog decides what is taken over. */
+  function openDev(dev, msg) {
+    U().loadState(dev, msg);
+    const named = (dev.objects || []).some(function (o) { return (o.name || '').trim(); });
+    if (H.isVscode && named && copilotReady() && U().startSapCheck) {
+      U().ui.step = 3;
+      U().renderMain();
+      U().startSapCheck();
+    }
   }
 
   /* ------------------------------------------- Technical spec from a program */
@@ -605,7 +698,7 @@
         const last = drf.log.filter(function (l) { return l.key === m.key; })[0];
         if (last) { last.text = text; last.status = m.status; } else drf.log.push({ key: m.key, text: text, status: m.status });
         if (drf.log.length > 80) drf.log.shift();
-        const el = document.querySelector('.fs-prog .fs-log, .fs-asis .fs-log, .fs-tobe .fs-log');
+        const el = document.querySelector('.fs-prog .fs-log, .fs-asis .fs-log, .fs-tobe .fs-log, .fs-docs .fs-log');
         if (el) el.outerHTML = draftLogHtml(); else rerenderStep1();
         return;
       }
@@ -618,7 +711,7 @@
       drf.log.push({ text: 'Result received', status: 'done' });
       const answer = String(m.text || '');
       if (!reviewDraft(answer)) {
-        const box = { asis: 'fs-asis', tobe: 'fs-tobe' }[drf.kind] || 'fs-draft';
+        const box = { asis: 'fs-asis', tobe: 'fs-tobe', docs: 'fs-docs' }[drf.kind] || 'fs-draft';
         U().ui.open[box + '-paste'] = true; rerenderStep1();
         const ta = document.getElementById(box + '-answer');
         if (ta) ta.value = answer;
@@ -652,6 +745,15 @@
     rerenderStep1();
   }
 
+  function readDocs(mode) {
+    const list = docsList();
+    if (!list.length) { U().toast('Choose the BRD or the solution document first'); return; }
+    drf.running = true; drf.kind = 'docs'; drf.mode = mode; drf.error = ''; drf.log = [];
+    drf.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Copilot is reading ' + list.map(function (d) { return d.name; }).join(' and ') + ' and checking SAP (read-only)…';
+    H.post({ type: 'read-program', mode: mode, prompt: APB.fsDraft.docsPrompt(S.get(), list) });
+    rerenderStep1();
+  }
+
   function draftToBe(mode) {
     const s = S.get();
     if ((s.context.requirement || '').trim().length < 10) { U().toast('Describe the business requirement in step 1 first'); return; }
@@ -672,6 +774,32 @@
   }
 
   const actions = {
+    'fs-docs-auto': function () { readDocs('auto'); },
+    'fs-docs-chat': function () { readDocs('chat'); },
+    'fs-docs-copy': function () {
+      const list = docsList();
+      if (!list.length) { U().toast('Choose the BRD or the solution document first'); return; }
+      Promise.resolve(APB.exporter.copy(APB.fsDraft.docsPrompt(S.get(), list))).then(function (ok) {
+        U().ui.open['fs-docs-paste'] = true;
+        rerenderStep1();
+        U().toast(ok ? 'Prompt copied ✓ Paste it into Copilot Chat in VS Code (' + DS.cfg.agent + '), then paste the answer here' : 'Copy failed – the documents may be too long for the clipboard', 8000);
+      });
+    },
+    'fs-docs-review': function () {
+      const ta = document.getElementById('fs-docs-answer');
+      drf.kind = 'docs';
+      if (ta && reviewDraft(ta.value)) U().ui.open['fs-docs-paste'] = false;
+    },
+    'fs-doc-remove': function (el) { docs[el.dataset.role] = null; setSource(el.dataset.role, null); },
+    'fs-handoff-all': function () {
+      const s = S.get();
+      const ids = F.ricefwIds(s.solution.ricefw);
+      const items = (s.solution.ricefw || []).map(function (r, i) { return i; }).filter(function (i) { const r = s.solution.ricefw[i]; return V.isFilled(r) && r.type; });
+      if (!items.length) return;
+      const devs = items.map(function (i) { const dev = toDevSpec(s, i); APB.specLink.stamp(dev, s, 'ricefw', i); return { dev: dev, id: ids[i] }; });
+      devs.slice(1).forEach(function (x) { APB.storage.save(x.dev); });
+      openDev(devs[0].dev, devs.length + ' Technical specs created (' + devs.map(function (x) { return x.id; }).join(', ') + ') – this one is open, the others are in Drafts');
+    },
     'fs-tobe-auto': function () { draftToBe('auto'); },
     'fs-tobe-chat': function () { draftToBe('chat'); },
     'fs-tobe-copy': function () {
@@ -791,12 +919,16 @@
         // the program logic belongs to the current process: show it in step 2
         U().ui.step = 2;
         U().ui.open['fs-more-proc'] = true;
+      } else if (kind === 'docs') {
+        // a module means an SAP spec; the classification badge shows at the top of step 1
+        if (r.state.context.module && !r.state.context.system) { const st = S.get(); st.context.system = 'sap'; S.replace(st); }
+        U().ui.step = 1;
       } else if (kind === 'asis' || kind === 'tobe') {
         U().ui.step = 2;
       } else if (r.added.length && !FC.checkMandatory(r.state).length) U().ui.generated = true;
       U().renderMain();
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      U().toast(r.added.length ? 'Added ' + r.added.join(', ') + (kind === 'program' ? ' – see More details in this step' : kind === 'asis' ? ' – the AS-IS process is at the top of this step' : kind === 'tobe' ? ' – mark what changes, then add the requirements' : ' – use Review Details to change anything') : 'Nothing new to add', 7000);
+      U().toast(r.added.length ? 'Added ' + r.added.join(', ') + (kind === 'program' ? ' – see More details in this step' : kind === 'asis' ? ' – the AS-IS process is at the top of this step' : kind === 'tobe' ? ' – mark what changes, then add the requirements' : kind === 'docs' ? ' – check each step; step 3 creates the Technical specs from the RICEFW items' : ' – use Review Details to change anything') : 'Nothing new to add', 7000);
     },
     'fs-template': function (el) {
       const t = F.templates.fromTemplate(el.dataset.id, S.get());
@@ -859,7 +991,7 @@
       const s = S.get();
       const dev = toDevSpec(s, Number(el.dataset.i));
       APB.specLink.stamp(dev, s, 'ricefw', Number(el.dataset.i));
-      U().loadState(dev, 'Development spec created from ' + F.ricefwIds(s.solution.ricefw)[Number(el.dataset.i)] + ' — your FS is in Drafts');
+      openDev(dev, 'Development spec created from ' + F.ricefwIds(s.solution.ricefw)[Number(el.dataset.i)] + ' — your FS is in Drafts');
     },
     'fs-docx': function () {
       const s = S.get();
