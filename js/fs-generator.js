@@ -36,8 +36,10 @@
     return join([
       (c.requirement || '').trim(),
       (c.processArea || '').trim() && '- **Process area:** ' + clean(c.processArea),
+      c.changeType && '- **Type of change:** ' + clean(opt('context', 'changeType', c.changeType)) + ((c.changeNote || '').trim() ? ' – ' + clean(c.changeNote) : ''),
       sub('Objectives', bullets(c.objectives)),
-      sub('KPIs / success measures', bullets(c.kpis))
+      sub('KPIs / success measures', bullets(c.kpis)),
+      rows(c.sources).length ? sub('Source documents', table(['Document', 'File', 'Type'], rows(c.sources).map(function (d) { return [dash(opt('context', 'sources', d.role, 'role')), cell(d.name), dash(d.type)]; }))) : ''
     ]);
   }
 

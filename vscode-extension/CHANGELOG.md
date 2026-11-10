@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.14
+
+- **Functional spec, step 1: Start from documents.** Upload the BRD and/or the solution document – Word (.docx), PDF with text, Excel (.xlsx), Markdown or text. Copilot reads them, checks the SAP objects they name read-only, classifies the change as **new**, **enhancement** or **as-built**, and drafts the whole FS (requirements with their BRD IDs, rules, AS-IS / TO-BE, objects, RICEFW items, tests, risks) for your review.
+- The type of change and the source documents are shown in step 1 and written to the document.
+- **Step 3: Create Technical specs for all RICEFW items.** The main object follows the type of change (new, existing – change, existing); in VS Code each Technical spec opens with Check & read in SAP.
+- Priorities written as High / Medium / Low are mapped to Must / Should / Could.
+
 ## 1.0.13
 
 - **Functional spec, step 2: TO-BE process from the AS-IS and the requirement.** *Proposed process (TO-BE)* has **Generate TO-BE**: Copilot designs the process after the change from the AS-IS steps, their pain points, the requirement, scope and the existing objects. Each step comes with role, transaction / app and a change mark (unchanged, changed, new, automated). You review it first; steps you typed stay. Works for SAP and non-SAP specs, without system access.

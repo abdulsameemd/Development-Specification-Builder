@@ -41,6 +41,20 @@
       { "id": "module", "label": "Module", "kind": "select", "optionsRef": "modules", "sapOnly": true },
       { "id": "processArea", "label": "Process area", "kind": "text", "placeholder": "e.g. Accounts Payable – period-end closing", "generic": { "placeholder": "e.g. Customer service – complaints" } },
       { "id": "requirement", "label": "Business requirement", "kind": "textarea", "placeholder": "Describe the business need in the business's words, e.g.\nAP accountants need to see overdue vendor items per company code grouped into ageing buckets (0-30 / 31-60 / 61-90 / >90 days) for the month-end review.", "generic": { "placeholder": "Describe the business need in your own words, e.g.\nCustomer service needs one place to log, assign and track customer complaints so that every complaint is answered within 5 working days." } },
+      { "id": "changeType", "label": "Type of change", "kind": "select", "custom": true, "options": [
+        { "value": "", "label": "— not classified —" },
+        { "value": "new", "label": "New development" },
+        { "value": "enhancement", "label": "Enhancement of an existing solution" },
+        { "value": "asbuilt", "label": "As-built documentation of an existing solution" }
+      ] },
+      { "id": "changeNote", "label": "Why this type of change", "kind": "textarea", "custom": true, "placeholder": "e.g. The BRD documents the live off-cycle upload; the Fiori app and infotype 267 posting exist in SAP" },
+      { "id": "sources", "label": "Source documents", "kind": "grid", "custom": true, "columns": [
+        { "id": "role", "label": "Document", "kind": "select", "w": 160, "options": [
+          { "value": "", "label": "" }, { "value": "brd", "label": "BRD" }, { "value": "solution", "label": "Solution document" }, { "value": "other", "label": "Other" }
+        ] },
+        { "id": "name", "label": "File", "w": 280 },
+        { "id": "type", "label": "Type", "w": 90 }
+      ] },
       { "id": "objects", "label": "Existing SAP objects", "kind": "grid", "custom": true, "sapOnly": true, "addLabel": "+ Add object", "paste": true, "hint": "The reports, classes, function modules, CDS views, services, proxies and transactions this requirement touches today. Copilot can read them read-only; they are checked in discovery and handed to the developer.", "columns": [
         { "id": "type", "label": "Type", "kind": "select", "w": 210, "options": [
           { "value": "", "label": "— type —" },

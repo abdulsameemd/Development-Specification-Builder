@@ -59,6 +59,28 @@ Only the **business requirement** is mandatory for a non-SAP spec. Drafts from b
   - A **review dialog** shows what would be added per section; pick what to keep. Only empty fields are filled and new rows are appended – nothing typed by hand is changed. Assumptions are marked `[TO BE CONFIRMED]`. The document opens right after; *Review Details* goes back to the steps.
 - **Create document now** creates the document from what is there; everything missing is listed under *Open questions*.
 
+### Start from documents: BRD and solution document
+
+Step 1 opens with **Start from documents**. Upload the **BRD** and/or the **solution document** (process details) as
+Word (`.docx`), PDF with a text layer, Excel (`.xlsx`), Markdown or text. The builder reads them on your computer (no
+upload anywhere else; scanned PDFs have no text – use the Word original) and shows how much text it found.
+
+**✦ Generate FS from the documents** (VS Code; *In Copilot Chat*, or *Copy prompt* in the browser) sends both texts to
+your GitHub Copilot with the read-only SAP tools. Copilot:
+
+- checks every SAP object the documents name or imply (programs, transactions, classes, function modules, CDS, RAP,
+  OData, Fiori apps, workflows, tables, infotypes, wage types) in the system, read-only, and reads the ones that exist;
+- classifies the **type of change**: **new development**, **enhancement** of an existing solution, or **as-built**
+  documentation of a solution that is already live – with the evidence;
+- drafts the whole FS: requirement, module, scope, stakeholders, benefits, AS-IS / TO-BE, the requirements with their
+  BRD IDs (BR-01 …), rules (VAL-01 …), data, existing objects, RICEFW items, roles, interfaces, tests and risks.
+
+You review it in the usual dialog; nothing you typed is overwritten. The type of change shows (and can be corrected) at
+the top of step 1 and goes into the document with the list of source documents. In step 3, **Create Technical specs for
+all RICEFW items** creates one linked Technical spec per item. The main object is *New*, *Existing – change*
+(enhancement) or *Existing* (as-built); in VS Code each Technical spec opens on step 3 and starts **Check & read in
+SAP**, whose review decides what is taken over.
+
 ### Existing SAP objects and reading them (SAP)
 
 In step 1, list the existing objects the requirement touches, each with its type: report / program, transaction code,
@@ -136,7 +158,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.13.vsix`](dist/dewa-sap-spec-builder-1.0.13.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.13.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.14.vsix`](dist/dewa-sap-spec-builder-1.0.14.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.14.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **If the .vsix download is blocked** (the downloaded file is only a few KB, and VS Code says *End of central directory record signature not found*): some company networks replace `.vsix` downloads with a web page. The repository also holds the extension **unpacked** in `dist/vscode-extension/dewa.dewa-sap-spec-builder-<version>/`, as plain files, so no `.vsix` is downloaded:
 

@@ -7355,6 +7355,79 @@ window.APB_CONFIG = {
       }
      },
      {
+      "id": "changeType",
+      "label": "Type of change",
+      "kind": "select",
+      "custom": true,
+      "options": [
+       {
+        "value": "",
+        "label": "— not classified —"
+       },
+       {
+        "value": "new",
+        "label": "New development"
+       },
+       {
+        "value": "enhancement",
+        "label": "Enhancement of an existing solution"
+       },
+       {
+        "value": "asbuilt",
+        "label": "As-built documentation of an existing solution"
+       }
+      ]
+     },
+     {
+      "id": "changeNote",
+      "label": "Why this type of change",
+      "kind": "textarea",
+      "custom": true,
+      "placeholder": "e.g. The BRD documents the live off-cycle upload; the Fiori app and infotype 267 posting exist in SAP"
+     },
+     {
+      "id": "sources",
+      "label": "Source documents",
+      "kind": "grid",
+      "custom": true,
+      "columns": [
+       {
+        "id": "role",
+        "label": "Document",
+        "kind": "select",
+        "w": 160,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "brd",
+          "label": "BRD"
+         },
+         {
+          "value": "solution",
+          "label": "Solution document"
+         },
+         {
+          "value": "other",
+          "label": "Other"
+         }
+        ]
+       },
+       {
+        "id": "name",
+        "label": "File",
+        "w": 280
+       },
+       {
+        "id": "type",
+        "label": "Type",
+        "w": 90
+       }
+      ]
+     },
+     {
       "id": "objects",
       "label": "Existing SAP objects",
       "kind": "grid",
