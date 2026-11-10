@@ -492,6 +492,8 @@
     const line = st.state === 'approved' ? '<p class="gov-state ok">✓ Approved by <strong>' + esc(a.by) + '</strong> · ' + when(a) + (a.version ? ' · version ' + esc(a.version) : '') + ' · fingerprint <code>' + esc(a.hash) + '</code></p>'
       : st.state === 'changed' ? '<p class="gov-state bad">⚠ Changed after the approval by ' + esc(a.by) + ' (' + when(a) + ') – it needs approval again.</p>'
         : '<p class="gov-state">Not approved yet.</p>';
+    const req = g.requestOf(s);
+    const reqLine = req ? '<p class="gov-request">✉ Approval requested by <strong>' + esc(req.by) + '</strong> · ' + when(req) + ((req.data && req.data.to || []).length ? ' · from ' + esc([].concat(req.data.to).join(', ')) : '') + '</p>' : '';
     let action = '';
     if (st.state !== 'approved') {
       if (!H.isVscode) action = '<p class="muted small">Approval needs the VS Code extension (a signed-in GitHub account). In the browser the gate only warns.</p>';
@@ -499,8 +501,11 @@
       else if (!g.canApprove(kind)) action = '<p class="muted small">Waiting for approval by: <strong>' + list.map(esc).join(', ') + '</strong>.' + (me ? ' You are signed in as ' + esc(me) + '.' : ' Sign in to GitHub in VS Code to approve.') + '</p>';
       else if (blockers.length) action = '<p class="field-error small">' + blockers.map(esc).join(' ') + '</p><button type="button" class="btn btn-primary btn-sm" disabled>Approve ' + what + '</button>';
       else action = '<button type="button" class="btn btn-primary btn-sm" data-action="gov-approve">Approve ' + what + '</button> <span class="muted small">as ' + esc(me) + ' – records your account, the time and a fingerprint of the content</span>';
+      if (!g.canApprove(kind)) action += '<div class="gov-send"><button type="button" class="btn btn-ghost btn-sm" data-action="gov-request">' + (req ? 'Request approval again' : 'Request approval') + '</button> <span class="muted small">saves the file to attach to an email or Teams message, and copies the message text' + (list.length ? ' for ' + list.map(esc).join(', ') : '') + '</span></div>';
+    } else {
+      action = '<div class="gov-send"><button type="button" class="btn btn-ghost btn-sm" data-action="gov-send-back">' + (a.by && me && a.by.toLowerCase() === me.toLowerCase() ? 'Save approved file to send back' : 'Save approved file') + '</button> <span class="muted small">the author opens it with <strong>Upload</strong> – it replaces their draft of this spec</span></div>';
     }
-    return '<section class="card gov-card gov-' + st.state + '" aria-labelledby="h-gov"><h3 id="h-gov">Approval <span class="hint">gate ' + gateName + ' – needed before ' + unlocks + '</span></h3>' + line + action +
+    return '<section class="card gov-card gov-' + st.state + '" aria-labelledby="h-gov"><h3 id="h-gov">Approval <span class="hint">gate ' + gateName + ' – needed before ' + unlocks + '</span></h3>' + line + reqLine + action +
       '<p class="muted small gov-mode">Gates: ' + (g.mode() === 'enforce' ? 'enforced' : 'warn only – continuing without approval is recorded in the audit trail') + '. Any change after approval needs a new approval.</p></section>';
   }
 
@@ -523,6 +528,16 @@
     APB.gov.audit.add(s, type, data);
     if (!(exampleSnapshot && snapshot(s) === exampleSnapshot)) ST.save(s);
     renderPreview();
+  }
+
+  /* Approval by file (email / Teams): the .md carries the whole spec, its approval and audit trail. */
+  function specTitle(s) {
+    if (s.kind === 'fs') return APB.fs.model.name(s);
+    return (s.project.name || '').trim() || (s.requirement.text || '').trim().split(/\r?\n/)[0].slice(0, 60) || 'Untitled requirement';
+  }
+  function saveApprovalFile(s, suffix) {
+    const name = (s.kind === 'fs' ? 'FS_' : 'TS_') + (M.helpers.slug(specTitle(s)).slice(0, 60) || 'spec') + '_' + suffix + '.md';
+    return APB.mdImport.embed(buildMd(s), s).then(function (md) { X.download(name, md, 'text/markdown'); return name; });
   }
 
   function step5(s) {
@@ -1121,6 +1136,27 @@
       renderMain();
       toast(kind === 'functional' ? 'Functional spec approved – Technical specs can now be created' : 'Technical spec approved – dewa-abap can build from it', 6000);
     },
+    'gov-request': function () {
+      const s = S.get(), kind = APB.gov.kindOf(s), to = APB.gov.approvers(kind);
+      if (mandatoryMissing(s).length) { toast('Complete the mandatory fields first'); return; }
+      auditAdd('approval-requested', { to: to, fingerprint: APB.gov.fingerprint(s) });
+      const what = kind === 'functional' ? 'functional specification' : 'technical specification';
+      saveApprovalFile(S.get(), 'FOR-APPROVAL').then(function (file) {
+        const msg = 'Please review and approve the ' + what + ' "' + specTitle(s) + '".\n\nOpen the attached file ' + file + ' in VS Code: DEWA: Open SAP Spec Builder → Upload. Review it, press Approve, then "Save approved file to send back" and reply with that file.';
+        X.copyNow(msg);
+        renderMain();
+        toast('Saved ' + file + ' – attach it to an email or Teams message' + (to.length ? ' to ' + to.join(', ') : '') + '. The message text is copied – paste it with Ctrl+V.', 12000);
+      });
+    },
+    'gov-send-back': function () {
+      const s = S.get();
+      if (APB.gov.status(s).state !== 'approved') { toast('This spec is not approved'); return; }
+      auditAdd('export', { to: 'approved file (send back)', approval: 'approved' });
+      saveApprovalFile(S.get(), 'APPROVED').then(function (file) {
+        X.copyNow('Approved: "' + specTitle(s) + '". Open the attached file ' + file + ' in the DEWA Spec Builder with Upload – it replaces your draft and the gate is open.');
+        toast('Saved ' + file + ' – reply with it attached. The message text is copied – paste it with Ctrl+V.', 12000);
+      });
+    },
     'gov-settings': function () { H.post({ type: 'open-settings' }); },
     'view-raw': function () { ui.raw = true; renderPreview(); },
     'view-rendered': function () { ui.raw = false; renderPreview(); }
@@ -1322,9 +1358,19 @@
     if (file.size > 5 * 1024 * 1024) { toast('This file is too large for a specification (max 5 MB)'); return; }
     file.text().then(APB.mdImport.read).then(function (r) {
       const what = r.state.kind === 'fs' ? 'Functional specification' : 'Technical specification';
+      // the same spec (e.g. sent back approved) replaces its local draft; Undo restores the draft as it was
+      const cur = S.get();
+      const prev = r.originId ? (cur.id === r.originId ? JSON.parse(JSON.stringify(cur)) : ST.load(r.originId)) : null;
       loadState(r.state, r.mode === 'partial' ? what + ' partly restored from the Markdown – check every step' :
         r.edited ? what + ' restored as generated – manual edits made in the file are not taken over' : what + ' restored from ' + file.name);
-      auditAdd('uploaded', { file: file.name, mode: r.mode, approval: APB.gov.status(S.get()).state });
+      auditAdd('uploaded', { file: file.name, mode: r.mode, approval: APB.gov.status(S.get()).state, replaced: prev ? 'local draft' : '' });
+      const st = APB.gov.status(S.get()).state, req = APB.gov.requestOf(S.get()), kind = APB.gov.kindOf(S.get());
+      const flash = function () { ui.step = kind === 'functional' ? 3 : 5; ui.generated = false; renderMain(); setTimeout(function () { const c = $('.gov-card'); if (c) { c.scrollIntoView({ behavior: 'smooth', block: 'center' }); c.classList.add('gov-flash'); } }, 50); };
+      if (prev) {
+        toast(what + ' updated from ' + file.name + ' – it replaced your draft of this spec' + (st === 'approved' ? ' (approved ✓)' : ''), 10000, { label: 'Undo', run: function () { loadState(prev, 'Your previous draft is back'); } });
+        return;
+      }
+      if (req && APB.gov.canApprove(kind)) { toast('Approval requested by ' + req.by + ' – review the spec, then approve it', 12000, { label: 'Show approval', run: flash }); return; }
       // an uploaded FS only changes itself; Technical specs created from it offer the update when opened
       const linked = r.state.kind === 'fs' ? APB.specLink.linkedTo(S.get()) : [];
       const changed = linked.filter(function (x) { return x.state === 'changed'; }).length;

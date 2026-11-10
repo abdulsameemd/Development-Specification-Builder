@@ -696,6 +696,8 @@ div.link-banner p { margin: 0 0 6px; }
 .gov-state { margin: 4px 0 8px; font-weight: 600; }
 .gov-state.ok { color: var(--accent-text); }
 .gov-state.bad { color: var(--danger); }
+.gov-request { margin: 0 0 8px; }
+.gov-send { margin-top: 10px; }
 .gov-state code { font-size: .78rem; }
 .gov-mode { margin-top: 8px; }
 .gov-flash { animation: gov-flash .5s ease 3; }

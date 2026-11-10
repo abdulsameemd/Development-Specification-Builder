@@ -97,6 +97,17 @@
     return next;
   }
 
+  /* The open approval request: the last 'approval-requested' entry with no approval after it, while not approved. */
+  function requestOf(s) {
+    if (!s || status(s).state === 'approved') return null;
+    const list = Array.isArray(s.audit) ? s.audit : [];
+    for (let i = list.length - 1; i >= 0; i--) {
+      if (list[i].type === 'approved') return null;
+      if (list[i].type === 'approval-requested') return list[i];
+    }
+    return null;
+  }
+
   /* gate: 'G1' (FS → Technical specs) | 'G2' (TS → dewa-abap) → { open, reason } */
   function gate(name, s) {
     const st = status(s);
@@ -137,7 +148,7 @@
   /* Markdown table of the trail (newest last), for the documents. */
   const LABELS = {
     'ai-start': 'AI job started', 'ai-input': 'AI input', 'ai-end': 'AI job finished', review: 'AI result reviewed', approved: 'Approved',
-    'gate-blocked': 'Gate blocked', 'gate-override': 'Gate overridden', handoff: 'Handed over', 'created-from': 'Created from',
+    'approval-requested': 'Approval requested', 'gate-blocked': 'Gate blocked', 'gate-override': 'Gate overridden', handoff: 'Handed over', 'created-from': 'Created from',
     export: 'Exported', uploaded: 'Uploaded', 'example-loaded': 'Example loaded', trimmed: 'Older entries summarised'
   };
   function detail(e) {
@@ -164,7 +175,7 @@
   APB.gov = {
     setFromAuth: setFromAuth, policy: function () { return JSON.parse(JSON.stringify(pol)); }, account: account, mode: mode,
     kindOf: kindOf, approvers: approvers, canApprove: canApprove, fingerprint: fingerprint, status: status,
-    approvalBlockers: approvalBlockers, approve: approve, gate: gate,
+    approvalBlockers: approvalBlockers, approve: approve, gate: gate, requestOf: requestOf,
     audit: { add: add, md: auditMd, normalize: normalizeAudit, LABELS: LABELS }, normalizeApproval: normalizeApproval, approvalMd: approvalMd
   };
 })(window.APB = window.APB || {});

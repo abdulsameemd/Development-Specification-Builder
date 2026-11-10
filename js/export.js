@@ -75,13 +75,14 @@
     return 'r' + toB64Url(json);
   }
 
-  async function decodeState(token) {
+  /* opts.keepId: keep the spec's own id (an uploaded file may replace the local draft of the same spec) */
+  async function decodeState(token, opts) {
     const m = /^([zr])([A-Za-z0-9_-]+)$/.exec(token || '');
     if (!m) return null;
     const bytes = fromB64Url(m[2]);
     const json = m[1] === 'z' ? await pipe(bytes, new DecompressionStream('deflate-raw')) : bytes;
     const s = APB.state.migrate(JSON.parse(new TextDecoder().decode(json)));
-    s.id = APB.state.uid();
+    if (!(opts && opts.keepId && s.id)) s.id = APB.state.uid();
     return s;
   }
 

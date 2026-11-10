@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.17
+
+- **Approval by email or Teams – no Git or shared folder needed.** On the Approval card the author presses **Request approval**: the builder saves `FS_<title>_FOR-APPROVAL.md` (or `TS_…`), records the request in the audit trail and copies a message to paste into Outlook or Teams with the file attached.
+- **The approver** opens the attachment with **Upload**; the builder says *Approval requested by …* and goes to the Approval card. After **Approve**, **Save approved file to send back** saves `…_APPROVED.md` and copies the reply text.
+- **The author** uploads the approved file: it **replaces their draft of that spec** (Undo offered) instead of creating a second copy, and the gate is open. The Approval card shows who requested approval, when and from whom.
+- The approver settings no longer claim IT can lock them (VS Code cannot lock an extension's settings); they show an example instead.
+
 ## 1.0.16
 
 - **Approval gates.** A functional spec must be **approved** before Technical specs are created from it (gate G1), and a technical spec before `dewa-abap` builds from it (gate G2). The new **Approval** card shows the status, who approved and when, and who may approve. Approvers are GitHub accounts listed in the VS Code settings `dewaSpecBuilder.approvers.functional` / `.technical`; only they see **Approve**.

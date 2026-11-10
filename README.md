@@ -158,7 +158,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.16.vsix`](dist/dewa-sap-spec-builder-1.0.16.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.16.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.17.vsix`](dist/dewa-sap-spec-builder-1.0.17.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.17.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **If the .vsix download is blocked** (the downloaded file is only a few KB, and VS Code says *End of central directory record signature not found*): some company networks replace `.vsix` downloads with a web page. The repository also holds the extension **unpacked** in `dist/vscode-extension/dewa.dewa-sap-spec-builder-<version>/`, as plain files, so no `.vsix` is downloaded:
 
@@ -203,6 +203,12 @@ Specs are **approved before they move on**: a functional spec before Technical s
 ```
 
 Changes apply at once. The Approval card's *Open settings* button (shown while no approvers are set) opens these settings.
+
+**Get an approval (by email or Teams):**
+
+1. **Author:** Approval card → **Request approval**. It saves `FS_<title>_FOR-APPROVAL.md` (or `TS_…`) and copies a message – attach the file to an email or Teams message to the approvers and paste the message.
+2. **Approver:** *DEWA: Open SAP Spec Builder* → **Upload** the attachment → *Approval requested by …* → review → **Approve** → **Save approved file to send back** → reply with `…_APPROVED.md`.
+3. **Author:** **Upload** the approved file. It replaces your draft of that spec (with Undo), and the gate is open.
 
 Roles, settings, what IT can and cannot lock, and the release rules: [GOVERNANCE.md](GOVERNANCE.md). Threats and controls: [SECURITY.md](SECURITY.md). Tests: `npm test` (unit) and `npm run test:e2e` (browser, needs `npm install`); both run in CI.
 

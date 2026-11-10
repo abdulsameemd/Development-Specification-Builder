@@ -167,10 +167,10 @@
     text = String(text || '').replace(/^﻿/, '');
     const m = BLOCK.exec(text);
     if (m) {
-      const state = await APB.exporter.decodeState(m[1]);
+      const state = await APB.exporter.decodeState(m[1], { keepId: true }); // the caller decides: replace that draft or give a new id
       if (!state) throw new Error('The builder data in this file could not be read.');
       const edited = norm(buildMd(state)) !== norm(text.replace(BLOCK, ''));
-      return { state: state, mode: 'exact', edited: edited };
+      return { state: state, mode: 'exact', edited: edited, originId: state.id };
     }
     if (/^#\s+Functional Specification/m.test(text)) return { state: APB.state.migrate(partialFs(text)), mode: 'partial', edited: false };
     if (/^#\s+SAP Development Specification/m.test(text)) return { state: APB.state.migrate(partialDev(text)), mode: 'partial', edited: false };

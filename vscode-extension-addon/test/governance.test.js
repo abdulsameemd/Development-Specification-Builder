@@ -91,3 +91,22 @@ test('audit trail: append-only entries, posted to the extension, capped, and in 
   assert.match(md, /STOP: this specification is not approved/); // dewa-abap is told not to build
   assert.match(md, /\| Time \(UTC\) \| By \| Event \| Details \|/);
 });
+
+test('an approval request stays open until the spec is approved, and a new request after a change opens again', () => {
+  const { APB } = load(true);
+  const G = APB.gov;
+  G.setFromAuth({ signedIn: true, account: 'lead', policy: { gates: 'enforce', requireSapCheck: false, approvers: { functional: ['lead'], technical: ['lead'] } } });
+  let s = APB.state.migrate({ requirement: { text: 'Vendor ageing' } });
+  assert.strictEqual(G.requestOf(s), null);
+  G.audit.add(s, 'approval-requested', { to: ['lead'] });
+  assert.strictEqual(G.requestOf(s).data.to[0], 'lead');
+  s = G.approve(s);
+  G.audit.add(s, 'approved', {});
+  assert.strictEqual(G.requestOf(s), null);
+  s.requirement.text = 'Vendor ageing, changed';
+  assert.strictEqual(G.status(s).state, 'changed');
+  assert.strictEqual(G.requestOf(s), null, 'the old request was answered');
+  G.audit.add(s, 'approval-requested', { to: ['lead'] });
+  assert.ok(G.requestOf(s));
+  assert.strictEqual(G.audit.LABELS['approval-requested'], 'Approval requested');
+});
