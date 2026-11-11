@@ -263,6 +263,12 @@
     "extensionId": "dewa.dewa-sap-spec-builder",
     "staleDays": 30,
     "mcpServers": ["SAP ABAP ADT", "SAP Fiori", "SAP UI5", "SAP CAP"],
+    "processSearch": { "maxSearches": 12, "maxReads": 3, "maxHits": 50, "fewObjects": 3 },
+    "moduleNamespaces": {
+      "FI/CO": ["ZFI", "ZWFI", "ZCO", "ZWCO"], "MM": ["ZMM", "ZWMM"], "SD": ["ZSD", "ZWSD"],
+      "IS-U": ["ZISU", "ZWISU", "ZIU"], "CRM": ["ZCRM", "ZWCRM"], "PS/PM": ["ZPS", "ZWPS", "ZPM", "ZWPM"],
+      "HCM": ["ZHR", "ZWHR", "ZPY", "ZPA"], "Cross-module": ["Z", "Y"], "": ["Z", "Y"]
+    },
     "objectTypeMap": {
       "TABL": "Table", "VIEW": "Table", "DTEL": "Data Element", "DOMA": "Domain", "TTYP": "Table Type", "SHLP": "Search Help", "ENQU": "Lock Object",
       "MSAG": "Message Class", "SUSO": "Authorization Object", "PROG": "Report", "CLAS": "Class", "INTF": "Interface",

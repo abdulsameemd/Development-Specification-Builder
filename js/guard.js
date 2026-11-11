@@ -58,6 +58,7 @@
     const add = function (n) { n = up(n); if (n && /^[A-Z0-9_/]{2,40}$/.test(n) && out.indexOf(n) < 0) out.push(n); };
     (d.objects || []).forEach(function (r) { if (!/to be built|new|not found/i.test(r.note || '')) add(r.name); });
     (d.programs || []).forEach(function (r) { add(r.name); });
+    (d.candidates || []).forEach(function (r) { add(r.name); }); // process search: must come from a tool result
     (d.ricefw || []).forEach(function (r) { splitNames(r.existing).forEach(add); });
     return out;
   }

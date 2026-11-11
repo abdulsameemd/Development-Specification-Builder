@@ -378,7 +378,7 @@
   }
 
   if (H.isVscode) {
-    H.on('auth', function (m) { APB.gov.setFromAuth(m); disc.auth = { signedIn: !!m.signedIn, account: String(m.account || ''), copilot: m.copilot !== false, chatAutoSend: m.chatAutoSend !== false }; rerenderDiscovery(); rerenderStep1(); });
+    H.on('auth', function (m) { APB.gov.setFromAuth(m); APB.fsDraft.setNamespaces(m.policy && m.policy.namespaces); disc.auth = { signedIn: !!m.signedIn, account: String(m.account || ''), copilot: m.copilot !== false, chatAutoSend: m.chatAutoSend !== false }; rerenderDiscovery(); rerenderStep1(); });
     H.on('discovery-progress', function (m) {
       const text = String(m.text || '').slice(0, 300);
       APB.busy.progress(text, m.status);
@@ -737,9 +737,15 @@
     if (flags.length && drf.pendingKind !== 'docs') U().auditAdd('guard-flag', { job: drf.pendingKind, flags: flags.length, where: 'AI answer', first: flags[0].excerpt });
     document.getElementById('draft-guard').innerHTML = guardHtml(drf.guard);
     document.getElementById('draft-list').innerHTML = parts.map(function (p) {
-      const more = p.items.length > 4 ? '<li class="muted">… and ' + (p.items.length - 4) + ' more</li>' : '';
+      const shown = p.unticked ? 25 : 4; // candidates: every one with the reason it was found
+      const more = p.items.length > shown ? '<li class="muted">… and ' + (p.items.length - shown) + ' more</li>' : '';
+      if (p.unticked) {
+        // one checkbox per candidate, none ticked: only what you pick is added
+        return '<li class="draft-candidates"><strong>' + esc(p.label) + '</strong> <span class="count">' + p.items.length + '</span>' +
+          '<ul class="small cand-list">' + p.items.slice(0, shown).map(function (i, k) { return '<li><label class="check"><input type="checkbox" name="draft-cand" value="' + esc(p.keys[k]) + '"> ' + esc(String(i).slice(0, 260)) + '</label></li>'; }).join('') + more + '</ul></li>';
+      }
       return '<li><label class="check"><input type="checkbox" name="draft-part" value="' + esc(p.id) + '" checked> <strong>' + esc(p.label) + '</strong> <span class="count">' + p.items.length + '</span></label>' +
-        '<ul class="small">' + p.items.slice(0, 4).map(function (i) { return '<li>' + esc(String(i).slice(0, 160)) + '</li>'; }).join('') + more + '</ul></li>';
+        '<ul class="small">' + p.items.slice(0, shown).map(function (i) { return '<li>' + esc(String(i).slice(0, 160)) + '</li>'; }).join('') + more + '</ul></li>';
     }).join('');
     const dlg = document.getElementById('draft-dialog');
     if (typeof dlg.showModal === 'function') { if (!dlg.open) dlg.showModal(); } else dlg.setAttribute('open', '');
@@ -979,6 +985,13 @@
     },
     'fs-draft-apply': function () {
       const ids = Array.prototype.map.call(document.querySelectorAll('#draft-list input[name="draft-part"]:checked'), function (i) { return i.value; });
+      // process-search candidates: only the ticked ones
+      const picked = Array.prototype.map.call(document.querySelectorAll('#draft-list input[name="draft-cand"]:checked'), function (i) { return i.value; });
+      if (drf.pending && drf.pending.candidates) {
+        drf.offeredCandidates = drf.pending.candidates.map(function (c) { return c.name; });
+        drf.pending.candidates = drf.pending.candidates.filter(function (c) { return picked.indexOf(c.name) >= 0; });
+        if (picked.length) ids.push('candidates');
+      }
       const dlg = document.getElementById('draft-dialog');
       if (dlg.close) dlg.close(); else dlg.removeAttribute('open');
       if (!drf.pending || !ids.length) return;
@@ -988,6 +1001,7 @@
       const gd = drf.guard || { ground: { verified: [], unverified: [], checked: false }, flags: [] };
       markUnverified(r.state, gd.ground.unverified);
       APB.gov.audit.add(r.state, 'review', { job: kind || 'draft', accepted: ids, declined: offered.filter(function (x) { return ids.indexOf(x) < 0; }), added: r.added,
+        candidatesOffered: (drf.offeredCandidates || []).length, candidatesTaken: (drf.pending.candidates || []).map(function (c) { return c.name; }).join(', '),
         grounded: gd.ground.verified.length, unverified: gd.ground.unverified.length, unverifiedNames: gd.ground.unverified.slice(0, 20), evidence: gd.ground.checked ? gd.ground.calls + ' SAP tool calls' : 'none', guardFlags: gd.flags.length });
       drf.pending = null;
       S.replace(r.state);

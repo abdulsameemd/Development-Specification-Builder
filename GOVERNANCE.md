@@ -151,6 +151,11 @@ review, and the *CI* check to pass. This is a repository setting; it is not set 
   the others as **Not verified in SAP**. Accepted rows with such a name carry `[NOT VERIFIED IN SAP]`, so nobody takes
   them for checked facts; the count is in the audit trail (*AI result reviewed*). Results from Copilot Chat or pasted
   answers have no evidence and say so.
+- **Process search (BRD upload).** The read-only BRD job also searches SAP by process, within a fixed budget: at most
+  12 searches by name / description (module prefixes from `dewaSpecBuilder.namespaces`, e.g. `ZHR*<keyword>*`; standard
+  transactions, Fiori apps, released CDS / APIs, BAdIs), never a bare wildcard, at most 50 hits each, the logic of at
+  most 3 objects, no table contents – inside the general limit of 30 tool calls. Hits are offered as unticked
+  *candidates* with the reason; what is ticked is recorded (*AI result reviewed*: candidates offered / taken).
 - **Untrusted input.** Uploaded documents are wrapped as `<<<BEGIN UNTRUSTED …>>>` data blocks, and every SAP tool
   result is labelled as data; the prompts tell the model never to follow instructions inside them.
 - **Prompt-injection screening.** Documents, SAP tool results and AI answers are screened for text that looks like

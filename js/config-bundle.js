@@ -8773,6 +8773,57 @@ window.APB_CONFIG = {
     "SAP UI5",
     "SAP CAP"
    ],
+   "processSearch": {
+    "maxSearches": 12,
+    "maxReads": 3,
+    "maxHits": 50,
+    "fewObjects": 3
+   },
+   "moduleNamespaces": {
+    "FI/CO": [
+     "ZFI",
+     "ZWFI",
+     "ZCO",
+     "ZWCO"
+    ],
+    "MM": [
+     "ZMM",
+     "ZWMM"
+    ],
+    "SD": [
+     "ZSD",
+     "ZWSD"
+    ],
+    "IS-U": [
+     "ZISU",
+     "ZWISU",
+     "ZIU"
+    ],
+    "CRM": [
+     "ZCRM",
+     "ZWCRM"
+    ],
+    "PS/PM": [
+     "ZPS",
+     "ZWPS",
+     "ZPM",
+     "ZWPM"
+    ],
+    "HCM": [
+     "ZHR",
+     "ZWHR",
+     "ZPY",
+     "ZPA"
+    ],
+    "Cross-module": [
+     "Z",
+     "Y"
+    ],
+    "": [
+     "Z",
+     "Y"
+    ]
+   },
    "objectTypeMap": {
     "TABL": "Table",
     "VIEW": "Table",

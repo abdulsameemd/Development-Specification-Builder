@@ -70,6 +70,14 @@ your GitHub Copilot with the read-only SAP tools. Copilot:
 
 - checks every SAP object the documents name or imply (programs, transactions, classes, function modules, CDS, RAP,
   OData, Fiori apps, workflows, tables, infotypes, wage types) in the system, read-only, and reads the ones that exist;
+- **searches the SAP system by process** – also when the BRD names no SAP object: with 3–6 business keywords from the
+  documents it looks for DEWA's custom objects of the module (`<prefix>*<keyword>*`, e.g. `ZHR*BONUS*`, `ZWHR*BONUS*`),
+  for standard transactions and Fiori apps whose description matches, released CDS views / APIs and BAdIs of the area.
+  It is targeted, not a scan of the whole system: at most 12 searches (4 when the documents already name 3 or more
+  objects), never a bare `Z*`, at most 50 hits per search, the logic of at most 3 best matches, no table contents.
+  The hits come back as **candidates** in the review, **unticked**, each with why it was found – tick the ones that
+  belong; they go into *Existing SAP objects* with the note *candidate – …*. The prefixes per module (ZHR, ZWHR, ZFI,
+  ZMM, ZSD …) can be changed with the VS Code setting `dewaSpecBuilder.namespaces`;
 - classifies the **type of change**: **new development**, **enhancement** of an existing solution, or **as-built**
   documentation of a solution that is already live – with the evidence;
 - drafts the whole FS: requirement, module, scope, stakeholders, benefits, AS-IS / TO-BE, the requirements with their
@@ -158,7 +166,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.19.vsix`](dist/dewa-sap-spec-builder-1.0.19.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.19.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.20.vsix`](dist/dewa-sap-spec-builder-1.0.20.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.20.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **If the .vsix download is blocked** (the downloaded file is only a few KB, and VS Code says *End of central directory record signature not found*): some company networks replace `.vsix` downloads with a web page. The repository also holds the extension **unpacked** in `dist/vscode-extension/dewa.dewa-sap-spec-builder-<version>/`, as plain files, so no `.vsix` is downloaded:
 

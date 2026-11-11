@@ -77,3 +77,42 @@ test('the document states the type of change and the source documents, and an up
   assert.strictEqual(back.state.context.changeNote, 'Extends the live upload with Excel input');
   assert.deepStrictEqual(plain(back.state.context.sources).map((d) => d.role + ':' + d.name), ['brd:BRD_OffCycle.docx', 'solution:Solution.xlsx']);
 });
+
+test('the BRD job searches SAP by process: module namespaces, budget, no bare wildcards; settings override the prefixes', () => {
+  const st = APB.fs.model.blank();
+  st.context.module = 'HCM';
+  const p = APB.fsDraft.docsPrompt(st, DOCS);
+  assert.match(p, /SEARCH THE SAP SYSTEM BY PROCESS \(read-only, targeted – never the whole system\)/);
+  assert.match(p, /prefixes of the module HCM: ZHR\*, ZWHR\*/);
+  assert.match(p, /fewer than 3 SAP objects, up to 12 search calls; otherwise up to 4/);
+  assert.match(p, /at most 3 of the best matches/);
+  assert.match(p, /Never: a bare prefix or wildcard alone/);
+  assert.match(p, /"candidates": \[/);
+  APB.fsDraft.setNamespaces({ HCM: ['zdewahr*', 'ZWHR', 'bad prefix!'], 'FI/CO': [] });
+  assert.match(APB.fsDraft.docsPrompt(st, DOCS), /prefixes of the module HCM: ZDEWAHR\*, ZWHR\*\./);
+  assert.deepStrictEqual(plain(APB.fsDraft.namespaces()['FI/CO']), ['ZFI', 'ZWFI', 'ZCO', 'ZWCO'], 'an empty list keeps the default');
+  APB.fsDraft.setNamespaces(null);
+  assert.match(APB.fsDraft.docsPrompt(st, DOCS), /HCM: ZHR\*, ZWHR\*, ZPY\*, ZPA\*/);
+});
+
+test('process-search candidates are offered unticked with the reason and merged as candidate objects', () => {
+  const answer = '```json\n' + JSON.stringify({ kind: 'fs-draft', version: 1,
+    objects: [{ type: 'PROG', name: 'ZHR_OFFCYCLE_UPLOAD', note: 'exists in SAP' }],
+    candidates: [
+      { type: 'PROG', name: 'zwhr_bonus_post', description: 'Bonus posting to payroll', why: 'name matches ZWHR*BONUS*', origin: 'custom' },
+      { type: 'TRAN', name: 'PC00_M02_CALC', description: 'Start payroll', why: 'description contains payroll', origin: 'standard' },
+      { type: 'PROG', name: 'ZHR_OFFCYCLE_UPLOAD', why: 'duplicate of a named object' }
+    ] }) + '\n```';
+  const r = APB.fsDraft.parse(answer);
+  const st = APB.fs.model.blank();
+  const parts = plain(APB.fsDraft.preview(st, r.draft));
+  const cand = parts.find((x) => x.id === 'candidates');
+  assert.strictEqual(cand.unticked, true);
+  assert.deepStrictEqual(cand.keys, ['ZWHR_BONUS_POST', 'PC00_M02_CALC', 'ZHR_OFFCYCLE_UPLOAD']);
+  assert.match(cand.items[0], /^ZWHR_BONUS_POST – candidate – name matches ZWHR\*BONUS\* · Bonus posting to payroll · custom$/);
+  // the user ticks one candidate: only it is added, the named object once
+  const d = Object.assign({}, r.draft, { candidates: r.draft.candidates.filter((c) => c.name === 'PC00_M02_CALC' || c.name === 'ZHR_OFFCYCLE_UPLOAD') });
+  const m = APB.fsDraft.merge(st, d, ['objects', 'candidates']);
+  const objs = plain(m.state.context.objects).map((o) => o.name + ' | ' + o.note);
+  assert.deepStrictEqual(objs, ['ZHR_OFFCYCLE_UPLOAD | exists in SAP', 'PC00_M02_CALC | candidate – description contains payroll · Start payroll · SAP standard']);
+});

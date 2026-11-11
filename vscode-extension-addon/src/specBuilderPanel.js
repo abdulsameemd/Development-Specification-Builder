@@ -300,7 +300,9 @@ function createSpecBuilder(vscode, context, opts) {
         approvers: { functional: list('approvers.functional'), technical: list('approvers.technical') },
         // guardrails and local usage statistics (guard.js in the builder)
         masking: cfg.get('masking', true) !== false, maskingPatterns: (cfg.get('masking.patterns', []) || []).slice(0, 30),
-        telemetry: cfg.get('telemetry', 'local') === 'off' ? 'off' : 'local', modelsAllowed: list('models.allowed') }
+        telemetry: cfg.get('telemetry', 'local') === 'off' ? 'off' : 'local', modelsAllowed: list('models.allowed'),
+        // DEWA custom namespaces per module for the BRD process search (builder default: config moduleNamespaces)
+        namespaces: (function () { const v = cfg.get('namespaces', {}); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; })() }
     };
   }
 
@@ -327,7 +329,7 @@ function createSpecBuilder(vscode, context, opts) {
       vscode.authentication.onDidChangeSessions(async function (e) { if (e.provider && e.provider.id === 'github') post(Object.assign({ type: 'auth' }, await getAuth())); })
     ];
     if (vscode.workspace.onDidChangeConfiguration) {
-      subs.push(vscode.workspace.onDidChangeConfiguration(async function (e) { if (e.affectsConfiguration('dewaSpecBuilder.chatAutoSend') || e.affectsConfiguration('dewaSpecBuilder.gates') || e.affectsConfiguration('dewaSpecBuilder.approvers') || e.affectsConfiguration('dewaSpecBuilder.masking') || e.affectsConfiguration('dewaSpecBuilder.telemetry') || e.affectsConfiguration('dewaSpecBuilder.models')) post(Object.assign({ type: 'auth' }, await getAuth())); }));
+      subs.push(vscode.workspace.onDidChangeConfiguration(async function (e) { if (e.affectsConfiguration('dewaSpecBuilder.chatAutoSend') || e.affectsConfiguration('dewaSpecBuilder.gates') || e.affectsConfiguration('dewaSpecBuilder.approvers') || e.affectsConfiguration('dewaSpecBuilder.masking') || e.affectsConfiguration('dewaSpecBuilder.telemetry') || e.affectsConfiguration('dewaSpecBuilder.models') || e.affectsConfiguration('dewaSpecBuilder.namespaces')) post(Object.assign({ type: 'auth' }, await getAuth())); }));
     }
     panel.onDidDispose(function () { router.cancel(); subs.forEach(function (d) { d.dispose(); }); if (current && current.panel === panel) current = null; });
     current = { panel: panel, router: router, post: post };
