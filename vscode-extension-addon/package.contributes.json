@@ -123,6 +123,17 @@
           ],
           "default": "local",
           "markdownDescription": "`local`: count AI jobs, review decisions, approvals and gate events per month on this computer (header → *Usage*; export as CSV). No spec content is kept and nothing is sent anywhere. `off`: count nothing."
+        },
+        "dewaSpecBuilder.namespaces": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "default": {},
+          "markdownDescription": "DEWA's custom name prefixes per module, used when a BRD is uploaded to search the SAP system by process (read-only, `<prefix>*<keyword>*`). Overrides the built-in list for the modules you name, e.g. `{\"HCM\": [\"ZHR\", \"ZWHR\", \"ZPY\"], \"FI/CO\": [\"ZFI\", \"ZWFI\"]}`. Module keys: FI/CO, MM, SD, IS-U, CRM, PS/PM, HCM, Cross-module."
         }
       }
     },

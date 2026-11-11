@@ -135,6 +135,19 @@
     return DOC_ROLES.map(function (r) { return docs[r[0]] && Object.assign({ role: r[0] }, docs[r[0]]); }).filter(Boolean);
   }
 
+  /* What the document job does – depends on the system choice and, for SAP, on the module (process-search prefixes). */
+  function docsIntro(s) {
+    const c = s.context, sap = F.isSap(s) || !c.system;
+    const pre = sap && c.module ? (APB.fsDraft.namespaces()[c.module] || []) : [];
+    const search = !sap ? ''
+      : c.module ? ' It also <strong>searches the SAP system by process</strong> – DEWA\'s custom objects of ' + esc(c.module) + ' (' + pre.slice(0, 4).map(function (p) { return '<code>' + esc(p) + '*</code>'; }).join(', ') + '), standard transactions, Fiori apps and BAdIs – and offers what it finds as candidates for you to tick.'
+        : ' <strong>Pick the module above</strong> so the SAP search by process uses DEWA\'s prefixes for it (e.g. <code>ZHR*</code>, <code>ZWHR*</code> for HCM).';
+    return '<p class="muted small">Upload the BRD and/or the solution document (Word, PDF with text, Excel, Markdown or text). Copilot reads them' +
+      (sap ? ', checks every SAP object they name in the system <strong>read-only</strong>, works out whether this is a <strong>new development</strong>, an <strong>enhancement</strong> of an existing solution or <strong>as-built</strong> documentation,' : '') +
+      ' and drafts the whole functional spec – requirements, rules, AS-IS / TO-BE' + (sap ? ', objects, RICEFW items' : '') + ', tests.' + search +
+      ' You review it before anything is added' + (sap ? '; from the RICEFW items in step 3 you then create the Technical specs' : '') + '. The documents stay on this computer and are only sent to your GitHub Copilot.</p>';
+  }
+
   function docsCard(s) {
     const c = s.context;
     const list = docsList();
@@ -163,7 +176,7 @@
         ((c.changeNote || '').trim() ? '<p class="small">' + esc(c.changeNote) + '</p>' : '') + '</div>'
       : '';
     return '<section class="card fs-docs" aria-labelledby="h-docs"><h3 id="h-docs">Start from documents <span class="hint">BRD &amp; solution document</span></h3>' +
-      '<p class="muted small">Upload the BRD and/or the solution document (Word, PDF with text, Excel, Markdown or text). Copilot reads them, checks every SAP object they name in the system <strong>read-only</strong>, works out whether this is a <strong>new development</strong>, an <strong>enhancement</strong> of an existing solution or <strong>as-built</strong> documentation, and drafts the whole functional spec – requirements, rules, AS-IS / TO-BE, objects, RICEFW items, tests. You review it before anything is added; from the RICEFW items in step 3 you then create the Technical specs. The documents stay on this computer and are only sent to your GitHub Copilot.</p>' +
+      docsIntro(s) +
       '<div class="fs-doc-slots">' + DOC_ROLES.map(slot).join('') + '</div>' +
       (H.isVscode && list.length ? '<div class="chips fs-copilot">' + copilotStatus() + '</div>' : '') +
       '<div class="gen-actions">' + run + (list.length ? '' : '<span class="muted small">Choose at least one document.</span>') + '</div>' +
@@ -238,11 +251,14 @@
       return '<button type="button" class="chip" data-action="fs-template" data-id="' + esc(t.id) + '" title="' + esc(t.description) + '">' + esc(t.label) + '</button>';
     }).join('');
     const ctxFilled = ['processArea', 'objectives', 'kpis', 'inScope', 'outOfScope', 'stakeholders', 'otherOrg'].some(function (k) { return V.isFilled(c[k]); });
-    return header(1) + docsCard(s) + systemCards(s) +
+    // order: where it runs → title / module → documents (they use the system and the module) → or the requirement typed
+    return header(1) + systemCards(s) +
       '<div class="grid-2"><div class="field"><label for="fs-title">Specification title</label><input id="fs-title" type="text" data-bind="context.title" value="' + esc(c.title) + '" placeholder="' + esc(F.view(F.field('context', 'title'), s).placeholder) + '"></div>' +
       (!sap ? '</div>' : '') + (sap ? '<div class="field"><label for="fs-module">Module <span class="req">required</span></label><select id="fs-module" data-bind="context.module"' + (missing.indexOf('module') >= 0 ? ' aria-invalid="true"' : '') + '>' +
       mod.options.map(function (o) { return '<option value="' + esc(o.value) + '"' + (c.module === o.value ? ' selected' : '') + '>' + esc(o.label) + '</option>'; }).join('') + '</select>' +
       (missing.indexOf('module') >= 0 ? '<p class="field-error" role="alert">Pick the module.</p>' : '') + '</div></div>' : '') +
+      docsCard(s) +
+      '<p class="fs-or"><span>or describe the need yourself</span></p>' +
       '<div class="field"><label for="fs-req">Business requirement <span class="req">required</span></label>' +
       '<textarea id="fs-req" class="tall" rows="7" data-bind="context.requirement" placeholder="' + esc(req.placeholder) + '"' + (missing.indexOf('requirement') >= 0 ? ' aria-invalid="true" aria-describedby="fs-req-err"' : '') + '>' + esc(c.requirement) + '</textarea>' +
       (missing.indexOf('requirement') >= 0 ? '<p id="fs-req-err" class="field-error" role="alert">Describe the business need (a sentence or two is enough).</p>' : '') + '</div>' +
@@ -378,7 +394,7 @@
   }
 
   if (H.isVscode) {
-    H.on('auth', function (m) { APB.gov.setFromAuth(m); disc.auth = { signedIn: !!m.signedIn, account: String(m.account || ''), copilot: m.copilot !== false, chatAutoSend: m.chatAutoSend !== false }; rerenderDiscovery(); rerenderStep1(); });
+    H.on('auth', function (m) { APB.gov.setFromAuth(m); APB.fsDraft.setNamespaces(m.policy && m.policy.namespaces); disc.auth = { signedIn: !!m.signedIn, account: String(m.account || ''), copilot: m.copilot !== false, chatAutoSend: m.chatAutoSend !== false }; rerenderDiscovery(); rerenderStep1(); });
     H.on('discovery-progress', function (m) {
       const text = String(m.text || '').slice(0, 300);
       APB.busy.progress(text, m.status);
@@ -737,9 +753,15 @@
     if (flags.length && drf.pendingKind !== 'docs') U().auditAdd('guard-flag', { job: drf.pendingKind, flags: flags.length, where: 'AI answer', first: flags[0].excerpt });
     document.getElementById('draft-guard').innerHTML = guardHtml(drf.guard);
     document.getElementById('draft-list').innerHTML = parts.map(function (p) {
-      const more = p.items.length > 4 ? '<li class="muted">… and ' + (p.items.length - 4) + ' more</li>' : '';
+      const shown = p.unticked ? 25 : 4; // candidates: every one with the reason it was found
+      const more = p.items.length > shown ? '<li class="muted">… and ' + (p.items.length - shown) + ' more</li>' : '';
+      if (p.unticked) {
+        // one checkbox per candidate, none ticked: only what you pick is added
+        return '<li class="draft-candidates"><strong>' + esc(p.label) + '</strong> <span class="count">' + p.items.length + '</span>' +
+          '<ul class="small cand-list">' + p.items.slice(0, shown).map(function (i, k) { return '<li><label class="check"><input type="checkbox" name="draft-cand" value="' + esc(p.keys[k]) + '"> ' + esc(String(i).slice(0, 260)) + '</label></li>'; }).join('') + more + '</ul></li>';
+      }
       return '<li><label class="check"><input type="checkbox" name="draft-part" value="' + esc(p.id) + '" checked> <strong>' + esc(p.label) + '</strong> <span class="count">' + p.items.length + '</span></label>' +
-        '<ul class="small">' + p.items.slice(0, 4).map(function (i) { return '<li>' + esc(String(i).slice(0, 160)) + '</li>'; }).join('') + more + '</ul></li>';
+        '<ul class="small">' + p.items.slice(0, shown).map(function (i) { return '<li>' + esc(String(i).slice(0, 160)) + '</li>'; }).join('') + more + '</ul></li>';
     }).join('');
     const dlg = document.getElementById('draft-dialog');
     if (typeof dlg.showModal === 'function') { if (!dlg.open) dlg.showModal(); } else dlg.setAttribute('open', '');
@@ -979,6 +1001,13 @@
     },
     'fs-draft-apply': function () {
       const ids = Array.prototype.map.call(document.querySelectorAll('#draft-list input[name="draft-part"]:checked'), function (i) { return i.value; });
+      // process-search candidates: only the ticked ones
+      const picked = Array.prototype.map.call(document.querySelectorAll('#draft-list input[name="draft-cand"]:checked'), function (i) { return i.value; });
+      if (drf.pending && drf.pending.candidates) {
+        drf.offeredCandidates = drf.pending.candidates.map(function (c) { return c.name; });
+        drf.pending.candidates = drf.pending.candidates.filter(function (c) { return picked.indexOf(c.name) >= 0; });
+        if (picked.length) ids.push('candidates');
+      }
       const dlg = document.getElementById('draft-dialog');
       if (dlg.close) dlg.close(); else dlg.removeAttribute('open');
       if (!drf.pending || !ids.length) return;
@@ -988,6 +1017,7 @@
       const gd = drf.guard || { ground: { verified: [], unverified: [], checked: false }, flags: [] };
       markUnverified(r.state, gd.ground.unverified);
       APB.gov.audit.add(r.state, 'review', { job: kind || 'draft', accepted: ids, declined: offered.filter(function (x) { return ids.indexOf(x) < 0; }), added: r.added,
+        candidatesOffered: (drf.offeredCandidates || []).length, candidatesTaken: (drf.pending.candidates || []).map(function (c) { return c.name; }).join(', '),
         grounded: gd.ground.verified.length, unverified: gd.ground.unverified.length, unverifiedNames: gd.ground.unverified.slice(0, 20), evidence: gd.ground.checked ? gd.ground.calls + ' SAP tool calls' : 'none', guardFlags: gd.flags.length });
       drf.pending = null;
       S.replace(r.state);

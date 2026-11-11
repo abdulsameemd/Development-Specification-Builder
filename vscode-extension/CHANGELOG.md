@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.20
+
+- **The BRD upload searches the SAP system by process** – also when the BRD names no SAP object. From 3–6 business keywords of the documents, Copilot looks (read-only) for DEWA's custom objects of the module (`ZHR*<keyword>*`, `ZWHR*<keyword>*`, `ZFI*…` – prefixes per module, changeable with the new setting `dewaSpecBuilder.namespaces`), standard transactions and Fiori apps whose description matches, released CDS views / APIs and BAdIs of the area, and reads the logic of the best matches.
+- **Targeted, not the whole system:** at most 12 searches (4 when the documents already name 3 or more objects), never a bare `Z*`, at most 50 hits per search, at most 3 objects read, no table contents.
+- **Candidates in the review:** the hits are listed **unticked**, each with why it was found (keyword, origin custom / SAP standard). Only what you tick goes into *Existing SAP objects*, with the note *candidate – …*; the audit trail records how many were offered and which were taken.
+- **Functional step 1 in a clear order:** *Where will this run?* comes first, then title and module, then **Start from documents**, then – *or describe the need yourself* – the business requirement, *Generate the whole spec*, *Existing SAP objects* and *More details*. The documents card explains what it will do for the chosen system and shows the module's prefixes it searches (e.g. `ZHR*`, `ZWHR*` for HCM), or asks you to pick the module first.
+
 ## 1.0.19
 
 - **Personal data is masked before it reaches the AI.** E-mail addresses, phone numbers, Emirates IDs, IBANs and card numbers in prompts (sent to Copilot or copied to the clipboard) become tokens such as `[EMAIL_1]`; the answer gets the real values back before you review it. SAP tool results are masked too (`[EMAIL]`). IT can add patterns (`dewaSpecBuilder.masking.patterns`, e.g. personnel numbers) or switch it off (`dewaSpecBuilder.masking`). Each masking is recorded in the audit trail.

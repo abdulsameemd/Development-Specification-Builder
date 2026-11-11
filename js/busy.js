@@ -9,6 +9,7 @@
     docs: { title: 'AI is reading your BRD and solution document', sap: true, lines: [
       'Extracting requirements, business rules and process steps…',
       'Reading the DEWA SAP system: checking the ABAP artifacts named in the documents (read-only)…',
+      'Searching the DEWA SAP system by process: custom objects of the module, transactions, Fiori apps (read-only)…',
       'Reading the logic of existing programs, classes and function modules…',
       'Classifying the change: new development, enhancement or as-built…',
       'Drafting the functional specification and the RICEFW items…'] },

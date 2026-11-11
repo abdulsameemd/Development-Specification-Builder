@@ -569,7 +569,7 @@ test('the auth message carries the approval, guardrail and usage policy from the
   const b = panel.createSpecBuilder(vs, fakeContext(dir), {});
   const auth = await b.getAuth();
   assert.deepStrictEqual(auth.policy, { gates: 'warn', requireSapCheck: true, approvers: { functional: ['Alice'], technical: ['bob', '7'] },
-    masking: false, maskingPatterns: [], telemetry: 'off', modelsAllowed: ['gpt-5*'] });
+    masking: false, maskingPatterns: [], telemetry: 'off', modelsAllowed: ['gpt-5*'], namespaces: {} });
   const def = await panel.createSpecBuilder(fakeVscode(), fakeContext(dir), {}).getAuth();
   assert.strictEqual(def.policy.gates, 'enforce'); // enforced unless IT relaxes it
   assert.deepStrictEqual(def.policy.approvers, { functional: [], technical: [] });
@@ -578,6 +578,7 @@ test('the auth message carries the approval, guardrail and usage policy from the
   const decl = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.contributes.json'), 'utf8')).contributes.configuration.properties;
   assert.strictEqual(decl['dewaSpecBuilder.gates'].default, 'enforce');
   assert.ok(decl['dewaSpecBuilder.approvers.functional'] && decl['dewaSpecBuilder.approvers.technical'] && decl['dewaSpecBuilder.gates.requireSapCheck']);
+  assert.strictEqual(decl['dewaSpecBuilder.namespaces'].type, 'object');
   assert.ok(decl['dewaSpecBuilder.models.allowed'] && decl['dewaSpecBuilder.masking.patterns'] && decl['dewaSpecBuilder.telemetry'].enum.join() === 'local,off');
 });
 

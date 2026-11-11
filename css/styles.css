@@ -713,3 +713,9 @@ div.link-banner p { margin: 0 0 6px; }
 .usage-table { width: 100%; border-collapse: collapse; font-size: .88rem; margin: 6px 0 12px; }
 .usage-table th, .usage-table td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); }
 .usage-table td.num, .usage-table th.num { text-align: right; }
+/* process-search candidates in the AI review: one checkbox each */
+.draft-candidates .cand-list { list-style: none; padding-left: 4px; }
+.draft-candidates .cand-list li { margin: 4px 0; }
+/* FS step 1: "or describe the need yourself" between the documents card and the requirement */
+.fs-or { display: flex; align-items: center; gap: 12px; margin: 18px 0 6px; color: var(--muted); font-size: .85rem; }
+.fs-or::before, .fs-or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
