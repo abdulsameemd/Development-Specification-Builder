@@ -123,7 +123,7 @@
 
   // nothing of the previous spec stays when another one is opened (New, Drafts, Upload, mode switch); app.js calls it
   function resetRuntime() {
-    APB.busy.done();
+    APB.busy.done('reset');
     docs.brd = null; docs.solution = null; docs.busy = '';
     if (drf.running && drf.mode !== 'chat') H.post({ type: 'stop' });
     drf.running = false; drf.kind = ''; drf.mode = ''; drf.status = ''; drf.error = ''; drf.pending = null; drf.pendingKind = ''; drf.log = [];
@@ -378,7 +378,7 @@
   }
 
   if (H.isVscode) {
-    H.on('auth', function (m) { disc.auth = { signedIn: !!m.signedIn, account: String(m.account || ''), copilot: m.copilot !== false, chatAutoSend: m.chatAutoSend !== false }; rerenderDiscovery(); rerenderStep1(); });
+    H.on('auth', function (m) { APB.gov.setFromAuth(m); disc.auth = { signedIn: !!m.signedIn, account: String(m.account || ''), copilot: m.copilot !== false, chatAutoSend: m.chatAutoSend !== false }; rerenderDiscovery(); rerenderStep1(); });
     H.on('discovery-progress', function (m) {
       const text = String(m.text || '').slice(0, 300);
       APB.busy.progress(text, m.status);
@@ -389,9 +389,10 @@
       if (el) el.outerHTML = logHtml(); else rerenderDiscovery();
     });
     H.on('discovery-result', function (m) {
-      APB.busy.done();
+      APB.busy.done('result');
       disc.running = false;
       const answer = String(m.text || '');
+      APB.guard.evidenceAudit('discovery', m.evidence);
       if (!importText(answer, disc.mode === 'chat' ? 'Copilot Chat' : 'Copilot')) {
         disc.error = 'The answer did not contain a valid context pack. The model\'s answer is shown below – fix or complete it and click Import pasted pack, try again (setting dewaSpecBuilder.model selects a stronger model), or run it in Copilot Chat.';
         U().ui.open['fs-paste'] = true;
@@ -400,7 +401,7 @@
         if (ta) ta.value = answer;
       }
     });
-    H.on('discovery-error', function (m) { APB.busy.done(); disc.running = false; disc.error = String(m.message || 'Discovery failed').slice(0, 400); rerenderDiscovery(); });
+    H.on('discovery-error', function (m) { APB.busy.done('error'); disc.running = false; disc.error = String(m.message || 'Discovery failed').slice(0, 400); rerenderDiscovery(); });
     H.on('saved', function (m) { U().toast('Saved ' + String(m.path || ''), 5000); });
     H.post({ type: 'auth-status' });
   }
@@ -494,7 +495,7 @@
     const solution = sap
       ? discoveryPanel(s) +
         (gaps.length ? '<div class="refs" role="note"><strong>Gaps without a RICEFW item:</strong> ' + gaps.map(esc).join(', ') + ' — add an item and list the FR under “Covers FRs”.</div>' : '') +
-        block('solution', ['ricefw']) + handoffHtml(s) + programHandoffHtml(s) + linkedHtml(s) +
+        block('solution', ['ricefw']) + U().approvalCardHtml(s) + handoffHtml(s) + programHandoffHtml(s) + linkedHtml(s) +
         more('fs-more-sol', 'More details – roles & authorizations, interfaces, outputs, configuration', blockAll('solution', null, ['ricefw']), ['roles', 'interfaces', 'outputs', 'customizing'].some(function (k) { return V.isFilled(s.solution[k]); }))
       : block('solution');
     const q = s.quality, ctl = s.control;
@@ -532,7 +533,7 @@
       '<button type="button" class="btn btn-ghost btn-lg" data-action="download">Download Markdown</button>' +
       '<button type="button" class="btn btn-ghost" data-action="copy">Copy Markdown</button>' +
       (H.isVscode ? '<button type="button" class="btn btn-ghost" data-action="fs-chat-review">Open in Copilot Chat</button>' : '<button type="button" class="btn btn-ghost" data-action="share">Copy share link</button>') +
-      '<button type="button" class="btn btn-ghost" data-action="edit">Review Details</button></div>' + ho + (F.isSap(s) ? programHandoffHtml(s) + linkedHtml(s) : '') +
+      '<button type="button" class="btn btn-ghost" data-action="edit">Review Details</button></div>' + U().approvalCardHtml(s) + ho + (F.isSap(s) ? programHandoffHtml(s) + linkedHtml(s) : '') +
       '<div class="seg gen-seg" role="group" aria-label="Format"><button type="button" data-action="view-rendered" aria-pressed="' + !ui.raw + '">Preview</button><button type="button" data-action="view-raw" aria-pressed="' + ui.raw + '">Markdown</button></div>' +
       '<div class="gen-doc md" tabindex="0" aria-label="Generated specification">' + (ui.raw ? '<pre>' + esc(md) + '</pre>' : APB.markdown.toHtml(md)) + '</div>';
   }
@@ -590,9 +591,16 @@
     });
   }
 
+  function handoffOne(el) { actions['fs-handoff-one'](el); }
+  function handoffAll() { actions['fs-handoff-all-go'](); }
+  function handoffProgram() { actions['fs-dev-from-program-go'](); }
+
   /* Opens a Technical spec made from this FS. In VS Code, with objects named and Copilot ready, it opens on step 3
      and starts "Check & read in SAP" (read-only); its review dialog decides what is taken over. */
-  function openDev(dev, msg) {
+  function openDev(dev, msg, item) {
+    const fs = S.get();
+    U().auditAdd('handoff', { to: item || 'Technical spec', approval: APB.gov.status(fs).state });
+    APB.gov.audit.add(dev, 'created-from', { fs: F.model.name(fs), item: item || '', fsApproval: APB.gov.status(fs).state });
     U().loadState(dev, msg);
     const named = (dev.objects || []).some(function (o) { return (o.name || '').trim(); });
     if (H.isVscode && named && copilotReady() && U().startSapCheck) {
@@ -673,6 +681,7 @@
 
   /* ------------------------------------------------------------------ actions */
   function importText(text, source) {
+    text = APB.guard.unmask(text);
     const res = DS.parse(text);
     if (!res.pack) { U().toast(res.errors[0] || 'This is not a context pack', 6000); return false; }
     U().updateSteps(function (st) { st.discovery = res.pack; });
@@ -686,7 +695,34 @@
     if (S.isFs() && !U().ui.generated && U().ui.step <= 2 && !U().ui.view) U().renderMain();
   }
 
-  function reviewDraft(text) {
+  const UNVERIFIED = '[NOT VERIFIED IN SAP]';
+  /* The review box above the draft: grounding result and guardrail warnings. */
+  function guardHtml(gd) {
+    const g = gd.ground, out = [];
+    if (gd.names.length) {
+      if (g.checked) {
+        out.push('<p class="guard-ok">✓ ' + g.verified.length + ' of ' + gd.names.length + ' SAP name' + (gd.names.length > 1 ? 's' : '') + ' in this draft ' + (g.verified.length === 1 ? 'was' : 'were') + ' read from the system (' + g.calls + ' read-only tool call' + (g.calls === 1 ? '' : 's') + ').</p>');
+      } else {
+        out.push('<p class="guard-warn">⚠ SAP names not checked against the system: this result came without tool evidence (Copilot Chat, pasted answer or no SAP access)' + (g.verified.length ? '; ' + g.verified.length + ' are known from the SAP check or discovery' : '') + '.</p>');
+      }
+      if (g.unverified.length) out.push('<p class="guard-warn">⚠ Not verified in SAP: <strong>' + g.unverified.slice(0, 12).map(esc).join(', ') + (g.unverified.length > 12 ? ' …' : '') + '</strong>. They are added with the note ' + UNVERIFIED + ' – confirm them before approval (Technical spec: Check &amp; read in SAP).</p>');
+    }
+    if (gd.flags.length) {
+      out.push('<p class="guard-warn">⚠ Text that looks like instructions to the AI was found (' + gd.flags.length + ') and treated as data – read the related parts carefully:</p><ul class="small">' +
+        gd.flags.slice(0, 4).map(function (f) { return '<li>' + esc(f.where) + ': “' + esc(f.excerpt) + '”</li>'; }).join('') + '</ul>');
+    }
+    return out.length ? '<div class="guard-box" role="note">' + out.join('') + '</div>' : '';
+  }
+  /* Accepted rows naming an unverified SAP object carry a visible note, so nobody takes them for checked facts. */
+  function markUnverified(st, names) {
+    if (!names || !names.length) return;
+    const hit = function (n) { return names.indexOf(String(n || '').trim().toUpperCase()) >= 0; };
+    (st.context.objects || []).forEach(function (o) { if (o && hit(o.name) && String(o.note || '').indexOf(UNVERIFIED) < 0) o.note = ((o.note || '').trim() + ' ' + UNVERIFIED).trim(); });
+    (st.process.programs || []).forEach(function (p) { if (p && hit(p.name) && String(p.description || '').indexOf(UNVERIFIED) < 0) p.description = ((p.description || '').trim() + ' ' + UNVERIFIED).trim(); });
+  }
+
+  function reviewDraft(text, evidence) {
+    text = APB.guard.unmask(text);
     const r = APB.fsDraft.parse(text);
     if (!r.draft) { drf.error = r.error; rerenderStep1(); U().toast(r.error, 6000); return false; }
     const parts = APB.fsDraft.preview(S.get(), r.draft);
@@ -694,6 +730,12 @@
     drf.error = '';
     drf.pending = r.draft;
     drf.pendingKind = drf.kind || 'draft';
+    // grounding: SAP names in the draft against what the read-only tools returned; guardrail flags
+    const names = APB.guard.draftNames(r.draft);
+    const flags = (drf.pendingKind === 'docs' ? drf.docFlags || [] : []).concat(evidence && evidence.flags ? [{ where: 'SAP tool results', excerpt: evidence.flags + ' result(s) contained text that looks like instructions' }] : []).concat(APB.guard.injection(text).map(function (f) { return { where: 'AI answer', excerpt: f.excerpt }; }));
+    drf.guard = { names: names, ground: APB.guard.ground(names, evidence, S.get()), flags: flags };
+    if (flags.length && drf.pendingKind !== 'docs') U().auditAdd('guard-flag', { job: drf.pendingKind, flags: flags.length, where: 'AI answer', first: flags[0].excerpt });
+    document.getElementById('draft-guard').innerHTML = guardHtml(drf.guard);
     document.getElementById('draft-list').innerHTML = parts.map(function (p) {
       const more = p.items.length > 4 ? '<li class="muted">… and ' + (p.items.length - 4) + ' more</li>' : '';
       return '<li><label class="check"><input type="checkbox" name="draft-part" value="' + esc(p.id) + '" checked> <strong>' + esc(p.label) + '</strong> <span class="count">' + p.items.length + '</span></label>' +
@@ -721,18 +763,19 @@
       if (el && drf.running) el.textContent = drf.status; else rerenderStep1();
     });
     H.on('draft-result', function (m) {
-      APB.busy.done();
+      APB.busy.done('result');
       drf.running = false; drf.status = ''; drf.mode = '';
       drf.log.push({ text: 'Result received', status: 'done' });
       const answer = String(m.text || '');
-      if (!reviewDraft(answer)) {
+      APB.guard.evidenceAudit(drf.kind || 'draft', m.evidence);
+      if (!reviewDraft(answer, m.evidence)) {
         const box = { asis: 'fs-asis', tobe: 'fs-tobe', docs: 'fs-docs' }[drf.kind] || 'fs-draft';
         U().ui.open[box + '-paste'] = true; rerenderStep1();
         const ta = document.getElementById(box + '-answer');
         if (ta) ta.value = answer;
       } else rerenderStep1();
     });
-    H.on('draft-error', function (m) { APB.busy.done(); drf.running = false; drf.status = ''; drf.error = String(m.message || 'Drafting failed').slice(0, 400); rerenderStep1(); });
+    H.on('draft-error', function (m) { APB.busy.done('error'); drf.running = false; drf.status = ''; drf.error = String(m.message || 'Drafting failed').slice(0, 400); rerenderStep1(); });
   }
 
   /* Objects to read: the typed list in step 1. */
@@ -766,7 +809,13 @@
     drf.running = true; drf.kind = 'docs'; drf.mode = mode; drf.error = ''; drf.log = [];
     APB.busy.start('docs', mode, function () { actions['fs-draft-stop'](); });
     drf.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Copilot is reading ' + list.map(function (d) { return d.name; }).join(' and ') + ' and checking SAP (read-only)…';
-    H.post({ type: 'read-program', mode: mode, prompt: APB.fsDraft.docsPrompt(S.get(), list) });
+    const prompt = APB.fsDraft.docsPrompt(S.get(), list);
+    U().auditAdd('ai-input', { job: 'docs', documents: list.map(function (d) { return d.role + ': ' + d.name + ' (' + d.chars + ' chars, fp ' + APB.gov.fingerprint({ t: d.text }) + ')'; }), promptChars: prompt.length });
+    // instructions hidden in the documents are fenced as data; flag them for the reviewer as well
+    drf.docFlags = [];
+    list.forEach(function (d) { APB.guard.injection(d.text).forEach(function (f) { drf.docFlags.push({ where: d.name, excerpt: f.excerpt }); }); });
+    if (drf.docFlags.length) U().auditAdd('guard-flag', { job: 'docs', flags: drf.docFlags.length, where: 'uploaded documents', first: drf.docFlags[0].excerpt });
+    H.post({ type: 'read-program', mode: mode, prompt: prompt });
     rerenderStep1();
   }
 
@@ -797,7 +846,7 @@
     'fs-docs-copy': function () {
       const list = docsList();
       if (!list.length) { U().toast('Choose the BRD or the solution document first'); return; }
-      Promise.resolve(APB.exporter.copy(APB.fsDraft.docsPrompt(S.get(), list))).then(function (ok) {
+      Promise.resolve(APB.exporter.copy(APB.guard.outbound(APB.fsDraft.docsPrompt(S.get(), list), 'clipboard'))).then(function (ok) {
         U().ui.open['fs-docs-paste'] = true;
         rerenderStep1();
         U().toast(ok ? 'Prompt copied ✓ Paste it into Copilot Chat in VS Code (' + DS.cfg.agent + '), then paste the answer here' : 'Copy failed – the documents may be too long for the clipboard', 8000);
@@ -809,21 +858,22 @@
       if (ta && reviewDraft(ta.value)) U().ui.open['fs-docs-paste'] = false;
     },
     'fs-doc-remove': function (el) { docs[el.dataset.role] = null; setSource(el.dataset.role, null); },
-    'fs-handoff-all': function () {
+    'fs-handoff-all-go': function () {
       const s = S.get();
       const ids = F.ricefwIds(s.solution.ricefw);
       const items = (s.solution.ricefw || []).map(function (r, i) { return i; }).filter(function (i) { const r = s.solution.ricefw[i]; return V.isFilled(r) && r.type; });
       if (!items.length) return;
       const devs = items.map(function (i) { const dev = toDevSpec(s, i); APB.specLink.stamp(dev, s, 'ricefw', i); return { dev: dev, id: ids[i] }; });
-      devs.slice(1).forEach(function (x) { APB.storage.save(x.dev); });
-      openDev(devs[0].dev, devs.length + ' Technical specs created (' + devs.map(function (x) { return x.id; }).join(', ') + ') – this one is open, the others are in Drafts');
+      devs.slice(1).forEach(function (x) { APB.gov.audit.add(x.dev, 'created-from', { fs: F.model.name(s), item: x.id, fsApproval: APB.gov.status(s).state }); APB.storage.save(x.dev); });
+      U().auditAdd('handoff', { to: devs.slice(1).map(function (x) { return x.id; }).join(', ') });
+      openDev(devs[0].dev, devs.length + ' Technical specs created (' + devs.map(function (x) { return x.id; }).join(', ') + ') – this one is open, the others are in Drafts', devs[0].id);
     },
     'fs-tobe-auto': function () { draftToBe('auto'); },
     'fs-tobe-chat': function () { draftToBe('chat'); },
     'fs-tobe-copy': function () {
       const s = S.get();
       if ((s.context.requirement || '').trim().length < 10) { U().toast('Describe the business requirement in step 1 first'); return; }
-      Promise.resolve(APB.exporter.copy(APB.fsDraft.toBePrompt(s))).then(function (ok) {
+      Promise.resolve(APB.exporter.copy(APB.guard.outbound(APB.fsDraft.toBePrompt(s), 'clipboard'))).then(function (ok) {
         U().ui.open['fs-tobe-paste'] = true;
         rerenderStep1();
         U().toast(ok ? 'Prompt copied ✓ Paste it into an AI chat your organisation allows, then paste the answer here' : 'Copy failed', 7000);
@@ -839,7 +889,7 @@
     'fs-asis-copy': function () {
       const labels = programLabels();
       if (!labels.length) { U().toast('List the existing objects in step 1 first'); return; }
-      Promise.resolve(APB.exporter.copy(APB.fsDraft.asIsPrompt(S.get(), labels))).then(function (ok) {
+      Promise.resolve(APB.exporter.copy(APB.guard.outbound(APB.fsDraft.asIsPrompt(S.get(), labels), 'clipboard'))).then(function (ok) {
         U().ui.open['fs-asis-paste'] = true;
         rerenderStep1();
         U().toast(ok ? 'Prompt copied ✓ Paste it into Copilot Chat in VS Code (' + DS.cfg.agent + '), then paste the answer here' : 'Copy failed', 8000);
@@ -873,7 +923,7 @@
     'fs-draft-copy': function () {
       const s = S.get();
       if ((s.context.requirement || '').trim().length < 10) { U().toast('Describe the business requirement first'); return; }
-      Promise.resolve(APB.exporter.copy(APB.fsDraft.prompt(s))).then(function (ok) {
+      Promise.resolve(APB.exporter.copy(APB.guard.outbound(APB.fsDraft.prompt(s), 'clipboard'))).then(function (ok) {
         U().ui.open['fs-draft-paste'] = true;
         rerenderStep1();
         U().toast(ok ? 'AI prompt copied ✓ Paste it into an AI chat your organisation allows, then paste the answer here' : 'Copy failed', 7000);
@@ -895,28 +945,29 @@
       H.post({ type: 'draft', mode: 'chat', prompt: APB.fsDraft.prompt(s) });
       rerenderStep1();
     },
-    'fs-draft-stop': function () { APB.busy.done(); if (drf.mode !== 'chat') H.post({ type: 'stop' }); drf.running = false; drf.mode = ''; drf.status = ''; rerenderStep1(); },
+    'fs-draft-stop': function () { APB.busy.done('stopped'); if (drf.mode !== 'chat') H.post({ type: 'stop' }); drf.running = false; drf.mode = ''; drf.status = ''; rerenderStep1(); },
     'fs-prog-auto': function () { readProgram('auto'); },
     'fs-prog-chat': function () { readProgram('chat'); },
     'fs-prog-copy': function () {
       const names = programNames();
       if (!names.length) { U().toast('Add an existing object first'); return; }
-      Promise.resolve(APB.exporter.copy(APB.fsDraft.programPrompt(S.get(), programLabels()))).then(function (ok) {
+      Promise.resolve(APB.exporter.copy(APB.guard.outbound(APB.fsDraft.programPrompt(S.get(), programLabels()), 'clipboard'))).then(function (ok) {
         U().ui.open['fs-draft-paste'] = true;
         rerenderStep1();
         U().toast(ok ? 'Prompt copied ✓ Paste it into Copilot Chat in VS Code (' + DS.cfg.agent + '), then paste the answer under Paste the AI answer' : 'Copy failed', 8000);
       });
     },
-    'fs-dev-from-program': function () {
+    'fs-dev-from-program-go': function () {
       const s = S.get();
       const dev = toDevSpecFromProgram(s);
       if (!dev) { U().toast('Read an existing program first'); return; }
       APB.specLink.stamp(dev, s, 'program');
-      U().loadState(dev, 'Development spec created to change ' + mainProgram(s).name + ' — your FS is in Drafts');
+      openDev(dev, 'Development spec created to change ' + mainProgram(s).name + ' — your FS is in Drafts', 'change ' + mainProgram(s).name);
     },
     'fs-chat-review': function () {
       const s = S.get();
       if (FC.checkMandatory(s).length) { U().toast(mandatoryMsg(s)); return; }
+      U().auditAdd('export', { to: 'Copilot Chat (review)' });
       H.post({ type: 'open-chat', agent: 'ask', prompt: FM.chatPrompt(s) });
       U().toast(autoSend() ? 'Copilot Chat is reviewing the specification – ask your questions there' : 'The specification is in Copilot Chat – press Enter to start the review', 6000);
     },
@@ -931,8 +982,13 @@
       const dlg = document.getElementById('draft-dialog');
       if (dlg.close) dlg.close(); else dlg.removeAttribute('open');
       if (!drf.pending || !ids.length) return;
+      const offered = APB.fsDraft.preview(S.get(), drf.pending).map(function (p) { return p.id; });
       const r = APB.fsDraft.merge(S.get(), drf.pending, ids);
       const kind = drf.pendingKind;
+      const gd = drf.guard || { ground: { verified: [], unverified: [], checked: false }, flags: [] };
+      markUnverified(r.state, gd.ground.unverified);
+      APB.gov.audit.add(r.state, 'review', { job: kind || 'draft', accepted: ids, declined: offered.filter(function (x) { return ids.indexOf(x) < 0; }), added: r.added,
+        grounded: gd.ground.verified.length, unverified: gd.ground.unverified.length, unverifiedNames: gd.ground.unverified.slice(0, 20), evidence: gd.ground.checked ? gd.ground.calls + ' SAP tool calls' : 'none', guardFlags: gd.flags.length });
       drf.pending = null;
       S.replace(r.state);
       if (kind === 'program') {
@@ -972,19 +1028,19 @@
       const s = S.get();
       if (FC.checkMandatory(s).length) { U().toast(mandatoryMsg(s)); return; }
       const mode = APB.storage.getPref('vscodeLaunch', 'extension');
-      const copied = APB.exporter.copyNow(DS.prompt(s));
+      const copied = APB.exporter.copyNow(APB.guard.outbound(DS.prompt(s), 'clipboard'));
       APB.exporter.launchVscode(DS.launchUrl(mode, APB.storage.getPref('extensionId', DS.cfg.extensionId)));
       U().toast(!copied ? 'VS Code is opening — copying failed, use Copy prompt only'
         : mode === 'plain' ? 'Prompt copied ✓ In VS Code open Copilot Chat (Ctrl+Alt+I), pick ' + DS.cfg.agent + ', paste and press Enter'
           : 'Prompt copied ✓ VS Code opens Copilot Chat with ' + DS.cfg.agent + ' — sign in if asked, then press Enter', 8000);
     },
     'fs-copy-prompt': function () {
-      Promise.resolve(APB.exporter.copy(DS.prompt(S.get()))).then(function (ok) { U().toast(ok ? 'Discovery prompt copied' : 'Copy failed'); });
+      Promise.resolve(APB.exporter.copy(APB.guard.outbound(DS.prompt(S.get()), 'clipboard'))).then(function (ok) { U().toast(ok ? 'Discovery prompt copied' : 'Copy failed'); });
     },
     'fs-signin': function () { H.post({ type: 'sign-in' }); },
     'fs-auto': function () { startDiscovery('auto'); },
     'fs-chat': function () { startDiscovery('chat'); },
-    'fs-stop': function () { APB.busy.done(); H.post({ type: 'stop' }); disc.running = false; disc.log.push({ text: 'Stopped', status: 'info' }); rerenderDiscovery(); },
+    'fs-stop': function () { APB.busy.done('stopped'); H.post({ type: 'stop' }); disc.running = false; disc.log.push({ text: 'Stopped', status: 'info' }); rerenderDiscovery(); },
     'fs-import-clip': function () {
       if (H.isVscode) {
         H.request('clipboard-read').then(function (t) { importText(String(t || ''), 'clipboard'); }, function () { U().toast('Could not read the clipboard'); });
@@ -1007,15 +1063,20 @@
       U().renderDatalists();
     },
     'fs-launch-mode': function (el) { APB.storage.setPref('vscodeLaunch', el.value); U().toast(el.value === 'plain' ? 'VS Code opens without the extension — paste the prompt yourself' : 'VS Code opens through the DEWA extension'); },
-    'fs-handoff': function (el) {
+    'fs-handoff': function (el) { U().gateGuard('G1', function () { handoffOne(el); }); },
+    'fs-handoff-all': function () { U().gateGuard('G1', handoffAll); },
+    'fs-dev-from-program': function () { U().gateGuard('G1', handoffProgram); },
+    'fs-handoff-one': function (el) {
       const s = S.get();
       const dev = toDevSpec(s, Number(el.dataset.i));
       APB.specLink.stamp(dev, s, 'ricefw', Number(el.dataset.i));
-      openDev(dev, 'Development spec created from ' + F.ricefwIds(s.solution.ricefw)[Number(el.dataset.i)] + ' — your FS is in Drafts');
+      const id = F.ricefwIds(s.solution.ricefw)[Number(el.dataset.i)];
+      openDev(dev, 'Development spec created from ' + id + ' — your FS is in Drafts', id);
     },
     'fs-docx': function () {
       const s = S.get();
       if (FC.checkMandatory(s).length) { U().toast(mandatoryMsg(s)); return; }
+      U().auditAdd('export', { to: 'Word file', file: FM.docxFilename(s), approval: APB.gov.status(s).state });
       const bytes = APB.docx.fromMarkdown(FM.build(s), FM.docMeta(s));
       APB.exporter.downloadBytes(FM.docxFilename(s), bytes, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
       U().toast(U().savedMsg(FM.docxFilename(s)));

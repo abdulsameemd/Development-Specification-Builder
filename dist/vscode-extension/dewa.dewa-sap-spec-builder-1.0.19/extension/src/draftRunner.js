@@ -4,6 +4,7 @@
    for review before anything is added to the spec. */
 
 const { pickModel } = require('./discoveryRunner');
+const guardrails = require('./guardrails');
 
 const MARKER = 'FS-DRAFT v1';
 const JUSTIFICATION = 'Drafts the missing parts of a functional specification from its business requirement.';
@@ -21,7 +22,7 @@ async function ask(vscode, model, messages, token) {
   return out;
 }
 
-/* opts: { prompt, model, token, onProgress } → the model's answer (text with one ```json block) */
+/* opts: { prompt, model, token, onProgress, guard: { allowedModels } } → the model's answer (text with one ```json block) */
 async function run(vscode, opts) {
   const progress = opts.onProgress || function () {};
   const models = await vscode.lm.selectChatModels({ vendor: 'copilot' });
@@ -30,8 +31,11 @@ async function run(vscode, opts) {
     e.code = 'NO_MODEL';
     throw e;
   }
-  const model = pickModel(models, opts.model);
-  progress({ text: 'Drafting with ' + (model.name || model.id || 'Copilot') + '…' });
+  const allowedList = (opts.guard && opts.guard.allowedModels) || [];
+  const allowed = guardrails.allowedModels(models, allowedList);
+  if (!allowed.length) throw guardrails.notAllowedError(models, allowedList);
+  const model = pickModel(allowed, opts.model);
+  progress({ text: 'Model ' + (model.name || model.id || 'Copilot') + ' · drafting…' });
   const M = vscode.LanguageModelChatMessage;
   const messages = [M.User(String(opts.prompt || ''))];
   cancelled(opts.token);

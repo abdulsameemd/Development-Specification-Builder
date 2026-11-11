@@ -688,3 +688,28 @@ div.link-banner p { margin: 0 0 6px; }
 .busy-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--lime); animation: busy-pulse 1.4s ease-in-out infinite; }
 @media (max-width: 480px) { .busy-card { grid-template-columns: 1fr; justify-items: start; } }
 @media (prefers-reduced-motion: reduce) { .busy-orb span, .busy-dot, .busy-line { animation: none; } .busy-orb span:nth-child(1) { border-color: var(--lime); } }
+
+/* Approval gates (governance.js) */
+.gov-card { border-left: 4px solid var(--amber); }
+.gov-card.gov-approved { border-left-color: var(--lime); }
+.gov-card.gov-changed { border-left-color: var(--danger); }
+.gov-state { margin: 4px 0 8px; font-weight: 600; }
+.gov-state.ok { color: var(--accent-text); }
+.gov-state.bad { color: var(--danger); }
+.gov-request { margin: 0 0 8px; }
+.gov-send { margin-top: 10px; }
+.gov-state code { font-size: .78rem; }
+.gov-mode { margin-top: 8px; }
+.gov-flash { animation: gov-flash .5s ease 3; }
+@keyframes gov-flash { 50% { box-shadow: 0 0 0 4px var(--amber); } }
+@media (prefers-reduced-motion: reduce) { .gov-flash { animation: none; outline: 3px solid var(--amber); } }
+
+/* Grounding and guardrail notes in the AI review dialog (js/guard.js) */
+.guard-box { border: 1px solid var(--line); border-left: 4px solid var(--lime, #8cc63f); border-radius: 8px; padding: 8px 12px; margin: 0 0 12px; font-size: .9rem; }
+.guard-box p { margin: 4px 0; }
+.guard-ok { color: var(--accent-text, #2f6b00); }
+.guard-warn { color: var(--danger, #b42318); }
+/* Usage dialog */
+.usage-table { width: 100%; border-collapse: collapse; font-size: .88rem; margin: 6px 0 12px; }
+.usage-table th, .usage-table td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); }
+.usage-table td.num, .usage-table th.num { text-align: right; }

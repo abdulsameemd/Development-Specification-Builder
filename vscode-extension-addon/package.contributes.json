@@ -45,6 +45,84 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "Send the prompt in Copilot Chat right away when a Spec Builder button opens Chat (development spec to `dewa-abap`, discovery in Chat, draft in Chat, review of a functional spec). Off: the prompt is only filled in and you press Enter."
+        },
+        "dewaSpecBuilder.gates": {
+          "type": "string",
+          "enum": [
+            "enforce",
+            "warn"
+          ],
+          "default": "enforce",
+          "markdownDescription": "Approval gates. **enforce** (default): a functional spec must be approved before Technical specs are created from it (G1), and a technical spec before `dewa-abap` builds from it (G2). **warn**: the gates only warn, and continuing is recorded in the audit trail. IT can set and lock this setting."
+        },
+        "dewaSpecBuilder.gates.requireSapCheck": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "A technical spec can be approved only after *Check & read in SAP* has run with no unresolved findings."
+        },
+        "dewaSpecBuilder.approvers.functional": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "GitHub accounts (as shown in VS Code's Accounts menu) that may **approve functional specifications** (gate G1). Empty = nobody can approve, so enforced gates stay closed. Example: `[\"fs-lead\", \"ba-manager\"]`. IT distributes it in user or workspace settings (`.vscode/settings.json`); see GOVERNANCE.md."
+        },
+        "dewaSpecBuilder.approvers.technical": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "GitHub accounts that may **approve technical specifications** (gate G2, before `dewa-abap` builds). Example: `[\"tech-lead\"]`. IT distributes it in user or workspace settings (`.vscode/settings.json`); see GOVERNANCE.md."
+        },
+        "dewaSpecBuilder.models.allowed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Copilot models the builder may use (family, name or id; `*` wildcards, a plain word = contains), e.g. `[\"gpt-5*\", \"*sonnet*\"]`. Empty = any GitHub Copilot model. When none of the available models is allowed, AI jobs stop with a message. The model used is recorded in the audit trail."
+        },
+        "dewaSpecBuilder.masking": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Mask personal data before it reaches the AI: e-mail addresses, phone numbers, Emirates IDs, IBANs and card numbers in prompts are replaced by tokens such as `[EMAIL_1]` (restored in the answer before you review it), and in SAP tool results by `[EMAIL]`. Each masking is recorded in the audit trail."
+        },
+        "dewaSpecBuilder.masking.patterns": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "regex": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "regex"
+                ]
+              }
+            ]
+          },
+          "default": [],
+          "markdownDescription": "Extra masking patterns (JavaScript regular expressions), e.g. `[{\"name\": \"PERNR\", \"regex\": \"\\\\bPERNR\\\\s*\\\\d{8}\\\\b\"}]` for personnel numbers."
+        },
+        "dewaSpecBuilder.telemetry": {
+          "type": "string",
+          "enum": [
+            "local",
+            "off"
+          ],
+          "default": "local",
+          "markdownDescription": "`local`: count AI jobs, review decisions, approvals and gate events per month on this computer (header → *Usage*; export as CSV). No spec content is kept and nothing is sent anywhere. `off`: count nothing."
         }
       }
     },

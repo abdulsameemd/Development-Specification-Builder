@@ -158,7 +158,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.15.vsix`](dist/dewa-sap-spec-builder-1.0.15.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.15.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.19.vsix`](dist/dewa-sap-spec-builder-1.0.19.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.19.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **If the .vsix download is blocked** (the downloaded file is only a few KB, and VS Code says *End of central directory record signature not found*): some company networks replace `.vsix` downloads with a web page. The repository also holds the extension **unpacked** in `dist/vscode-extension/dewa.dewa-sap-spec-builder-<version>/`, as plain files, so no `.vsix` is downloaded:
 
@@ -184,6 +184,42 @@ Copying the unpacked folder into `~/.vscode/extensions` does **not** work once o
 - Word / Markdown are saved through VS Code's save dialog.
 
 **VS Code extension add-on** – [`vscode-extension-addon/`](vscode-extension-addon/INSTALL.md): the panel, the automatic discovery runner, the submit tool, the `/builder` and `/discover` URI handlers, the agent file, install steps and unit tests (`node --test vscode-extension-addon/test/*.test.js`). In the browser without the add-on, choose *Plain VS Code (copy & paste)* in step 3 → *VS Code launch settings*.
+
+### Approval gates & audit
+
+Specs are **approved before they move on**: a functional spec before Technical specs are created from it (gate **G1**), a technical spec before `dewa-abap` builds from it (gate **G2**); the code itself goes through a reviewed pull request (**G3**).
+
+- The **Approval** card (FS step 3, TS step 5, and the finished documents) shows the status, who approved and when, and who may approve. Approvers are GitHub accounts in the VS Code settings `dewaSpecBuilder.approvers.functional` and `dewaSpecBuilder.approvers.technical`.
+- An approval holds a fingerprint of the content: **any change afterwards needs a new approval**.
+- A technical spec can only be approved after *Check & read in SAP* ran without open findings (`dewaSpecBuilder.gates.requireSapCheck`).
+- `dewaSpecBuilder.gates`: `enforce` (default) blocks; `warn` allows *Continue anyway* and records it. In a plain browser the gates only warn.
+- Every spec keeps an **audit trail** (AI jobs, documents read, review decisions, approvals, gate blocks and overrides, hand-offs, exports), printed in the documents and, in VS Code, written to `.dewa/audit/<spec-id>.jsonl`.
+
+**Add approvers:** VS Code → Settings (`Ctrl+,`) → search `dewaSpecBuilder.approvers` → *Add Item* with the GitHub account shown in the Accounts menu (case does not matter). Use the *Workspace* tab to share the list with the team through `.vscode/settings.json`, or edit the JSON directly:
+
+```json
+"dewaSpecBuilder.approvers.functional": ["fs-lead", "ba-manager"],
+"dewaSpecBuilder.approvers.technical": ["tech-lead"]
+```
+
+Changes apply at once. The Approval card's *Open settings* button (shown while no approvers are set) opens these settings.
+
+**Get an approval (by email or Teams):**
+
+1. **Author:** Approval card → **Request approval**. It saves `FS_<title>_FOR-APPROVAL.md` (or `TS_…`) and copies a message – attach the file to an email or Teams message to the approvers and paste the message.
+2. **Approver:** *DEWA: Open SAP Spec Builder* → **Upload** the attachment → *Approval requested by …* → review → **Approve** → **Save approved file to send back** → reply with `…_APPROVED.md`.
+3. **Author:** **Upload** the approved file. It replaces your draft of that spec (with Undo), and the gate is open.
+
+Roles, settings, what IT can and cannot lock, and the release rules: [GOVERNANCE.md](GOVERNANCE.md). Threats and controls: [SECURITY.md](SECURITY.md). Tests: `npm test` (unit) and `npm run test:e2e` (browser, needs `npm install`); both run in CI.
+
+### Grounding, guardrails, masking & usage
+
+- **Grounding:** the AI review dialog shows how many SAP names in a draft were actually read from the system (read-only tools) and lists the rest as **Not verified in SAP**; accepted rows with such a name are marked `[NOT VERIFIED IN SAP]`.
+- **Guardrails:** uploaded documents and SAP tool results are passed to the AI as data, never as instructions; text that looks like an instruction to the AI is flagged in the review and recorded. `dewaSpecBuilder.models.allowed` restricts which Copilot models may run.
+- **Masking:** e-mail addresses, phone numbers, Emirates IDs, IBANs and card numbers (plus your own patterns in `dewaSpecBuilder.masking.patterns`) are replaced by tokens like `[EMAIL_1]` before a prompt leaves the builder and restored before you review the answer (`dewaSpecBuilder.masking`, on by default).
+- **Usage** (header): AI jobs, review decisions, masked items, approvals and gate events per month – counted on this computer only, no content, CSV export (`dewaSpecBuilder.telemetry` = `local` | `off`).
+
+Details: [GOVERNANCE.md](GOVERNANCE.md#grounding-and-guardrails).
 
 ## How developers use it (Technical mode)
 

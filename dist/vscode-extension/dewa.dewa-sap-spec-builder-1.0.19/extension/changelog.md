@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.0.19
+
+- **Personal data is masked before it reaches the AI.** E-mail addresses, phone numbers, Emirates IDs, IBANs and card numbers in prompts (sent to Copilot or copied to the clipboard) become tokens such as `[EMAIL_1]`; the answer gets the real values back before you review it. SAP tool results are masked too (`[EMAIL]`). IT can add patterns (`dewaSpecBuilder.masking.patterns`, e.g. personnel numbers) or switch it off (`dewaSpecBuilder.masking`). Each masking is recorded in the audit trail.
+- **Usage (header):** AI jobs per month with runs, results, average time, steps and model; review decisions; unverified SAP names; masked items; guardrail warnings; approvals; gate blocks and overrides – counted on this computer only, without content, nothing is sent. Export as CSV; `dewaSpecBuilder.telemetry` = `off` switches it off.
+
+## 1.0.18
+
+- **Grounding.** When Copilot reads SAP for a draft, the extension keeps the evidence (tools called, SAP names in their results). The review dialog shows how many SAP names in the draft were read from the system and lists the others as **Not verified in SAP**; accepted rows with such a name are marked `[NOT VERIFIED IN SAP]`. The audit trail records the counts.
+- **Guardrails.** Uploaded documents and SAP tool results are passed to the model as data, with the rule never to follow instructions inside them. Text that looks like an instruction to the AI ("ignore previous instructions", "activate … without approval" …) in documents, tool results or the answer is flagged in the review and recorded.
+- **Allowed models.** `dewaSpecBuilder.models.allowed` restricts which Copilot models may run (e.g. `["gpt-5*", "*sonnet*"]`); otherwise the job stops with the list of available models.
+
+## 1.0.17
+
+- **Approval by email or Teams – no Git or shared folder needed.** On the Approval card the author presses **Request approval**: the builder saves `FS_<title>_FOR-APPROVAL.md` (or `TS_…`), records the request in the audit trail and copies a message to paste into Outlook or Teams with the file attached.
+- **The approver** opens the attachment with **Upload**; the builder says *Approval requested by …* and goes to the Approval card. After **Approve**, **Save approved file to send back** saves `…_APPROVED.md` and copies the reply text.
+- **The author** uploads the approved file: it **replaces their draft of that spec** (Undo offered) instead of creating a second copy, and the gate is open. The Approval card shows who requested approval, when and from whom.
+- The approver settings no longer claim IT can lock them (VS Code cannot lock an extension's settings); they show an example instead.
+
+## 1.0.16
+
+- **Approval gates.** A functional spec must be **approved** before Technical specs are created from it (gate G1), and a technical spec before `dewa-abap` builds from it (gate G2). The new **Approval** card shows the status, who approved and when, and who may approve. Approvers are GitHub accounts listed in the VS Code settings `dewaSpecBuilder.approvers.functional` / `.technical`; only they see **Approve**.
+- **Any change after approval needs a new approval.** The approval stores a fingerprint of the spec content; editing the spec afterwards closes the gate again. A technical spec handed to Copilot without a valid approval starts with a STOP instruction.
+- **G2 needs the SAP check.** A technical spec can be approved only after *Check & read in SAP* ran without open ✗ findings (setting `dewaSpecBuilder.gates.requireSapCheck`).
+- **Enforced by default, IT can relax it.** `dewaSpecBuilder.gates` = `enforce` blocks the action; `warn` lets the user continue, and that is recorded as an override. In a plain browser the gates only warn (no signed-in identity).
+- **Audit trail.** Each spec records AI jobs (start, end, model, duration, outcome), documents read, review decisions, approvals, gate blocks and overrides, hand-offs and exports. It appears in the documents (*Audit trail* / *Approval & Audit Trail*) and, in VS Code, is also written to `.dewa/audit/<spec-id>.jsonl` in the workspace.
+- **Tests in CI.** Unit tests and browser end-to-end tests (gates, approval, audit, New / Undo) run on every pull request. New [GOVERNANCE.md](https://github.com/abdulsameemd/Development-Specification-Builder/blob/main/GOVERNANCE.md) and [SECURITY.md](https://github.com/abdulsameemd/Development-Specification-Builder/blob/main/SECURITY.md).
+
 ## 1.0.15
 
 - **Busy overlay while the AI works.** Whenever the builder reads the DEWA SAP system or asks Copilot to generate something, an overlay shows what is happening – for example *AI is reading DEWA SAP ABAP artifacts* or *AI is reading your BRD and solution document* – with what the agent is doing right now (reading program source, checking objects read-only, classifying the change …), the latest step from the SAP tools, elapsed time and **Stop**. **Keep working** hides it into a small pill that reopens it. In Copilot Chat mode it says to follow the progress in Chat.

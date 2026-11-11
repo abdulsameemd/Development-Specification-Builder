@@ -350,6 +350,7 @@
   }
 
   function sapReview(text) {
+    text = APB.guard.unmask(text);
     const r = APB.devSap.parse(text);
     if (!r.ctx) { sap.error = r.error; rerenderSap(); toast(r.error, 6000); return false; }
     sap.error = '';
@@ -374,10 +375,13 @@
   }
 
   onReset(FA.reset);
-  onReset(function () { APB.busy.done(); if (sap.running && sap.mode !== 'chat') H.post({ type: 'stop' }); sap.running = false; sap.mode = ''; sap.status = ''; sap.error = ''; sap.log = []; sap.pending = null; });
+  onReset(function () { APB.busy.done('reset'); if (sap.running && sap.mode !== 'chat') H.post({ type: 'stop' }); sap.running = false; sap.mode = ''; sap.status = ''; sap.error = ''; sap.log = []; sap.pending = null; });
 
   if (H.isVscode) {
-    H.on('auth', function () { if (!isFs() && ui.step === 3 && !ui.generated) rerenderSap(); });
+    H.on('auth', function () {
+      if (!isFs() && ui.step === 3 && !ui.generated) rerenderSap();
+      if ($('.gov-card')) renderMain(); // approvers / account changed
+    });
     H.on('devctx-progress', function (m) {
       const text = String(m.text || '').slice(0, 300);
       APB.busy.progress(text, m.status);
@@ -389,10 +393,11 @@
       rerenderSap();
     });
     H.on('devctx-result', function (m) {
-      APB.busy.done();
+      APB.busy.done('result');
       sap.running = false; sap.status = ''; sap.mode = '';
       sap.log.push({ text: 'Result received', status: 'done' });
       const answer = String(m.text || '');
+      APB.guard.evidenceAudit('devctx', m.evidence);
       rerenderSap();
       if (!sapReview(answer)) {
         ui.open['devctx-paste'] = true; rerenderSap();
@@ -400,7 +405,7 @@
         if (ta) ta.value = answer;
       }
     });
-    H.on('devctx-error', function (m) { APB.busy.done(); sap.running = false; sap.status = ''; sap.error = String(m.message || 'The SAP check failed').slice(0, 400); rerenderSap(); });
+    H.on('devctx-error', function (m) { APB.busy.done('error'); sap.running = false; sap.status = ''; sap.error = String(m.message || 'The SAP check failed').slice(0, 400); rerenderSap(); });
   }
 
   function step3(s) {
@@ -476,6 +481,67 @@
 
   function stat(label, html) { return '<div class="stat"><span class="stat-label">' + label + '</span><span class="stat-val">' + html + '</span></div>'; }
 
+  /* ------------------------------------------- approval gates and audit (governance.js) */
+  function approvalCardHtml(s) {
+    const g = APB.gov, kind = g.kindOf(s), st = g.status(s);
+    const gateName = kind === 'functional' ? 'G1' : 'G2';
+    const what = kind === 'functional' ? 'functional spec' : 'technical spec';
+    const unlocks = kind === 'functional' ? 'creating the Technical specs' : 'dewa-abap building from it';
+    const list = g.approvers(kind), me = g.account();
+    const blockers = g.approvalBlockers(s);
+    const a = st.approval;
+    const when = function (x) { return x ? esc(x.at.replace('T', ' ').slice(0, 16)) + ' UTC' : ''; };
+    const line = st.state === 'approved' ? '<p class="gov-state ok">✓ Approved by <strong>' + esc(a.by) + '</strong> · ' + when(a) + (a.version ? ' · version ' + esc(a.version) : '') + ' · fingerprint <code>' + esc(a.hash) + '</code></p>'
+      : st.state === 'changed' ? '<p class="gov-state bad">⚠ Changed after the approval by ' + esc(a.by) + ' (' + when(a) + ') – it needs approval again.</p>'
+        : '<p class="gov-state">Not approved yet.</p>';
+    const req = g.requestOf(s);
+    const reqLine = req ? '<p class="gov-request">✉ Approval requested by <strong>' + esc(req.by) + '</strong> · ' + when(req) + ((req.data && req.data.to || []).length ? ' · from ' + esc([].concat(req.data.to).join(', ')) : '') + '</p>' : '';
+    let action = '';
+    if (st.state !== 'approved') {
+      if (!H.isVscode) action = '<p class="muted small">Approval needs the VS Code extension (a signed-in GitHub account). In the browser the gate only warns.</p>';
+      else if (!list.length) action = '<p class="muted small">No approvers are configured. IT sets them in the setting <code>dewaSpecBuilder.approvers.' + kind + '</code>.</p><button type="button" class="btn btn-ghost btn-sm" data-action="gov-settings">Open settings</button>';
+      else if (!g.canApprove(kind)) action = '<p class="muted small">Waiting for approval by: <strong>' + list.map(esc).join(', ') + '</strong>.' + (me ? ' You are signed in as ' + esc(me) + '.' : ' Sign in to GitHub in VS Code to approve.') + '</p>';
+      else if (blockers.length) action = '<p class="field-error small">' + blockers.map(esc).join(' ') + '</p><button type="button" class="btn btn-primary btn-sm" disabled>Approve ' + what + '</button>';
+      else action = '<button type="button" class="btn btn-primary btn-sm" data-action="gov-approve">Approve ' + what + '</button> <span class="muted small">as ' + esc(me) + ' – records your account, the time and a fingerprint of the content</span>';
+      if (!g.canApprove(kind)) action += '<div class="gov-send"><button type="button" class="btn btn-ghost btn-sm" data-action="gov-request">' + (req ? 'Request approval again' : 'Request approval') + '</button> <span class="muted small">saves the file to attach to an email or Teams message, and copies the message text' + (list.length ? ' for ' + list.map(esc).join(', ') : '') + '</span></div>';
+    } else {
+      action = '<div class="gov-send"><button type="button" class="btn btn-ghost btn-sm" data-action="gov-send-back">' + (a.by && me && a.by.toLowerCase() === me.toLowerCase() ? 'Save approved file to send back' : 'Save approved file') + '</button> <span class="muted small">the author opens it with <strong>Upload</strong> – it replaces their draft of this spec</span></div>';
+    }
+    return '<section class="card gov-card gov-' + st.state + '" aria-labelledby="h-gov"><h3 id="h-gov">Approval <span class="hint">gate ' + gateName + ' – needed before ' + unlocks + '</span></h3>' + line + reqLine + action +
+      '<p class="muted small gov-mode">Gates: ' + (g.mode() === 'enforce' ? 'enforced' : 'warn only – continuing without approval is recorded in the audit trail') + '. Any change after approval needs a new approval.</p></section>';
+  }
+
+  /* Runs proceed() only when the gate is open; enforce = block, warn = offer "Continue anyway" (audited). */
+  function gateGuard(name, proceed) {
+    const s = S.get(), g = APB.gov.gate(name, s);
+    if (g.open) { proceed(); return; }
+    const flash = function () { const c = $('.gov-card'); if (c) { c.scrollIntoView({ behavior: 'smooth', block: 'center' }); c.classList.add('gov-flash'); setTimeout(function () { c.classList.remove('gov-flash'); }, 1600); } };
+    if (APB.gov.mode() === 'enforce') {
+      auditAdd('gate-blocked', { gate: name, reason: g.reason });
+      toast(g.reason + ' The action is locked until it is approved.', 8000, { label: 'Show approval', run: flash });
+      return;
+    }
+    toast(g.reason, 10000, { label: 'Continue anyway', run: function () { auditAdd('gate-override', { gate: name, reason: g.reason }); proceed(); } });
+  }
+
+  /* Appends to the open spec's audit trail and saves it (no re-render). */
+  function auditAdd(type, data) {
+    const s = S.get();
+    APB.gov.audit.add(s, type, data);
+    if (!(exampleSnapshot && snapshot(s) === exampleSnapshot)) ST.save(s);
+    renderPreview();
+  }
+
+  /* Approval by file (email / Teams): the .md carries the whole spec, its approval and audit trail. */
+  function specTitle(s) {
+    if (s.kind === 'fs') return APB.fs.model.name(s);
+    return (s.project.name || '').trim() || (s.requirement.text || '').trim().split(/\r?\n/)[0].slice(0, 60) || 'Untitled requirement';
+  }
+  function saveApprovalFile(s, suffix) {
+    const name = (s.kind === 'fs' ? 'FS_' : 'TS_') + (M.helpers.slug(specTitle(s)).slice(0, 60) || 'spec') + '_' + suffix + '.md';
+    return APB.mdImport.embed(buildMd(s), s).then(function (md) { X.download(name, md, 'text/markdown'); return name; });
+  }
+
   function step5(s) {
     const ev = C.evaluate(s);
     const c = ev.counts;
@@ -494,6 +560,7 @@
       stat('Rules &amp; criteria', s.rules.filter(function (r) { return V.isFilled([r]); }).length + ' rules<br>' + s.acceptance.filter(function (a) { return a.text.trim(); }).length + ' criteria') + '</div>' +
       (ev.questions.length ? '<details class="more"' + detailsAttrs('questions', false) + '><summary>Open questions (' + ev.questions.length + ')</summary><ol class="small">' + ev.questions.map(function (q) { return '<li>' + esc(q) + '</li>'; }).join('') + '</ol></details>' : '') +
       (ev.optional.length ? '<p class="muted small">Optional information not specified: ' + ev.optional.map(function (r) { return esc(r.label.toLowerCase()); }).join(', ') + '.</p>' : '') +
+      approvalCardHtml(s) +
       '<h3>Definition of done</h3><p class="muted small">Checked items are added to the document. Edit freely.</p>' + dod +
       '<button type="button" class="btn btn-ghost" data-action="add-dod">+ Add item</button>' +
       '<div class="nav-row"><button type="button" class="btn btn-ghost" data-action="back">Back</button><span class="spacer"></span>' +
@@ -533,7 +600,7 @@
       '<button type="button" class="btn btn-ghost btn-lg" data-action="download">Download file</button>' +
       '<button type="button" class="btn btn-ghost" data-action="copy">Copy Markdown</button>' +
       '<button type="button" class="btn btn-ghost" data-action="share">Copy share link</button>' +
-      '<button type="button" class="btn btn-ghost" data-action="edit">Review Details</button></div>' +
+      '<button type="button" class="btn btn-ghost" data-action="edit">Review Details</button></div>' + approvalCardHtml(s) +
       '<div class="seg gen-seg" role="group" aria-label="Format"><button type="button" data-action="view-rendered" aria-pressed="' + !ui.raw + '">Preview</button><button type="button" data-action="view-raw" aria-pressed="' + ui.raw + '">Markdown</button></div>' +
       '<div class="gen-doc md" tabindex="0" aria-label="Generated specification">' + (ui.raw ? '<pre>' + esc(md) + '</pre>' : M.toHtml(md)) + '</div>';
   }
@@ -678,7 +745,7 @@
 
   /* An example stays out of Drafts until it is edited (otherwise New / the mode switch would bring it back). */
   let exampleSnapshot = null;
-  function snapshot(s) { const c = JSON.parse(JSON.stringify(s)); delete c.meta; return JSON.stringify(c); }
+  function snapshot(s) { const c = JSON.parse(JSON.stringify(s)); delete c.meta; delete c.audit; delete c.approval; return JSON.stringify(c); }
 
   function loadState(next, msg, opts) {
     const cur = S.get();
@@ -768,6 +835,34 @@
     openDialog('#drafts-dialog');
   }
 
+  /* Local usage statistics (js/guard.js): AI jobs, review decisions, gates – per month. */
+  function openUsage() {
+    const u = APB.guard.usage(), months = Object.keys(u.months).sort().reverse().slice(0, 3);
+    const num = function (v) { return '<td class="num">' + (v || 0) + '</td>'; };
+    const JOB = { docs: 'Read BRD / solution document', program: 'Read existing objects', asis: 'AS-IS process', tobe: 'TO-BE process', draft: 'Generate FS', discovery: 'System discovery', devctx: 'Check & read in SAP' };
+    $('#usage-body').innerHTML = !months.length ? '<p class="empty">Nothing recorded yet' + (APB.guard.policy().telemetry === 'off' ? ' – switched off by the setting dewaSpecBuilder.telemetry.' : '.') + '</p>' : months.map(function (m) {
+      const b = u.months[m], e = b.events;
+      const jobs = Object.keys(b.jobs).map(function (k) {
+        const j = b.jobs[k], ok = j.outcomes.result || 0;
+        const models = Object.keys(j.models).sort(function (x, y) { return j.models[y] - j.models[x]; }).slice(0, 2).join(', ');
+        return '<tr><td>' + esc(JOB[k] || k) + '</td>' + num(j.runs) + '<td class="num">' + (j.runs ? Math.round(ok * 100 / j.runs) : 0) + '%</td><td class="num">' + (j.runs ? Math.round(j.seconds / j.runs) : 0) + ' s</td>' + num(j.runs ? Math.round(j.steps / j.runs) : 0) + '<td>' + esc(models || '–') + '</td></tr>';
+      }).join('');
+      const acc = b.partsAccepted || 0, dec = b.partsDeclined || 0;
+      return '<h3>' + esc(m) + '</h3>' +
+        (jobs ? '<table class="usage-table"><thead><tr><th>AI job</th><th class="num">Runs</th><th class="num">With result</th><th class="num">Avg. time</th><th class="num">Avg. steps</th><th>Model</th></tr></thead><tbody>' + jobs + '</tbody></table>' : '') +
+        '<table class="usage-table"><tbody>' +
+        '<tr><td>AI parts accepted / declined in review</td><td class="num">' + acc + ' / ' + dec + (acc + dec ? ' (' + Math.round(acc * 100 / (acc + dec)) + '% accepted)' : '') + '</td></tr>' +
+        '<tr><td>SAP names not verified in AI drafts</td>' + num(b.namesUnverified) + '</tr>' +
+        '<tr><td>Guardrail warnings (possible prompt injection)</td>' + num(b.injectionFlags) + '</tr>' +
+        '<tr><td>Personal data items masked before prompts</td>' + num(b.itemsMasked) + '</tr>' +
+        '<tr><td>Approvals / requests</td><td class="num">' + (e.approved || 0) + ' / ' + (e['approval-requested'] || 0) + '</td></tr>' +
+        '<tr><td>Gates blocked / overridden</td><td class="num">' + (e['gate-blocked'] || 0) + ' / ' + (e['gate-override'] || 0) + '</td></tr>' +
+        '<tr><td>Exports and hand-offs</td><td class="num">' + ((e.export || 0) + (e.handoff || 0)) + '</td></tr>' +
+        '</tbody></table>';
+    }).join('');
+    openDialog('#usage-dialog');
+  }
+
   function openExamples() {
     if (isFs()) {
       $('#examples-list').innerHTML = '<ul class="draft-list">' + APB.fs.templates.examples().map(function (e) {
@@ -794,11 +889,11 @@
   const actions = {
     'devctx-auto': function () { sapStart('auto'); },
     'devctx-chat': function () { sapStart('chat'); },
-    'devctx-stop': function () { APB.busy.done(); if (sap.mode !== 'chat') H.post({ type: 'stop' }); sap.running = false; sap.mode = ''; sap.status = ''; rerenderSap(); },
+    'devctx-stop': function () { APB.busy.done('stopped'); if (sap.mode !== 'chat') H.post({ type: 'stop' }); sap.running = false; sap.mode = ''; sap.status = ''; rerenderSap(); },
     'devctx-copy': function () {
       const s = S.get();
       if (!APB.devSap.checkTargets(s).length) { toast('Name the objects first'); return; }
-      Promise.resolve(X.copy(APB.devSap.prompt(s))).then(function (ok) {
+      Promise.resolve(X.copy(APB.guard.outbound(APB.devSap.prompt(s), 'clipboard'))).then(function (ok) {
         ui.open['devctx-paste'] = true;
         rerenderSap();
         toast(ok ? 'Prompt copied ✓ Paste it into Copilot Chat in VS Code (dewa-fs-discovery), then paste the answer here' : 'Copy failed', 8000);
@@ -813,7 +908,9 @@
       const dlg = $('#devctx-dialog');
       if (dlg.close) dlg.close(); else dlg.removeAttribute('open');
       if (!sap.pending || !ids.length) return;
+      const offered = APB.devSap.preview(S.get(), sap.pending).filter(function (p) { return !p.info; }).map(function (p) { return p.id; });
       const r = APB.devSap.apply(S.get(), sap.pending, ids);
+      APB.gov.audit.add(r.state, 'review', { job: 'devctx', accepted: ids, declined: offered.filter(function (x) { return ids.indexOf(x) < 0; }), applied: r.applied });
       sap.pending = null;
       S.replace(r.state);
       renderMain();
@@ -859,7 +956,7 @@
       toast('Template applied — name the objects in step 3');
     },
     examples: openExamples,
-    'load-example': function (el) { closeDialogs(); loadState(isFs() ? APB.fs.templates.example(el.dataset.id) : T.example(el.dataset.id), 'Example loaded – it is saved to Drafts only when you change it', { example: true }); },
+    'load-example': function (el) { closeDialogs(); loadState(isFs() ? APB.fs.templates.example(el.dataset.id) : T.example(el.dataset.id), 'Example loaded – it is saved to Drafts only when you change it', { example: true }); APB.gov.audit.add(S.get(), 'example-loaded', { example: el.dataset.id }); },
     new: function () { loadState(S.blank(isFs() ? 'fs' : 'dev'), isFs() ? 'Started a new functional specification' : 'Started a new requirement'); },
     mode: function (el) {
       const want = el.dataset.mode === 'fs' ? 'fs' : 'dev';
@@ -1004,6 +1101,7 @@
       if (mandatoryMissing(s).length) { toast(isFs() ? (APB.fs.isSap(s) ? 'Add the business requirement and the module first' : 'Describe the business requirement first') : 'Add a requirement and a development object first'); return; }
       const name = isFs() ? FM.filename(s) : M.filename(s);
       // the file carries the builder data (hidden comment at the end), so Upload restores it exactly
+      auditAdd('export', { to: 'Markdown file', file: name, approval: APB.gov.status(s).state });
       APB.mdImport.embed(buildMd(s), s).then(function (md) {
         X.download(name, md, 'text/markdown');
         toast(savedMsg(name));
@@ -1039,8 +1137,13 @@
       if (d) loadState(d, 'Technical spec opened');
     },
     vscode: function () {
-      const s = S.get();
       if (isFs()) { FA.actions['fs-discover'](); return; }
+      gateGuard('G2', actions['vscode-go']);
+    },
+    /* gate G2 passed: hand the development spec to dewa-abap (Copilot Chat, or copy + open VS Code in the browser) */
+    'vscode-go': function () {
+      const s = S.get();
+      auditAdd('export', { to: H.isVscode ? 'Copilot Chat (dewa-abap)' : 'clipboard + VS Code', approval: APB.gov.status(s).state });
       if (H.isVscode) {
         if (V.checkMandatory(s).length) { toast('Add a requirement and a development object first'); return; }
         H.post({ type: 'open-chat', agent: 'dewa-abap', prompt: M.chatPrompt(s) });
@@ -1048,10 +1151,50 @@
         return;
       }
       if (V.checkMandatory(s).length) { toast('Add a requirement and a development object first'); return; }
-      const copied = X.copyNow(M.chatPrompt(s));
+      const copied = X.copyNow(APB.guard.outbound(M.chatPrompt(s), 'clipboard'));
       X.launchVscode();
       toast(copied ? 'Prompt copied ✓ VS Code is opening — press Ctrl+Alt+I for Copilot Chat, then Ctrl+V' : 'VS Code is opening — copying failed, use Copy Markdown', 7000);
     },
+    'gov-approve': function () {
+      const s = S.get(), kind = APB.gov.kindOf(s);
+      if (!APB.gov.canApprove(kind)) { toast('Only the configured approvers can approve'); return; }
+      const b = APB.gov.approvalBlockers(s);
+      if (b.length) { toast(b[0], 7000); return; }
+      const next = APB.gov.approve(s);
+      APB.gov.audit.add(next, 'approved', { gate: kind === 'functional' ? 'G1' : 'G2', version: next.approval.version, fingerprint: next.approval.hash });
+      S.replace(next);
+      renderMain();
+      toast(kind === 'functional' ? 'Functional spec approved – Technical specs can now be created' : 'Technical spec approved – dewa-abap can build from it', 6000);
+    },
+    'gov-request': function () {
+      const s = S.get(), kind = APB.gov.kindOf(s), to = APB.gov.approvers(kind);
+      if (mandatoryMissing(s).length) { toast('Complete the mandatory fields first'); return; }
+      auditAdd('approval-requested', { to: to, fingerprint: APB.gov.fingerprint(s) });
+      const what = kind === 'functional' ? 'functional specification' : 'technical specification';
+      saveApprovalFile(S.get(), 'FOR-APPROVAL').then(function (file) {
+        const msg = 'Please review and approve the ' + what + ' "' + specTitle(s) + '".\n\nOpen the attached file ' + file + ' in VS Code: DEWA: Open SAP Spec Builder → Upload. Review it, press Approve, then "Save approved file to send back" and reply with that file.';
+        X.copyNow(msg);
+        renderMain();
+        toast('Saved ' + file + ' – attach it to an email or Teams message' + (to.length ? ' to ' + to.join(', ') : '') + '. The message text is copied – paste it with Ctrl+V.', 12000);
+      });
+    },
+    'gov-send-back': function () {
+      const s = S.get();
+      if (APB.gov.status(s).state !== 'approved') { toast('This spec is not approved'); return; }
+      auditAdd('export', { to: 'approved file (send back)', approval: 'approved' });
+      saveApprovalFile(S.get(), 'APPROVED').then(function (file) {
+        X.copyNow('Approved: "' + specTitle(s) + '". Open the attached file ' + file + ' in the DEWA Spec Builder with Upload – it replaces your draft and the gate is open.');
+        toast('Saved ' + file + ' – reply with it attached. The message text is copied – paste it with Ctrl+V.', 12000);
+      });
+    },
+    usage: function () { closeDialogs(); openUsage(); },
+    'usage-csv': function () { X.download('spec-builder-usage.csv', APB.guard.usageCsv(), 'text/csv'); },
+    'usage-reset': function () {
+      const before = JSON.stringify(APB.guard.usage());
+      APB.guard.resetUsage(); openUsage();
+      toast('Usage statistics cleared', 8000, { label: 'Undo', run: function () { const u = JSON.parse(before); APB.guard.resetUsage(); try { if (H.isVscode) H.storage.set('apb.usage.v1', JSON.stringify(u)); else localStorage.setItem('apb.usage.v1', JSON.stringify(u)); } catch (e) { /* ignore */ } openUsage(); } });
+    },
+    'gov-settings': function () { H.post({ type: 'open-settings' }); },
     'view-raw': function () { ui.raw = true; renderPreview(); },
     'view-rendered': function () { ui.raw = false; renderPreview(); }
   };
@@ -1252,8 +1395,19 @@
     if (file.size > 5 * 1024 * 1024) { toast('This file is too large for a specification (max 5 MB)'); return; }
     file.text().then(APB.mdImport.read).then(function (r) {
       const what = r.state.kind === 'fs' ? 'Functional specification' : 'Technical specification';
+      // the same spec (e.g. sent back approved) replaces its local draft; Undo restores the draft as it was
+      const cur = S.get();
+      const prev = r.originId ? (cur.id === r.originId ? JSON.parse(JSON.stringify(cur)) : ST.load(r.originId)) : null;
       loadState(r.state, r.mode === 'partial' ? what + ' partly restored from the Markdown – check every step' :
         r.edited ? what + ' restored as generated – manual edits made in the file are not taken over' : what + ' restored from ' + file.name);
+      auditAdd('uploaded', { file: file.name, mode: r.mode, approval: APB.gov.status(S.get()).state, replaced: prev ? 'local draft' : '' });
+      const st = APB.gov.status(S.get()).state, req = APB.gov.requestOf(S.get()), kind = APB.gov.kindOf(S.get());
+      const flash = function () { ui.step = kind === 'functional' ? 3 : 5; ui.generated = false; renderMain(); setTimeout(function () { const c = $('.gov-card'); if (c) { c.scrollIntoView({ behavior: 'smooth', block: 'center' }); c.classList.add('gov-flash'); } }, 50); };
+      if (prev) {
+        toast(what + ' updated from ' + file.name + ' – it replaced your draft of this spec' + (st === 'approved' ? ' (approved ✓)' : ''), 10000, { label: 'Undo', run: function () { loadState(prev, 'Your previous draft is back'); } });
+        return;
+      }
+      if (req && APB.gov.canApprove(kind)) { toast('Approval requested by ' + req.by + ' – review the spec, then approve it', 12000, { label: 'Show approval', run: flash }); return; }
       // an uploaded FS only changes itself; Technical specs created from it offer the update when opened
       const linked = r.state.kind === 'fs' ? APB.specLink.linkedTo(S.get()) : [];
       const changed = linked.filter(function (x) { return x.state === 'changed'; }).length;
@@ -1339,7 +1493,7 @@
     fieldsBlock: fieldsBlock, fieldHtml: fieldHtml, renderMain: renderMain, updateSteps: updateSteps, loadState: loadState,
     renderDatalists: renderDatalists, savedMsg: savedMsg,
     // Check & read in SAP for the open Technical spec (used after a hand-off from the FS)
-    onReset: onReset,
+    onReset: onReset, approvalCardHtml: approvalCardHtml, gateGuard: gateGuard, auditAdd: auditAdd,
     startSapCheck: function () { if (!isFs() && APB.devSap.checkTargets(S.get()).length) sapStart('auto'); }
   };
 
