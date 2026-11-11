@@ -731,6 +731,9 @@ div.link-banner p { margin: 0 0 6px; }
 /* process-search candidates in the AI review: one checkbox each */
 .draft-candidates .cand-list { list-style: none; padding-left: 4px; }
 .draft-candidates .cand-list li { margin: 4px 0; }
+/* FS step 1: "or describe the need yourself" between the documents card and the requirement */
+.fs-or { display: flex; align-items: center; gap: 12px; margin: 18px 0 6px; color: var(--muted); font-size: .85rem; }
+.fs-or::before, .fs-or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
 
 </style>
 </head>
@@ -8158,9 +8161,9 @@ window.APB_CONFIG = {
     "n": 1,
     "label": "Requirement",
     "title": "Business requirement",
-    "intro": "Describe the business need – that is all that is required. Copilot can generate the rest, or read an existing program, for you to review.",
+    "intro": "Choose where it runs and the module, then start from the BRD / solution document or describe the business need – that is all that is required. Copilot drafts the rest, checks the SAP system read-only, and you review it.",
     "generic": {
-     "intro": "Describe the business need – that is all that is required. Copilot can generate the rest for you to review."
+     "intro": "Choose where it runs, then start from your documents or describe the business need – that is all that is required. Copilot drafts the rest for you to review."
     }
    },
    {
@@ -16323,6 +16326,19 @@ window.APB_CONFIG = {
     return DOC_ROLES.map(function (r) { return docs[r[0]] && Object.assign({ role: r[0] }, docs[r[0]]); }).filter(Boolean);
   }
 
+  /* What the document job does – depends on the system choice and, for SAP, on the module (process-search prefixes). */
+  function docsIntro(s) {
+    const c = s.context, sap = F.isSap(s) || !c.system;
+    const pre = sap && c.module ? (APB.fsDraft.namespaces()[c.module] || []) : [];
+    const search = !sap ? ''
+      : c.module ? ' It also <strong>searches the SAP system by process</strong> – DEWA\'s custom objects of ' + esc(c.module) + ' (' + pre.slice(0, 4).map(function (p) { return '<code>' + esc(p) + '*</code>'; }).join(', ') + '), standard transactions, Fiori apps and BAdIs – and offers what it finds as candidates for you to tick.'
+        : ' <strong>Pick the module above</strong> so the SAP search by process uses DEWA\'s prefixes for it (e.g. <code>ZHR*</code>, <code>ZWHR*</code> for HCM).';
+    return '<p class="muted small">Upload the BRD and/or the solution document (Word, PDF with text, Excel, Markdown or text). Copilot reads them' +
+      (sap ? ', checks every SAP object they name in the system <strong>read-only</strong>, works out whether this is a <strong>new development</strong>, an <strong>enhancement</strong> of an existing solution or <strong>as-built</strong> documentation,' : '') +
+      ' and drafts the whole functional spec – requirements, rules, AS-IS / TO-BE' + (sap ? ', objects, RICEFW items' : '') + ', tests.' + search +
+      ' You review it before anything is added' + (sap ? '; from the RICEFW items in step 3 you then create the Technical specs' : '') + '. The documents stay on this computer and are only sent to your GitHub Copilot.</p>';
+  }
+
   function docsCard(s) {
     const c = s.context;
     const list = docsList();
@@ -16351,7 +16367,7 @@ window.APB_CONFIG = {
         ((c.changeNote || '').trim() ? '<p class="small">' + esc(c.changeNote) + '</p>' : '') + '</div>'
       : '';
     return '<section class="card fs-docs" aria-labelledby="h-docs"><h3 id="h-docs">Start from documents <span class="hint">BRD &amp; solution document</span></h3>' +
-      '<p class="muted small">Upload the BRD and/or the solution document (Word, PDF with text, Excel, Markdown or text). Copilot reads them, checks every SAP object they name in the system <strong>read-only</strong>, works out whether this is a <strong>new development</strong>, an <strong>enhancement</strong> of an existing solution or <strong>as-built</strong> documentation, and drafts the whole functional spec – requirements, rules, AS-IS / TO-BE, objects, RICEFW items, tests. You review it before anything is added; from the RICEFW items in step 3 you then create the Technical specs. The documents stay on this computer and are only sent to your GitHub Copilot.</p>' +
+      docsIntro(s) +
       '<div class="fs-doc-slots">' + DOC_ROLES.map(slot).join('') + '</div>' +
       (H.isVscode && list.length ? '<div class="chips fs-copilot">' + copilotStatus() + '</div>' : '') +
       '<div class="gen-actions">' + run + (list.length ? '' : '<span class="muted small">Choose at least one document.</span>') + '</div>' +
@@ -16426,11 +16442,14 @@ window.APB_CONFIG = {
       return '<button type="button" class="chip" data-action="fs-template" data-id="' + esc(t.id) + '" title="' + esc(t.description) + '">' + esc(t.label) + '</button>';
     }).join('');
     const ctxFilled = ['processArea', 'objectives', 'kpis', 'inScope', 'outOfScope', 'stakeholders', 'otherOrg'].some(function (k) { return V.isFilled(c[k]); });
-    return header(1) + docsCard(s) + systemCards(s) +
+    // order: where it runs → title / module → documents (they use the system and the module) → or the requirement typed
+    return header(1) + systemCards(s) +
       '<div class="grid-2"><div class="field"><label for="fs-title">Specification title</label><input id="fs-title" type="text" data-bind="context.title" value="' + esc(c.title) + '" placeholder="' + esc(F.view(F.field('context', 'title'), s).placeholder) + '"></div>' +
       (!sap ? '</div>' : '') + (sap ? '<div class="field"><label for="fs-module">Module <span class="req">required</span></label><select id="fs-module" data-bind="context.module"' + (missing.indexOf('module') >= 0 ? ' aria-invalid="true"' : '') + '>' +
       mod.options.map(function (o) { return '<option value="' + esc(o.value) + '"' + (c.module === o.value ? ' selected' : '') + '>' + esc(o.label) + '</option>'; }).join('') + '</select>' +
       (missing.indexOf('module') >= 0 ? '<p class="field-error" role="alert">Pick the module.</p>' : '') + '</div></div>' : '') +
+      docsCard(s) +
+      '<p class="fs-or"><span>or describe the need yourself</span></p>' +
       '<div class="field"><label for="fs-req">Business requirement <span class="req">required</span></label>' +
       '<textarea id="fs-req" class="tall" rows="7" data-bind="context.requirement" placeholder="' + esc(req.placeholder) + '"' + (missing.indexOf('requirement') >= 0 ? ' aria-invalid="true" aria-describedby="fs-req-err"' : '') + '>' + esc(c.requirement) + '</textarea>' +
       (missing.indexOf('requirement') >= 0 ? '<p id="fs-req-err" class="field-error" role="alert">Describe the business need (a sentence or two is enough).</p>' : '') + '</div>' +

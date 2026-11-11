@@ -7264,9 +7264,9 @@ window.APB_CONFIG = {
     "n": 1,
     "label": "Requirement",
     "title": "Business requirement",
-    "intro": "Describe the business need – that is all that is required. Copilot can generate the rest, or read an existing program, for you to review.",
+    "intro": "Choose where it runs and the module, then start from the BRD / solution document or describe the business need – that is all that is required. Copilot drafts the rest, checks the SAP system read-only, and you review it.",
     "generic": {
-     "intro": "Describe the business need – that is all that is required. Copilot can generate the rest for you to review."
+     "intro": "Choose where it runs, then start from your documents or describe the business need – that is all that is required. Copilot drafts the rest for you to review."
     }
    },
    {
