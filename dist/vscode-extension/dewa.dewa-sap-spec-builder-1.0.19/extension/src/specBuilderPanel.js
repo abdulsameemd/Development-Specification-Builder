@@ -126,7 +126,9 @@ function createRouter(vscode, context, deps) {
       cts = new vscode.CancellationTokenSource();
       const cfg = deps.config();
       try {
+        const g = guardOpts(cfg);
         const text = await runner.run(vscode, {
+          guard: g,
           prompt: m.prompt,
           instructions: deps.agentInstructions(),
           allowPatterns: cfg.get('discoveryTools', []),
@@ -136,7 +138,7 @@ function createRouter(vscode, context, deps) {
           token: cts.token,
           onProgress: function (p) { deps.post(Object.assign({ type: 'discovery-progress' }, p)); }
         });
-        deps.post({ type: 'discovery-result', text: text });
+        deps.post({ type: 'discovery-result', text: text, evidence: g.evidence });
       } catch (e) {
         deps.post({ type: 'discovery-error', code: e.code || 'FAILED', message: String(e && e.message || e) });
       } finally {
@@ -160,6 +162,7 @@ function createRouter(vscode, context, deps) {
       cts = new vscode.CancellationTokenSource();
       try {
         const text = await drafter.run(vscode, {
+          guard: guardOpts(deps.config()),
           prompt: m.prompt,
           model: deps.config().get('model', ''),
           token: cts.token,
@@ -190,7 +193,9 @@ function createRouter(vscode, context, deps) {
       cts = new vscode.CancellationTokenSource();
       const cfg = deps.config();
       try {
+        const g = guardOpts(cfg);
         const text = await programReader.run(vscode, {
+          guard: g,
           prompt: m.prompt,
           allowPatterns: cfg.get('discoveryTools', []),
           maxRounds: cfg.get('maxToolRounds', 25),
@@ -199,7 +204,7 @@ function createRouter(vscode, context, deps) {
           token: cts.token,
           onProgress: function (p) { deps.post(Object.assign({ type: 'draft-progress' }, p, { key: p.key || 'info' })); }
         });
-        deps.post({ type: 'draft-result', text: text });
+        deps.post({ type: 'draft-result', text: text, evidence: g.evidence });
       } catch (e) {
         deps.post({ type: 'draft-error', code: e.code || 'FAILED', message: String(e && e.message || e) });
       } finally {
@@ -224,7 +229,9 @@ function createRouter(vscode, context, deps) {
       cts = new vscode.CancellationTokenSource();
       const cfg = deps.config();
       try {
+        const g = guardOpts(cfg);
         const text = await devReader.run(vscode, {
+          guard: g,
           prompt: m.prompt,
           allowPatterns: cfg.get('discoveryTools', []),
           maxRounds: cfg.get('maxToolRounds', 25),
@@ -233,7 +240,7 @@ function createRouter(vscode, context, deps) {
           token: cts.token,
           onProgress: function (p) { deps.post(Object.assign({ type: 'devctx-progress' }, p, { key: p.key || 'info' })); }
         });
-        deps.post({ type: 'devctx-result', text: text });
+        deps.post({ type: 'devctx-result', text: text, evidence: g.evidence });
       } catch (e) {
         deps.post({ type: 'devctx-error', code: e.code || 'FAILED', message: String(e && e.message || e) });
       } finally {
@@ -267,6 +274,13 @@ function createRouter(vscode, context, deps) {
 }
 
 /* Panel lifecycle: one builder tab, restored after a restart, plus the chat-to-panel pack delivery. */
+/* Guardrail settings for one AI job; evidence is filled by the tool loop (see guardrails.js). */
+function guardOpts(cfg) {
+  const arr = function (k) { const v = cfg.get(k, []); return Array.isArray(v) ? v : []; };
+  return { allowedModels: arr('models.allowed').map(String), masking: cfg.get('masking', true) !== false, maskingPatterns: arr('masking.patterns'),
+    evidence: { calls: [], names: [], flags: 0, masked: 0 } };
+}
+
 function createSpecBuilder(vscode, context, opts) {
   opts = opts || {};
   const htmlFile = path.join(context.extensionPath, opts.htmlPath || 'media/spec-builder.html');
@@ -281,9 +295,12 @@ function createSpecBuilder(vscode, context, opts) {
     const list = function (k) { const v = cfg.get(k, []); return Array.isArray(v) ? v.map(String) : []; };
     return {
       copilot: copilot, signedIn: !!session, account: session && session.account ? session.account.label : '', chatAutoSend: cfg.get('chatAutoSend', true) !== false,
-      // approval gates (governance.js in the builder); IT can set and lock these settings
+      // approval gates (governance.js in the builder); IT distributes these settings
       policy: { gates: cfg.get('gates', 'enforce') === 'warn' ? 'warn' : 'enforce', requireSapCheck: cfg.get('gates.requireSapCheck', true) !== false,
-        approvers: { functional: list('approvers.functional'), technical: list('approvers.technical') } }
+        approvers: { functional: list('approvers.functional'), technical: list('approvers.technical') },
+        // guardrails and local usage statistics (guard.js in the builder)
+        masking: cfg.get('masking', true) !== false, maskingPatterns: (cfg.get('masking.patterns', []) || []).slice(0, 30),
+        telemetry: cfg.get('telemetry', 'local') === 'off' ? 'off' : 'local', modelsAllowed: list('models.allowed') }
     };
   }
 
@@ -310,7 +327,7 @@ function createSpecBuilder(vscode, context, opts) {
       vscode.authentication.onDidChangeSessions(async function (e) { if (e.provider && e.provider.id === 'github') post(Object.assign({ type: 'auth' }, await getAuth())); })
     ];
     if (vscode.workspace.onDidChangeConfiguration) {
-      subs.push(vscode.workspace.onDidChangeConfiguration(async function (e) { if (e.affectsConfiguration('dewaSpecBuilder.chatAutoSend') || e.affectsConfiguration('dewaSpecBuilder.gates') || e.affectsConfiguration('dewaSpecBuilder.approvers')) post(Object.assign({ type: 'auth' }, await getAuth())); }));
+      subs.push(vscode.workspace.onDidChangeConfiguration(async function (e) { if (e.affectsConfiguration('dewaSpecBuilder.chatAutoSend') || e.affectsConfiguration('dewaSpecBuilder.gates') || e.affectsConfiguration('dewaSpecBuilder.approvers') || e.affectsConfiguration('dewaSpecBuilder.masking') || e.affectsConfiguration('dewaSpecBuilder.telemetry') || e.affectsConfiguration('dewaSpecBuilder.models')) post(Object.assign({ type: 'auth' }, await getAuth())); }));
     }
     panel.onDidDispose(function () { router.cancel(); subs.forEach(function (d) { d.dispose(); }); if (current && current.panel === panel) current = null; });
     current = { panel: panel, router: router, post: post };

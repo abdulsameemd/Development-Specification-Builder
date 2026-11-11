@@ -703,3 +703,13 @@ div.link-banner p { margin: 0 0 6px; }
 .gov-flash { animation: gov-flash .5s ease 3; }
 @keyframes gov-flash { 50% { box-shadow: 0 0 0 4px var(--amber); } }
 @media (prefers-reduced-motion: reduce) { .gov-flash { animation: none; outline: 3px solid var(--amber); } }
+
+/* Grounding and guardrail notes in the AI review dialog (js/guard.js) */
+.guard-box { border: 1px solid var(--line); border-left: 4px solid var(--lime, #8cc63f); border-radius: 8px; padding: 8px 12px; margin: 0 0 12px; font-size: .9rem; }
+.guard-box p { margin: 4px 0; }
+.guard-ok { color: var(--accent-text, #2f6b00); }
+.guard-warn { color: var(--danger, #b42318); }
+/* Usage dialog */
+.usage-table { width: 100%; border-collapse: collapse; font-size: .88rem; margin: 6px 0 12px; }
+.usage-table th, .usage-table td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); }
+.usage-table td.num, .usage-table th.num { text-align: right; }

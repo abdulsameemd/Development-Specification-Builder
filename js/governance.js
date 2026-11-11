@@ -21,6 +21,7 @@
     who.known = true;
     const p = (m && m.policy) || {};
     pol.gates = p.gates === 'warn' ? 'warn' : 'enforce';
+    if (APB.guard) APB.guard.setPolicy(p);
     pol.requireSapCheck = p.requireSapCheck !== false;
     ['functional', 'technical'].forEach(function (k) {
       const list = p.approvers && Array.isArray(p.approvers[k]) ? p.approvers[k] : [];
@@ -127,6 +128,7 @@
       const dropped = s.audit.splice(0, cut);
       s.audit.unshift({ at: dropped[dropped.length - 1].at, by: 'system', type: 'trimmed', data: { entries: cut, from: dropped[0].at } });
     }
+    if (APB.guard) APB.guard.record(e);
     if (H.isVscode) H.post({ type: 'audit', specId: String(s.id || ''), kind: kindOf(s), title: specName(s), entry: e });
     return e;
   }
@@ -149,7 +151,7 @@
   const LABELS = {
     'ai-start': 'AI job started', 'ai-input': 'AI input', 'ai-end': 'AI job finished', review: 'AI result reviewed', approved: 'Approved',
     'approval-requested': 'Approval requested', 'gate-blocked': 'Gate blocked', 'gate-override': 'Gate overridden', handoff: 'Handed over', 'created-from': 'Created from',
-    export: 'Exported', uploaded: 'Uploaded', 'example-loaded': 'Example loaded', trimmed: 'Older entries summarised'
+    export: 'Exported', uploaded: 'Uploaded', 'example-loaded': 'Example loaded', trimmed: 'Older entries summarised', masked: 'Personal data masked', 'guard-flag': 'Guardrail warning'
   };
   function detail(e) {
     const d = e.data || {};

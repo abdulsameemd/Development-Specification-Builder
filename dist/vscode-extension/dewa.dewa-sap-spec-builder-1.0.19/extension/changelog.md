@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.19
+
+- **Personal data is masked before it reaches the AI.** E-mail addresses, phone numbers, Emirates IDs, IBANs and card numbers in prompts (sent to Copilot or copied to the clipboard) become tokens such as `[EMAIL_1]`; the answer gets the real values back before you review it. SAP tool results are masked too (`[EMAIL]`). IT can add patterns (`dewaSpecBuilder.masking.patterns`, e.g. personnel numbers) or switch it off (`dewaSpecBuilder.masking`). Each masking is recorded in the audit trail.
+- **Usage (header):** AI jobs per month with runs, results, average time, steps and model; review decisions; unverified SAP names; masked items; guardrail warnings; approvals; gate blocks and overrides – counted on this computer only, without content, nothing is sent. Export as CSV; `dewaSpecBuilder.telemetry` = `off` switches it off.
+
+## 1.0.18
+
+- **Grounding.** When Copilot reads SAP for a draft, the extension keeps the evidence (tools called, SAP names in their results). The review dialog shows how many SAP names in the draft were read from the system and lists the others as **Not verified in SAP**; accepted rows with such a name are marked `[NOT VERIFIED IN SAP]`. The audit trail records the counts.
+- **Guardrails.** Uploaded documents and SAP tool results are passed to the model as data, with the rule never to follow instructions inside them. Text that looks like an instruction to the AI ("ignore previous instructions", "activate … without approval" …) in documents, tool results or the answer is flagged in the review and recorded.
+- **Allowed models.** `dewaSpecBuilder.models.allowed` restricts which Copilot models may run (e.g. `["gpt-5*", "*sonnet*"]`); otherwise the job stops with the list of available models.
+
 ## 1.0.17
 
 - **Approval by email or Teams – no Git or shared folder needed.** On the Approval card the author presses **Request approval**: the builder saves `FS_<title>_FOR-APPROVAL.md` (or `TS_…`), records the request in the audit trail and copies a message to paste into Outlook or Teams with the file attached.

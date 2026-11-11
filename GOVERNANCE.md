@@ -12,8 +12,10 @@ that are in place, who owns them, and what is still planned. The threat model is
 | Guardrails: read-only SAP access | in place | `discoveryRunner.js` allow-list + write-verb deny-list, max. 30 tool calls |
 | Human review of every AI result | in place | review dialogs: nothing is taken over without your choice |
 | Testing | in place (1.0.16) | unit tests + browser end-to-end tests in CI |
-| Grounding (claims tied to SAP evidence), model allow-list | planned – 1.0.19 | |
-| Data masking before prompts, local telemetry | planned – 1.0.19 | |
+| Grounding: SAP names in AI drafts checked against what SAP returned | in place (1.0.18) | review dialog; unverified names marked `[NOT VERIFIED IN SAP]` |
+| Guardrails: untrusted text fenced, prompt-injection flagged, model allow-list | in place (1.0.18) | `js/guard.js`, `src/guardrails.js`, `dewaSpecBuilder.models.allowed` |
+| Data masking before prompts | in place (1.0.19) | `dewaSpecBuilder.masking`, `.masking.patterns` |
+| Telemetry (local usage statistics, never sent) | in place (1.0.19) | header → *Usage*; `dewaSpecBuilder.telemetry` |
 
 ## Roles
 
@@ -128,8 +130,39 @@ review, and the *CI* check to pass. This is a repository setting; it is not set 
 ## Models and data
 
 - Only the GitHub Copilot models available in the user's VS Code are used (`vscode.lm`); the builder has no own model
-  keys. A model allow-list follows in 1.0.18.
+  keys. IT can restrict them with `dewaSpecBuilder.models.allowed` (e.g. `["gpt-5*", "*sonnet*"]`); if no available
+  model is allowed, AI jobs stop with a message. The model used is in the audit trail (*AI job finished*).
 - What is sent to Copilot: the requirement and spec text the user entered, uploaded documents (BRD, solution
   document), and what the read-only SAP tools return. Do not upload documents your data classification does not
-  allow to be processed by GitHub Copilot. Masking of personal data before prompts follows in 1.0.19.
+  allow to be processed by GitHub Copilot.
+- **Masking** (`dewaSpecBuilder.masking`, on by default): e-mail addresses, phone numbers, Emirates IDs, IBANs and
+  card numbers – plus IT's own patterns in `dewaSpecBuilder.masking.patterns` (e.g. personnel numbers) – are replaced
+  by tokens such as `[EMAIL_1]` before a prompt leaves the builder (also when it is copied to the clipboard), and put
+  back in the answer before review; the token map stays in memory. In SAP tool results they are replaced by `[EMAIL]`
+  before the model sees them. Each masking is recorded (*Personal data masked*). Names of people are **not** detected
+  automatically – keep them out of documents or add a pattern. In Copilot Chat mode, the SAP tool results go through
+  Copilot Chat directly and are not masked by the builder.
+
+## Grounding and guardrails
+
+- **Grounding.** When Copilot reads SAP for a draft (documents, existing objects, AS-IS), the extension keeps the
+  evidence: which read-only tools were called and which SAP names their results contain (a *not found* answer
+  verifies nothing). The review dialog then shows how many SAP names in the draft were read from the system, and lists
+  the others as **Not verified in SAP**. Accepted rows with such a name carry `[NOT VERIFIED IN SAP]`, so nobody takes
+  them for checked facts; the count is in the audit trail (*AI result reviewed*). Results from Copilot Chat or pasted
+  answers have no evidence and say so.
+- **Untrusted input.** Uploaded documents are wrapped as `<<<BEGIN UNTRUSTED …>>>` data blocks, and every SAP tool
+  result is labelled as data; the prompts tell the model never to follow instructions inside them.
+- **Prompt-injection screening.** Documents, SAP tool results and AI answers are screened for text that looks like
+  instructions to the AI ("ignore previous instructions", "you are now…", "activate … without approval" …). It is not
+  acted on; the reviewer sees it in the review dialog and it is recorded (*Guardrail warning*).
+- **Read-only SAP** (allow-list + write-verb deny-list, 30 calls) and **human review** of every AI result stay as before.
+
+## Telemetry (local)
+
+`dewaSpecBuilder.telemetry` = `local` (default) counts per month, on this computer only: AI jobs (runs, with result,
+average time and steps, model), review decisions (accepted / declined parts, unverified SAP names), masked items,
+guardrail warnings, approvals and requests, gate blocks and overrides, exports. No spec content is kept and nothing is
+sent anywhere. Header → **Usage** shows the last three months and exports a CSV (to collect centrally if wanted).
+`off` counts nothing.
 - SAP access is read-only by design (see SECURITY.md); the SAP MCP servers should also run with read-only SAP users.

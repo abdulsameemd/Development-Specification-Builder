@@ -25,7 +25,12 @@
     });
   }
 
-  function post(msg) { if (api) api.postMessage(msg); }
+  /* Prompts for Copilot are masked (personal data → tokens) on their way out; see js/guard.js. */
+  function post(msg) {
+    if (!api) return;
+    if (msg && typeof msg.prompt === 'string' && APB.guard) msg = Object.assign({}, msg, { prompt: APB.guard.outbound(msg.prompt, msg.type) });
+    api.postMessage(msg);
+  }
 
   /* Request / reply over postMessage (e.g. reading the clipboard through VS Code). */
   function request(type, payload) {

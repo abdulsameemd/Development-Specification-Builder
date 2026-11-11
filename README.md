@@ -158,7 +158,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.17.vsix`](dist/dewa-sap-spec-builder-1.0.17.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.17.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.19.vsix`](dist/dewa-sap-spec-builder-1.0.19.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.19.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **If the .vsix download is blocked** (the downloaded file is only a few KB, and VS Code says *End of central directory record signature not found*): some company networks replace `.vsix` downloads with a web page. The repository also holds the extension **unpacked** in `dist/vscode-extension/dewa.dewa-sap-spec-builder-<version>/`, as plain files, so no `.vsix` is downloaded:
 
@@ -211,6 +211,15 @@ Changes apply at once. The Approval card's *Open settings* button (shown while n
 3. **Author:** **Upload** the approved file. It replaces your draft of that spec (with Undo), and the gate is open.
 
 Roles, settings, what IT can and cannot lock, and the release rules: [GOVERNANCE.md](GOVERNANCE.md). Threats and controls: [SECURITY.md](SECURITY.md). Tests: `npm test` (unit) and `npm run test:e2e` (browser, needs `npm install`); both run in CI.
+
+### Grounding, guardrails, masking & usage
+
+- **Grounding:** the AI review dialog shows how many SAP names in a draft were actually read from the system (read-only tools) and lists the rest as **Not verified in SAP**; accepted rows with such a name are marked `[NOT VERIFIED IN SAP]`.
+- **Guardrails:** uploaded documents and SAP tool results are passed to the AI as data, never as instructions; text that looks like an instruction to the AI is flagged in the review and recorded. `dewaSpecBuilder.models.allowed` restricts which Copilot models may run.
+- **Masking:** e-mail addresses, phone numbers, Emirates IDs, IBANs and card numbers (plus your own patterns in `dewaSpecBuilder.masking.patterns`) are replaced by tokens like `[EMAIL_1]` before a prompt leaves the builder and restored before you review the answer (`dewaSpecBuilder.masking`, on by default).
+- **Usage** (header): AI jobs, review decisions, masked items, approvals and gate events per month – counted on this computer only, no content, CSV export (`dewaSpecBuilder.telemetry` = `local` | `off`).
+
+Details: [GOVERNANCE.md](GOVERNANCE.md#grounding-and-guardrails).
 
 ## How developers use it (Technical mode)
 

@@ -563,18 +563,22 @@ test('deliverDev posts the SAP check to the open panel; the tool is registered a
 });
 
 /* --------------------------------------------------- approval gates and audit trail */
-test('the auth message carries the approval policy from the settings', async () => {
+test('the auth message carries the approval, guardrail and usage policy from the settings', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sb-'));
-  const vs = fakeVscode({ config: { gates: 'warn', 'approvers.functional': ['Alice'], 'approvers.technical': ['bob', 7] } });
+  const vs = fakeVscode({ config: { gates: 'warn', 'approvers.functional': ['Alice'], 'approvers.technical': ['bob', 7], masking: false, telemetry: 'off', 'models.allowed': ['gpt-5*'] } });
   const b = panel.createSpecBuilder(vs, fakeContext(dir), {});
   const auth = await b.getAuth();
-  assert.deepStrictEqual(auth.policy, { gates: 'warn', requireSapCheck: true, approvers: { functional: ['Alice'], technical: ['bob', '7'] } });
+  assert.deepStrictEqual(auth.policy, { gates: 'warn', requireSapCheck: true, approvers: { functional: ['Alice'], technical: ['bob', '7'] },
+    masking: false, maskingPatterns: [], telemetry: 'off', modelsAllowed: ['gpt-5*'] });
   const def = await panel.createSpecBuilder(fakeVscode(), fakeContext(dir), {}).getAuth();
   assert.strictEqual(def.policy.gates, 'enforce'); // enforced unless IT relaxes it
   assert.deepStrictEqual(def.policy.approvers, { functional: [], technical: [] });
+  assert.strictEqual(def.policy.masking, true); // masking and local usage statistics are on by default
+  assert.strictEqual(def.policy.telemetry, 'local');
   const decl = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.contributes.json'), 'utf8')).contributes.configuration.properties;
   assert.strictEqual(decl['dewaSpecBuilder.gates'].default, 'enforce');
   assert.ok(decl['dewaSpecBuilder.approvers.functional'] && decl['dewaSpecBuilder.approvers.technical'] && decl['dewaSpecBuilder.gates.requireSapCheck']);
+  assert.ok(decl['dewaSpecBuilder.models.allowed'] && decl['dewaSpecBuilder.masking.patterns'] && decl['dewaSpecBuilder.telemetry'].enum.join() === 'local,off');
 });
 
 test('audit entries are appended as JSON lines to .dewa/audit/<spec-id>.jsonl; bad input is refused', async () => {

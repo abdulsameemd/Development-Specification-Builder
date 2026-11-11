@@ -33,6 +33,7 @@
         <button type="button" class="nav-link" data-action="drafts">Drafts</button>
         <button type="button" class="nav-link" data-action="upload" title="Open a specification .md file downloaded from the builder">Upload</button>
         <button type="button" class="nav-link" data-action="examples">Examples</button>
+        <button type="button" class="nav-link" data-action="usage" title="How the builder and the AI were used on this computer (kept locally)">Usage</button>
         <button type="button" class="nav-link" data-action="agents">Agents</button>
       </nav>
       <div class="header-tools">
@@ -118,12 +119,22 @@
     <div id="drafts-list"></div>
     <p class="muted small">Drafts are saved automatically in this browser only. Use the share link (🔗) to hand a spec to a colleague, or <button type="button" class="link-btn" data-action="upload">Upload</button> a downloaded <code>.md</code> file.</p>
   </dialog>
+  <dialog id="usage-dialog" aria-labelledby="usage-title">
+    <form method="dialog" class="dialog-head">
+      <h2 id="usage-title">Usage on this computer</h2>
+      <button class="icon-btn" aria-label="Close">✕</button>
+    </form>
+    <div id="usage-body"></div>
+    <p class="muted small">Counted locally from the audit events – no spec content, nothing is sent anywhere. IT can switch it off with the VS Code setting <code>dewaSpecBuilder.telemetry</code> = <code>off</code>.</p>
+    <div class="nav-row"><button type="button" class="btn btn-ghost btn-sm" data-action="usage-reset">Reset</button><span class="spacer"></span><button type="button" class="btn btn-primary btn-sm" data-action="usage-csv">Export CSV</button></div>
+  </dialog>
   <dialog id="draft-dialog" aria-labelledby="draft-title">
     <form method="dialog" class="dialog-head">
       <h2 id="draft-title">Review the AI draft</h2>
       <button class="icon-btn" aria-label="Close">✕</button>
     </form>
     <p class="muted small">Pick what to add. Only empty fields are filled and new rows are appended – nothing you typed is changed. Check every item afterwards – AI can be wrong.</p>
+    <div id="draft-guard"></div>
     <ul id="draft-list" class="draft-review"></ul>
     <div class="nav-row"><span class="spacer"></span><button type="button" class="btn btn-primary" data-action="fs-draft-apply">Add to the specification</button></div>
   </dialog>
@@ -163,6 +174,7 @@
   <script src="js/config-bundle.js"></script>
   <script src="js/host.js"></script>
   <script src="js/governance.js"></script>
+  <script src="js/guard.js"></script>
   <script src="js/object-definitions.js"></script>
   <script src="js/state.js"></script>
   <script src="js/validation.js"></script>

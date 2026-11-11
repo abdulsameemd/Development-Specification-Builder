@@ -350,6 +350,7 @@
   }
 
   function sapReview(text) {
+    text = APB.guard.unmask(text);
     const r = APB.devSap.parse(text);
     if (!r.ctx) { sap.error = r.error; rerenderSap(); toast(r.error, 6000); return false; }
     sap.error = '';
@@ -396,6 +397,7 @@
       sap.running = false; sap.status = ''; sap.mode = '';
       sap.log.push({ text: 'Result received', status: 'done' });
       const answer = String(m.text || '');
+      APB.guard.evidenceAudit('devctx', m.evidence);
       rerenderSap();
       if (!sapReview(answer)) {
         ui.open['devctx-paste'] = true; rerenderSap();
@@ -833,6 +835,34 @@
     openDialog('#drafts-dialog');
   }
 
+  /* Local usage statistics (js/guard.js): AI jobs, review decisions, gates – per month. */
+  function openUsage() {
+    const u = APB.guard.usage(), months = Object.keys(u.months).sort().reverse().slice(0, 3);
+    const num = function (v) { return '<td class="num">' + (v || 0) + '</td>'; };
+    const JOB = { docs: 'Read BRD / solution document', program: 'Read existing objects', asis: 'AS-IS process', tobe: 'TO-BE process', draft: 'Generate FS', discovery: 'System discovery', devctx: 'Check & read in SAP' };
+    $('#usage-body').innerHTML = !months.length ? '<p class="empty">Nothing recorded yet' + (APB.guard.policy().telemetry === 'off' ? ' – switched off by the setting dewaSpecBuilder.telemetry.' : '.') + '</p>' : months.map(function (m) {
+      const b = u.months[m], e = b.events;
+      const jobs = Object.keys(b.jobs).map(function (k) {
+        const j = b.jobs[k], ok = j.outcomes.result || 0;
+        const models = Object.keys(j.models).sort(function (x, y) { return j.models[y] - j.models[x]; }).slice(0, 2).join(', ');
+        return '<tr><td>' + esc(JOB[k] || k) + '</td>' + num(j.runs) + '<td class="num">' + (j.runs ? Math.round(ok * 100 / j.runs) : 0) + '%</td><td class="num">' + (j.runs ? Math.round(j.seconds / j.runs) : 0) + ' s</td>' + num(j.runs ? Math.round(j.steps / j.runs) : 0) + '<td>' + esc(models || '–') + '</td></tr>';
+      }).join('');
+      const acc = b.partsAccepted || 0, dec = b.partsDeclined || 0;
+      return '<h3>' + esc(m) + '</h3>' +
+        (jobs ? '<table class="usage-table"><thead><tr><th>AI job</th><th class="num">Runs</th><th class="num">With result</th><th class="num">Avg. time</th><th class="num">Avg. steps</th><th>Model</th></tr></thead><tbody>' + jobs + '</tbody></table>' : '') +
+        '<table class="usage-table"><tbody>' +
+        '<tr><td>AI parts accepted / declined in review</td><td class="num">' + acc + ' / ' + dec + (acc + dec ? ' (' + Math.round(acc * 100 / (acc + dec)) + '% accepted)' : '') + '</td></tr>' +
+        '<tr><td>SAP names not verified in AI drafts</td>' + num(b.namesUnverified) + '</tr>' +
+        '<tr><td>Guardrail warnings (possible prompt injection)</td>' + num(b.injectionFlags) + '</tr>' +
+        '<tr><td>Personal data items masked before prompts</td>' + num(b.itemsMasked) + '</tr>' +
+        '<tr><td>Approvals / requests</td><td class="num">' + (e.approved || 0) + ' / ' + (e['approval-requested'] || 0) + '</td></tr>' +
+        '<tr><td>Gates blocked / overridden</td><td class="num">' + (e['gate-blocked'] || 0) + ' / ' + (e['gate-override'] || 0) + '</td></tr>' +
+        '<tr><td>Exports and hand-offs</td><td class="num">' + ((e.export || 0) + (e.handoff || 0)) + '</td></tr>' +
+        '</tbody></table>';
+    }).join('');
+    openDialog('#usage-dialog');
+  }
+
   function openExamples() {
     if (isFs()) {
       $('#examples-list').innerHTML = '<ul class="draft-list">' + APB.fs.templates.examples().map(function (e) {
@@ -863,7 +893,7 @@
     'devctx-copy': function () {
       const s = S.get();
       if (!APB.devSap.checkTargets(s).length) { toast('Name the objects first'); return; }
-      Promise.resolve(X.copy(APB.devSap.prompt(s))).then(function (ok) {
+      Promise.resolve(X.copy(APB.guard.outbound(APB.devSap.prompt(s), 'clipboard'))).then(function (ok) {
         ui.open['devctx-paste'] = true;
         rerenderSap();
         toast(ok ? 'Prompt copied ✓ Paste it into Copilot Chat in VS Code (dewa-fs-discovery), then paste the answer here' : 'Copy failed', 8000);
@@ -1121,7 +1151,7 @@
         return;
       }
       if (V.checkMandatory(s).length) { toast('Add a requirement and a development object first'); return; }
-      const copied = X.copyNow(M.chatPrompt(s));
+      const copied = X.copyNow(APB.guard.outbound(M.chatPrompt(s), 'clipboard'));
       X.launchVscode();
       toast(copied ? 'Prompt copied ✓ VS Code is opening — press Ctrl+Alt+I for Copilot Chat, then Ctrl+V' : 'VS Code is opening — copying failed, use Copy Markdown', 7000);
     },
@@ -1156,6 +1186,13 @@
         X.copyNow('Approved: "' + specTitle(s) + '". Open the attached file ' + file + ' in the DEWA Spec Builder with Upload – it replaces your draft and the gate is open.');
         toast('Saved ' + file + ' – reply with it attached. The message text is copied – paste it with Ctrl+V.', 12000);
       });
+    },
+    usage: function () { closeDialogs(); openUsage(); },
+    'usage-csv': function () { X.download('spec-builder-usage.csv', APB.guard.usageCsv(), 'text/csv'); },
+    'usage-reset': function () {
+      const before = JSON.stringify(APB.guard.usage());
+      APB.guard.resetUsage(); openUsage();
+      toast('Usage statistics cleared', 8000, { label: 'Undo', run: function () { const u = JSON.parse(before); APB.guard.resetUsage(); try { if (H.isVscode) H.storage.set('apb.usage.v1', JSON.stringify(u)); else localStorage.setItem('apb.usage.v1', JSON.stringify(u)); } catch (e) { /* ignore */ } openUsage(); } });
     },
     'gov-settings': function () { H.post({ type: 'open-settings' }); },
     'view-raw': function () { ui.raw = true; renderPreview(); },

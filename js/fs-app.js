@@ -392,6 +392,7 @@
       APB.busy.done('result');
       disc.running = false;
       const answer = String(m.text || '');
+      APB.guard.evidenceAudit('discovery', m.evidence);
       if (!importText(answer, disc.mode === 'chat' ? 'Copilot Chat' : 'Copilot')) {
         disc.error = 'The answer did not contain a valid context pack. The model\'s answer is shown below – fix or complete it and click Import pasted pack, try again (setting dewaSpecBuilder.model selects a stronger model), or run it in Copilot Chat.';
         U().ui.open['fs-paste'] = true;
@@ -680,6 +681,7 @@
 
   /* ------------------------------------------------------------------ actions */
   function importText(text, source) {
+    text = APB.guard.unmask(text);
     const res = DS.parse(text);
     if (!res.pack) { U().toast(res.errors[0] || 'This is not a context pack', 6000); return false; }
     U().updateSteps(function (st) { st.discovery = res.pack; });
@@ -693,7 +695,34 @@
     if (S.isFs() && !U().ui.generated && U().ui.step <= 2 && !U().ui.view) U().renderMain();
   }
 
-  function reviewDraft(text) {
+  const UNVERIFIED = '[NOT VERIFIED IN SAP]';
+  /* The review box above the draft: grounding result and guardrail warnings. */
+  function guardHtml(gd) {
+    const g = gd.ground, out = [];
+    if (gd.names.length) {
+      if (g.checked) {
+        out.push('<p class="guard-ok">✓ ' + g.verified.length + ' of ' + gd.names.length + ' SAP name' + (gd.names.length > 1 ? 's' : '') + ' in this draft ' + (g.verified.length === 1 ? 'was' : 'were') + ' read from the system (' + g.calls + ' read-only tool call' + (g.calls === 1 ? '' : 's') + ').</p>');
+      } else {
+        out.push('<p class="guard-warn">⚠ SAP names not checked against the system: this result came without tool evidence (Copilot Chat, pasted answer or no SAP access)' + (g.verified.length ? '; ' + g.verified.length + ' are known from the SAP check or discovery' : '') + '.</p>');
+      }
+      if (g.unverified.length) out.push('<p class="guard-warn">⚠ Not verified in SAP: <strong>' + g.unverified.slice(0, 12).map(esc).join(', ') + (g.unverified.length > 12 ? ' …' : '') + '</strong>. They are added with the note ' + UNVERIFIED + ' – confirm them before approval (Technical spec: Check &amp; read in SAP).</p>');
+    }
+    if (gd.flags.length) {
+      out.push('<p class="guard-warn">⚠ Text that looks like instructions to the AI was found (' + gd.flags.length + ') and treated as data – read the related parts carefully:</p><ul class="small">' +
+        gd.flags.slice(0, 4).map(function (f) { return '<li>' + esc(f.where) + ': “' + esc(f.excerpt) + '”</li>'; }).join('') + '</ul>');
+    }
+    return out.length ? '<div class="guard-box" role="note">' + out.join('') + '</div>' : '';
+  }
+  /* Accepted rows naming an unverified SAP object carry a visible note, so nobody takes them for checked facts. */
+  function markUnverified(st, names) {
+    if (!names || !names.length) return;
+    const hit = function (n) { return names.indexOf(String(n || '').trim().toUpperCase()) >= 0; };
+    (st.context.objects || []).forEach(function (o) { if (o && hit(o.name) && String(o.note || '').indexOf(UNVERIFIED) < 0) o.note = ((o.note || '').trim() + ' ' + UNVERIFIED).trim(); });
+    (st.process.programs || []).forEach(function (p) { if (p && hit(p.name) && String(p.description || '').indexOf(UNVERIFIED) < 0) p.description = ((p.description || '').trim() + ' ' + UNVERIFIED).trim(); });
+  }
+
+  function reviewDraft(text, evidence) {
+    text = APB.guard.unmask(text);
     const r = APB.fsDraft.parse(text);
     if (!r.draft) { drf.error = r.error; rerenderStep1(); U().toast(r.error, 6000); return false; }
     const parts = APB.fsDraft.preview(S.get(), r.draft);
@@ -701,6 +730,12 @@
     drf.error = '';
     drf.pending = r.draft;
     drf.pendingKind = drf.kind || 'draft';
+    // grounding: SAP names in the draft against what the read-only tools returned; guardrail flags
+    const names = APB.guard.draftNames(r.draft);
+    const flags = (drf.pendingKind === 'docs' ? drf.docFlags || [] : []).concat(evidence && evidence.flags ? [{ where: 'SAP tool results', excerpt: evidence.flags + ' result(s) contained text that looks like instructions' }] : []).concat(APB.guard.injection(text).map(function (f) { return { where: 'AI answer', excerpt: f.excerpt }; }));
+    drf.guard = { names: names, ground: APB.guard.ground(names, evidence, S.get()), flags: flags };
+    if (flags.length && drf.pendingKind !== 'docs') U().auditAdd('guard-flag', { job: drf.pendingKind, flags: flags.length, where: 'AI answer', first: flags[0].excerpt });
+    document.getElementById('draft-guard').innerHTML = guardHtml(drf.guard);
     document.getElementById('draft-list').innerHTML = parts.map(function (p) {
       const more = p.items.length > 4 ? '<li class="muted">… and ' + (p.items.length - 4) + ' more</li>' : '';
       return '<li><label class="check"><input type="checkbox" name="draft-part" value="' + esc(p.id) + '" checked> <strong>' + esc(p.label) + '</strong> <span class="count">' + p.items.length + '</span></label>' +
@@ -732,7 +767,8 @@
       drf.running = false; drf.status = ''; drf.mode = '';
       drf.log.push({ text: 'Result received', status: 'done' });
       const answer = String(m.text || '');
-      if (!reviewDraft(answer)) {
+      APB.guard.evidenceAudit(drf.kind || 'draft', m.evidence);
+      if (!reviewDraft(answer, m.evidence)) {
         const box = { asis: 'fs-asis', tobe: 'fs-tobe', docs: 'fs-docs' }[drf.kind] || 'fs-draft';
         U().ui.open[box + '-paste'] = true; rerenderStep1();
         const ta = document.getElementById(box + '-answer');
@@ -775,6 +811,10 @@
     drf.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Copilot is reading ' + list.map(function (d) { return d.name; }).join(' and ') + ' and checking SAP (read-only)…';
     const prompt = APB.fsDraft.docsPrompt(S.get(), list);
     U().auditAdd('ai-input', { job: 'docs', documents: list.map(function (d) { return d.role + ': ' + d.name + ' (' + d.chars + ' chars, fp ' + APB.gov.fingerprint({ t: d.text }) + ')'; }), promptChars: prompt.length });
+    // instructions hidden in the documents are fenced as data; flag them for the reviewer as well
+    drf.docFlags = [];
+    list.forEach(function (d) { APB.guard.injection(d.text).forEach(function (f) { drf.docFlags.push({ where: d.name, excerpt: f.excerpt }); }); });
+    if (drf.docFlags.length) U().auditAdd('guard-flag', { job: 'docs', flags: drf.docFlags.length, where: 'uploaded documents', first: drf.docFlags[0].excerpt });
     H.post({ type: 'read-program', mode: mode, prompt: prompt });
     rerenderStep1();
   }
@@ -806,7 +846,7 @@
     'fs-docs-copy': function () {
       const list = docsList();
       if (!list.length) { U().toast('Choose the BRD or the solution document first'); return; }
-      Promise.resolve(APB.exporter.copy(APB.fsDraft.docsPrompt(S.get(), list))).then(function (ok) {
+      Promise.resolve(APB.exporter.copy(APB.guard.outbound(APB.fsDraft.docsPrompt(S.get(), list), 'clipboard'))).then(function (ok) {
         U().ui.open['fs-docs-paste'] = true;
         rerenderStep1();
         U().toast(ok ? 'Prompt copied ✓ Paste it into Copilot Chat in VS Code (' + DS.cfg.agent + '), then paste the answer here' : 'Copy failed – the documents may be too long for the clipboard', 8000);
@@ -833,7 +873,7 @@
     'fs-tobe-copy': function () {
       const s = S.get();
       if ((s.context.requirement || '').trim().length < 10) { U().toast('Describe the business requirement in step 1 first'); return; }
-      Promise.resolve(APB.exporter.copy(APB.fsDraft.toBePrompt(s))).then(function (ok) {
+      Promise.resolve(APB.exporter.copy(APB.guard.outbound(APB.fsDraft.toBePrompt(s), 'clipboard'))).then(function (ok) {
         U().ui.open['fs-tobe-paste'] = true;
         rerenderStep1();
         U().toast(ok ? 'Prompt copied ✓ Paste it into an AI chat your organisation allows, then paste the answer here' : 'Copy failed', 7000);
@@ -849,7 +889,7 @@
     'fs-asis-copy': function () {
       const labels = programLabels();
       if (!labels.length) { U().toast('List the existing objects in step 1 first'); return; }
-      Promise.resolve(APB.exporter.copy(APB.fsDraft.asIsPrompt(S.get(), labels))).then(function (ok) {
+      Promise.resolve(APB.exporter.copy(APB.guard.outbound(APB.fsDraft.asIsPrompt(S.get(), labels), 'clipboard'))).then(function (ok) {
         U().ui.open['fs-asis-paste'] = true;
         rerenderStep1();
         U().toast(ok ? 'Prompt copied ✓ Paste it into Copilot Chat in VS Code (' + DS.cfg.agent + '), then paste the answer here' : 'Copy failed', 8000);
@@ -883,7 +923,7 @@
     'fs-draft-copy': function () {
       const s = S.get();
       if ((s.context.requirement || '').trim().length < 10) { U().toast('Describe the business requirement first'); return; }
-      Promise.resolve(APB.exporter.copy(APB.fsDraft.prompt(s))).then(function (ok) {
+      Promise.resolve(APB.exporter.copy(APB.guard.outbound(APB.fsDraft.prompt(s), 'clipboard'))).then(function (ok) {
         U().ui.open['fs-draft-paste'] = true;
         rerenderStep1();
         U().toast(ok ? 'AI prompt copied ✓ Paste it into an AI chat your organisation allows, then paste the answer here' : 'Copy failed', 7000);
@@ -911,7 +951,7 @@
     'fs-prog-copy': function () {
       const names = programNames();
       if (!names.length) { U().toast('Add an existing object first'); return; }
-      Promise.resolve(APB.exporter.copy(APB.fsDraft.programPrompt(S.get(), programLabels()))).then(function (ok) {
+      Promise.resolve(APB.exporter.copy(APB.guard.outbound(APB.fsDraft.programPrompt(S.get(), programLabels()), 'clipboard'))).then(function (ok) {
         U().ui.open['fs-draft-paste'] = true;
         rerenderStep1();
         U().toast(ok ? 'Prompt copied ✓ Paste it into Copilot Chat in VS Code (' + DS.cfg.agent + '), then paste the answer under Paste the AI answer' : 'Copy failed', 8000);
@@ -945,7 +985,10 @@
       const offered = APB.fsDraft.preview(S.get(), drf.pending).map(function (p) { return p.id; });
       const r = APB.fsDraft.merge(S.get(), drf.pending, ids);
       const kind = drf.pendingKind;
-      APB.gov.audit.add(r.state, 'review', { job: kind || 'draft', accepted: ids, declined: offered.filter(function (x) { return ids.indexOf(x) < 0; }), added: r.added });
+      const gd = drf.guard || { ground: { verified: [], unverified: [], checked: false }, flags: [] };
+      markUnverified(r.state, gd.ground.unverified);
+      APB.gov.audit.add(r.state, 'review', { job: kind || 'draft', accepted: ids, declined: offered.filter(function (x) { return ids.indexOf(x) < 0; }), added: r.added,
+        grounded: gd.ground.verified.length, unverified: gd.ground.unverified.length, unverifiedNames: gd.ground.unverified.slice(0, 20), evidence: gd.ground.checked ? gd.ground.calls + ' SAP tool calls' : 'none', guardFlags: gd.flags.length });
       drf.pending = null;
       S.replace(r.state);
       if (kind === 'program') {
@@ -985,14 +1028,14 @@
       const s = S.get();
       if (FC.checkMandatory(s).length) { U().toast(mandatoryMsg(s)); return; }
       const mode = APB.storage.getPref('vscodeLaunch', 'extension');
-      const copied = APB.exporter.copyNow(DS.prompt(s));
+      const copied = APB.exporter.copyNow(APB.guard.outbound(DS.prompt(s), 'clipboard'));
       APB.exporter.launchVscode(DS.launchUrl(mode, APB.storage.getPref('extensionId', DS.cfg.extensionId)));
       U().toast(!copied ? 'VS Code is opening — copying failed, use Copy prompt only'
         : mode === 'plain' ? 'Prompt copied ✓ In VS Code open Copilot Chat (Ctrl+Alt+I), pick ' + DS.cfg.agent + ', paste and press Enter'
           : 'Prompt copied ✓ VS Code opens Copilot Chat with ' + DS.cfg.agent + ' — sign in if asked, then press Enter', 8000);
     },
     'fs-copy-prompt': function () {
-      Promise.resolve(APB.exporter.copy(DS.prompt(S.get()))).then(function (ok) { U().toast(ok ? 'Discovery prompt copied' : 'Copy failed'); });
+      Promise.resolve(APB.exporter.copy(APB.guard.outbound(DS.prompt(S.get()), 'clipboard'))).then(function (ok) { U().toast(ok ? 'Discovery prompt copied' : 'Copy failed'); });
     },
     'fs-signin': function () { H.post({ type: 'sign-in' }); },
     'fs-auto': function () { startDiscovery('auto'); },

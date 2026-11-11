@@ -2,7 +2,7 @@
   "name": "dewa-sap-spec-builder",
   "displayName": "DEWA SAP Spec Builder",
   "description": "Functional and development specifications for SAP, inside VS Code – with read-only SAP system discovery through GitHub Copilot and the SAP MCP servers.",
-  "version": "1.0.17",
+  "version": "1.0.19",
   "publisher": "dewa",
   "license": "UNLICENSED",
   "private": true,
@@ -111,6 +111,54 @@
           },
           "default": [],
           "markdownDescription": "GitHub accounts that may **approve technical specifications** (gate G2, before `dewa-abap` builds). Example: `[\"tech-lead\"]`. IT distributes it in user or workspace settings (`.vscode/settings.json`); see GOVERNANCE.md."
+        },
+        "dewaSpecBuilder.models.allowed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Copilot models the builder may use (family, name or id; `*` wildcards, a plain word = contains), e.g. `[\"gpt-5*\", \"*sonnet*\"]`. Empty = any GitHub Copilot model. When none of the available models is allowed, AI jobs stop with a message. The model used is recorded in the audit trail."
+        },
+        "dewaSpecBuilder.masking": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Mask personal data before it reaches the AI: e-mail addresses, phone numbers, Emirates IDs, IBANs and card numbers in prompts are replaced by tokens such as `[EMAIL_1]` (restored in the answer before you review it), and in SAP tool results by `[EMAIL]`. Each masking is recorded in the audit trail."
+        },
+        "dewaSpecBuilder.masking.patterns": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "regex": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "regex"
+                ]
+              }
+            ]
+          },
+          "default": [],
+          "markdownDescription": "Extra masking patterns (JavaScript regular expressions), e.g. `[{\"name\": \"PERNR\", \"regex\": \"\\\\bPERNR\\\\s*\\\\d{8}\\\\b\"}]` for personnel numbers."
+        },
+        "dewaSpecBuilder.telemetry": {
+          "type": "string",
+          "enum": [
+            "local",
+            "off"
+          ],
+          "default": "local",
+          "markdownDescription": "`local`: count AI jobs, review decisions, approvals and gate events per month on this computer (header → *Usage*; export as CSV). No spec content is kept and nothing is sent anywhere. `off`: count nothing."
         },
         "dewaSpecBuilder.installAgent": {
           "type": "boolean",
