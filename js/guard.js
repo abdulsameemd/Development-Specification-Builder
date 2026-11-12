@@ -143,7 +143,7 @@
     const art = (a.artifacts || []).slice();
     (b.artifacts || []).forEach(function (x) { if (!art.some(function (y) { return y.name === x.name; })) art.push(x); });
     return { calls: (a.calls || []).concat(b.calls || []), names: (a.names || []).concat(b.names || []), flags: (a.flags || 0) + (b.flags || 0), masked: (a.masked || 0) + (b.masked || 0),
-      searches: (a.searches || 0) + (b.searches || 0), artifacts: art,
+      searches: (a.searches || 0) + (b.searches || 0), artifacts: art, blocked: a.blocked || b.blocked || null,
       usage: { requests: (ua.requests || 0) + (ub.requests || 0), inputTokens: (ua.inputTokens || 0) + (ub.inputTokens || 0), outputTokens: (ua.outputTokens || 0) + (ub.outputTokens || 0), estimated: !!(ua.estimated || ub.estimated) } };
   }
   function n(v) { return Number(v || 0).toLocaleString('en'); }
@@ -155,11 +155,22 @@
     if (u.calls) parts.push(u.searches + ' SAP search' + (u.searches === 1 ? '' : 'es'), u.artifacts.length + ' ABAP artifact' + (u.artifacts.length === 1 ? '' : 's') + ' read' + (u.artifacts.length ? ': ' + u.artifacts.slice(0, 12).join(', ') + (u.artifacts.length > 12 ? ' …' : '') : ''));
     return parts.join(' · ');
   }
+  /* The ADT MCP server refused SAP access in this job: what the user sees and does. */
+  function blockedText(ev) {
+    const b = ev && ev.blocked;
+    if (!b || !b.count) return '';
+    return 'SAP could not be read: the ABAP ADT MCP server refused ' + b.count + ' call' + (b.count === 1 ? '' : 's') +
+      (b.destinations.length ? ' for destination ' + b.destinations.join(', ') : '') + (b.first ? ' (its message: “' + b.first + '”)' : '') +
+      '. If reading SAP worked before, run it again – SAP calls now run one at a time. Otherwise ask IT to allow the destination (read-only user) in the ADT MCP server. SAP names in this result are not verified.';
+  }
+
   /* For the audit entry "AI job finished". */
   function usageAudit(ev) {
     if (!ev) return {};
     const u = usageOf(ev);
-    return { tokensIn: u.tokensIn, tokensOut: u.tokensOut, tokensEstimated: u.estimated ? 'yes' : '', modelCalls: u.requests, sapSearches: u.searches, artifactsRead: u.artifacts.length, artifacts: u.artifacts.slice(0, 20).join(', ') };
+    const out = { tokensIn: u.tokensIn, tokensOut: u.tokensOut, tokensEstimated: u.estimated ? 'yes' : '', modelCalls: u.requests, sapSearches: u.searches, artifactsRead: u.artifacts.length, artifacts: u.artifacts.slice(0, 20).join(', ') };
+    if (ev.blocked) out.sapBlocked = ev.blocked.count + ' refused' + (ev.blocked.destinations.length ? ' – ' + ev.blocked.destinations.join(', ') : '');
+    return out;
   }
 
   /* Every prompt leaving the builder (VS Code message or clipboard): masked, and the masking is audited. */
@@ -233,7 +244,7 @@
     setPolicy: setPolicy, policy: function () { return { masking: pol.masking, telemetry: pol.telemetry, patterns: pol.patterns.length }; },
     injection: injection, fence: fence, FENCE_RULE: FENCE_RULE,
     draftNames: draftNames, ground: ground,
-    mask: mask, unmask: unmask, outbound: outbound, evidenceAudit: evidenceAudit, usageText: usageText, usageAudit: usageAudit, combineEvidence: combineEvidence,
+    mask: mask, unmask: unmask, outbound: outbound, evidenceAudit: evidenceAudit, blockedText: blockedText, usageText: usageText, usageAudit: usageAudit, combineEvidence: combineEvidence,
     record: record, usage: usage, resetUsage: resetUsage, usageCsv: usageCsv
   };
 })(window.APB = window.APB || {});

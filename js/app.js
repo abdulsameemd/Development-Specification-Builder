@@ -398,6 +398,7 @@
       sap.log.push({ text: 'Result received', status: 'done' });
       const answer = String(m.text || '');
       APB.guard.evidenceAudit('devctx', m.evidence);
+      if (APB.guard.blockedText(m.evidence)) { sap.log.push({ text: APB.guard.blockedText(m.evidence), status: 'blocked' }); toast(APB.guard.blockedText(m.evidence), 15000); }
       rerenderSap();
       if (!sapReview(answer)) {
         ui.open['devctx-paste'] = true; rerenderSap();

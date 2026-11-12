@@ -75,6 +75,11 @@ your GitHub Copilot with the read-only SAP tools. Copilot:
   findings go to Copilot **once, without tools**, to write the FS. Before, every tool round re-sent the whole
   documents. SAP searches run up to 4 at a time, and long tool results (e.g. a whole program source) are shortened
   to 12,000 characters for the model (`dewaSpecBuilder.maxToolResultChars`);
+- **SAP refused?** If the log shows ⛔ or the review says *SAP could not be read: the ABAP ADT MCP server refused …*,
+  the server did not allow the destination (e.g. `SBE_210`). After 3 refusals in a row the job stops calling SAP and
+  writes the result from the documents only (SAP names unverified). If reading SAP worked before, run again – SAP
+  calls run one at a time (`dewaSpecBuilder.parallelToolCalls`, default 1). Otherwise IT allows the destination
+  (read-only user) in the ADT MCP server;
 - **never hangs**: an SAP call that does not answer within 60 s is skipped (⏱ in the log; while it waits the log
   says so every 15 s – if VS Code asks you to *allow* an SAP tool, allow it), the SAP reading stops after 5 minutes,
   and a Copilot answer that stops arriving ends the job after 2 minutes. **Finish now** (busy overlay, next to Stop)
@@ -178,7 +183,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.22.vsix`](dist/dewa-sap-spec-builder-1.0.22.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.22.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.23.vsix`](dist/dewa-sap-spec-builder-1.0.23.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.23.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **If the .vsix download is blocked** (the downloaded file is only a few KB, and VS Code says *End of central directory record signature not found*): some company networks replace `.vsix` downloads with a web page. The repository also holds the extension **unpacked** in `dist/vscode-extension/dewa.dewa-sap-spec-builder-<version>/`, as plain files, so no `.vsix` is downloaded:
 

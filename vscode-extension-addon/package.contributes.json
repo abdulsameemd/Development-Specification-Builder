@@ -155,6 +155,13 @@
           "minimum": 30,
           "maximum": 3600,
           "markdownDescription": "Time budget for reading SAP in one job (default 5 minutes). When it is used up, no more SAP calls are made and Copilot writes the answer from what was read. *Finish now* in the busy overlay does the same at any time."
+        },
+        "dewaSpecBuilder.parallelToolCalls": {
+          "type": "number",
+          "default": 1,
+          "minimum": 1,
+          "maximum": 4,
+          "markdownDescription": "How many SAP tool calls may run at the same time (1–4). Default **1**: one after another – the ABAP ADT MCP server keeps one logon session per destination and can refuse the destination when several calls start at once. Higher is faster only if your MCP server supports parallel calls. The first SAP call of a job always runs alone (logon, up to 3 minutes)."
         }
       }
     },
