@@ -60,7 +60,9 @@
   }
 
   /* AS-IS and TO-BE steps as a simple text flow (Markdown) – Word shows the same block. */
-  function flow(list) {
+  /* the process as a swimlane diagram (js/flow-diagram.js: Mermaid block that the preview and Word redraw) */
+  function flow(list, kind) {
+    if (APB.flow) return APB.flow.markdown(APB.flow.steps(rows(list), kind), kind);
     list = rows(list).filter(function (r) { return (r.step || '').trim(); });
     if (list.length < 2) return '';
     return '```text\n' + list.map(function (r, i) {
@@ -238,8 +240,8 @@
     function add(t, body) { if (body && body.trim()) sections.push({ title: t, body: body.trim() }); }
     add('Business Requirement & Scope', join([businessRequirement(s), scope(s), sub('Stakeholders', simpleGrid('context', 'stakeholders', s.context.stakeholders))]));
     add('Process', join([
-      sub('Current process (AS-IS)', join([processTable(s.process.asIs, 'pain', 'Pain point'), flow(s.process.asIs)])),
-      sub('Proposed process (TO-BE)', join([processTable(s.process.toBe, 'change', 'Change', 'toBe'), flow(s.process.toBe)])),
+      sub('Current process (AS-IS)', join([flow(s.process.asIs, 'asIs'), processTable(s.process.asIs, 'pain', 'Pain point')])),
+      sub('Proposed process (TO-BE)', join([flow(s.process.toBe, 'toBe'), processTable(s.process.toBe, 'change', 'Change', 'toBe')])),
       sub('Variants & exceptions', bullets(s.process.variants))]));
     add('Functional Requirements', join([frSection(s), sub('Business rules & validations', rulesTable(s)), sub('Data requirements', dataTable(s))]));
     add('Current System', join([sap() ? existingObjects(s) : '', programLogic(s), sap() ? sub('SAP system context', systemContext(s).replace(/^### /gm, '#### ')) : '']));

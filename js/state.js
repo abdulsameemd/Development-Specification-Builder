@@ -42,6 +42,7 @@
       rules: [],
       acceptance: [],
       assumptions: '',
+      processToBe: [],
       source: null,
       sapCheck: null,
       approval: null,
@@ -76,6 +77,10 @@
     s.rules = arr(input.rules).map(function (r) { return { id: str(r.id) || uid(), condition: str(r.condition), behavior: str(r.behavior) }; });
     s.acceptance = arr(input.acceptance).map(function (a) { return { id: str(a.id) || uid(), text: str(a.text) }; });
     s.assumptions = str(input.assumptions);
+    // the TO-BE process of the functional spec it was created from (shown as swimlanes in the document)
+    s.processToBe = arr(input.processToBe).filter(function (r) { return r && str(r.step); }).slice(0, 60).map(function (r) {
+      return { step: str(r.step), role: str(r.role), tx: str(r.tx), change: str(r.change) };
+    });
     // link to the functional spec it was created from (spec-link.js); null for specs written directly
     s.source = APB.specLink ? APB.specLink.normalizeSource(input.source) : null;
     // approval (gate G2) and audit trail (governance.js)

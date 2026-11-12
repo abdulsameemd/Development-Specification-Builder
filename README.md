@@ -142,6 +142,16 @@ the transaction / app (only names already in the spec; something to be built is 
 report") and a change mark: unchanged, changed, new or automated. You review it first; steps you typed stay. The TO-BE is
 drawn as a flow in step 2 and in the document.
 
+### Process flow diagrams (swimlanes)
+
+The AS-IS and TO-BE processes are drawn as **swimlane diagrams**: one lane per role, one numbered box per step with
+its transaction / app, arrows in step order. AS-IS steps with a pain point have a red border and ⚠; TO-BE steps are
+coloured by change (unchanged grey, changed amber, new blue, automated green, with a legend). Long processes continue
+in a second diagram (8 steps each). The diagram appears in the preview and the finished document, as a picture in
+**Word**, and as a Mermaid flowchart in the **Markdown** (rendered by GitHub / VS Code with Mermaid support, readable
+for Copilot); the step table stays below it. A Technical spec created from the FS carries the TO-BE and shows it as
+*Business Process (TO-BE)*.
+
 ### Functional ↔ Technical
 
 A Technical spec created from an FS (a RICEFW item, or *→ Technical spec: change …* after reading a program) stays
@@ -183,7 +193,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.23.vsix`](dist/dewa-sap-spec-builder-1.0.23.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.23.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.24.vsix`](dist/dewa-sap-spec-builder-1.0.24.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.24.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **If the .vsix download is blocked** (the downloaded file is only a few KB, and VS Code says *End of central directory record signature not found*): some company networks replace `.vsix` downloads with a web page. The repository also holds the extension **unpacked** in `dist/vscode-extension/dewa.dewa-sap-spec-builder-<version>/`, as plain files, so no `.vsix` is downloaded:
 

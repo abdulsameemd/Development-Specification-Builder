@@ -244,6 +244,13 @@
     if (s.requirement.objective.trim()) obj.push(s.requirement.objective.trim());
     if (s.requirement.users.trim()) obj.push('- **Users / Role**: ' + s.requirement.users.trim());
     add('Business Objective', obj.join('\n\n'));
+    // TO-BE process from the functional spec: swimlanes (js/flow-diagram.js) and the step table
+    const toBe = (s.processToBe || []).filter(function (r) { return r && (r.step || '').trim(); });
+    if (toBe.length) {
+      const CH = { unchanged: 'Unchanged', changed: 'Changed', new: 'New', automated: 'Automated' };
+      add('Business Process (TO-BE)', [APB.flow ? APB.flow.markdown(APB.flow.steps(toBe, 'toBe'), 'toBe') : '',
+        table(['#', 'Step', 'Role', 'Transaction / app', 'Change'], toBe.map(function (r, i) { return [String(i + 1), cell(r.step), cell(r.role || '–'), cell(r.tx || '–'), CH[r.change] || '–']; }))].filter(Boolean).join('\n\n'));
+    }
 
     const by = function (st) { return s.objects.filter(function (o) { return o.status === st; }); };
     let ex = by('existing').length ? objectTable(by('existing'), 'Name') : '';
@@ -335,7 +342,10 @@
         i++;
         while (i < lines.length && !/^```/.test(lines[i])) buf.push(lines[i++]);
         i++;
-        html.push('<pre><code>' + esc(buf.join('\n')) + '</code></pre>');
+        // a process flow written by the builder: drawn as swimlanes (js/flow-diagram.js)
+        const fl = /^```mermaid/.test(l) && APB.flow ? APB.flow.fromBlock(buf) : null;
+        if (fl) html.push('<figure class="flow-diagram">' + APB.flow.svg(fl.steps, fl.kind) + '</figure>');
+        else html.push('<pre><code>' + esc(buf.join('\n')) + '</code></pre>');
       } else if (/^#{1,6}\s/.test(l)) {
         const lvl = Math.min(/^#+/.exec(l)[0].length, 6);
         html.push('<h' + lvl + '>' + inline(l.replace(/^#+\s+/, '')) + '</h' + lvl + '>');
