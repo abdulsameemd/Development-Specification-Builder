@@ -143,7 +143,9 @@ test('cancellation stops the loop', async () => {
   const token = { isCancellationRequested: false };
   const vs = fakeVscode({ onInvoke: () => { token.isCancellationRequested = true; }, script: [[{ call: ['fiori_search_apps', {}] }, { call: ['abap_adt_get_object', {}] }], [{ text: 'x' }]] });
   await assert.rejects(runner.run(vs, { prompt: 'p', token: token }), (e) => e.code === 'CANCELLED');
-  assert.deepStrictEqual(vs.calls.invoked, ['fiori_search_apps']);
+  // the calls of one round start together (parallel); after cancelling, no further model round is sent
+  assert.deepStrictEqual(vs.calls.invoked.sort(), ['abap_adt_get_object', 'fiori_search_apps']);
+  assert.strictEqual(vs.calls.requests.length, 1);
 });
 
 test('clear errors when no model or no SAP tools are available', async () => {

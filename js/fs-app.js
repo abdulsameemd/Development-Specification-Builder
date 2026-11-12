@@ -126,7 +126,7 @@
     APB.busy.done('reset');
     docs.brd = null; docs.solution = null; docs.busy = '';
     if (drf.running && drf.mode !== 'chat') H.post({ type: 'stop' });
-    drf.running = false; drf.kind = ''; drf.mode = ''; drf.status = ''; drf.error = ''; drf.pending = null; drf.pendingKind = ''; drf.log = [];
+    drf.running = false; drf.kind = ''; drf.mode = ''; drf.status = ''; drf.error = ''; drf.pending = null; drf.pendingKind = ''; drf.log = []; drf.phase = ''; drf.found = null; drf.ev1 = null;
     if (disc.running) H.post({ type: 'stop' });
     disc.running = false; disc.mode = ''; disc.log = []; disc.error = '';
   }
@@ -405,7 +405,7 @@
       if (el) el.outerHTML = logHtml(); else rerenderDiscovery();
     });
     H.on('discovery-result', function (m) {
-      APB.busy.done('result');
+      APB.busy.done('result', APB.guard.usageAudit(m.evidence));
       disc.running = false;
       const answer = String(m.text || '');
       APB.guard.evidenceAudit('discovery', m.evidence);
@@ -727,6 +727,7 @@
       out.push('<p class="guard-warn">⚠ Text that looks like instructions to the AI was found (' + gd.flags.length + ') and treated as data – read the related parts carefully:</p><ul class="small">' +
         gd.flags.slice(0, 4).map(function (f) { return '<li>' + esc(f.where) + ': “' + esc(f.excerpt) + '”</li>'; }).join('') + '</ul>');
     }
+    if (gd.usage) out.push('<p class="guard-usage">' + esc(gd.usage) + '</p>');
     return out.length ? '<div class="guard-box" role="note">' + out.join('') + '</div>' : '';
   }
   /* Accepted rows naming an unverified SAP object carry a visible note, so nobody takes them for checked facts. */
@@ -737,9 +738,9 @@
     (st.process.programs || []).forEach(function (p) { if (p && hit(p.name) && String(p.description || '').indexOf(UNVERIFIED) < 0) p.description = ((p.description || '').trim() + ' ' + UNVERIFIED).trim(); });
   }
 
-  function reviewDraft(text, evidence) {
+  function reviewDraft(text, evidence, ready) {
     text = APB.guard.unmask(text);
-    const r = APB.fsDraft.parse(text);
+    const r = ready || APB.fsDraft.parse(text);
     if (!r.draft) { drf.error = r.error; rerenderStep1(); U().toast(r.error, 6000); return false; }
     const parts = APB.fsDraft.preview(S.get(), r.draft);
     if (!parts.length) { drf.error = ''; rerenderStep1(); U().toast('The draft adds nothing new – everything it proposes is already in the specification', 6000); return false; }
@@ -751,6 +752,7 @@
     const flags = (drf.pendingKind === 'docs' ? drf.docFlags || [] : []).concat(evidence && evidence.flags ? [{ where: 'SAP tool results', excerpt: evidence.flags + ' result(s) contained text that looks like instructions' }] : []).concat(APB.guard.injection(text).map(function (f) { return { where: 'AI answer', excerpt: f.excerpt }; }));
     drf.guard = { names: names, ground: APB.guard.ground(names, evidence, S.get()), flags: flags };
     if (flags.length && drf.pendingKind !== 'docs') U().auditAdd('guard-flag', { job: drf.pendingKind, flags: flags.length, where: 'AI answer', first: flags[0].excerpt });
+    drf.guard.usage = APB.guard.usageText(evidence);
     document.getElementById('draft-guard').innerHTML = guardHtml(drf.guard);
     document.getElementById('draft-list').innerHTML = parts.map(function (p) {
       const shown = p.unticked ? 25 : 4; // candidates: every one with the reason it was found
@@ -785,19 +787,29 @@
       if (el && drf.running) el.textContent = drf.status; else rerenderStep1();
     });
     H.on('draft-result', function (m) {
-      APB.busy.done('result');
+      if (drf.kind === 'docs' && drf.phase === 'search') { docsWritePhase(m); return; }
+      let answer = String(m.text || '');
+      let evidence = m.evidence, ready = null;
+      if (drf.kind === 'docs' && drf.phase === 'write') {
+        // SAP facts only from phase 1; the usage of both phases together
+        evidence = APB.guard.combineEvidence(drf.ev1, m.evidence);
+        const r = APB.fsDraft.parse(APB.guard.unmask(answer));
+        if (r.draft) ready = { draft: APB.fsDraft.withFindings(r.draft, drf.found || {}), error: '' };
+        answer = answer + '\n\n' + drf.answer1;
+        drf.phase = '';
+      }
+      APB.busy.done('result', APB.guard.usageAudit(evidence));
       drf.running = false; drf.status = ''; drf.mode = '';
-      drf.log.push({ text: 'Result received', status: 'done' });
-      const answer = String(m.text || '');
+      drf.log.push({ text: 'Result received' + (APB.guard.usageText(evidence) ? ' · ' + APB.guard.usageText(evidence) : ''), status: 'done' });
       APB.guard.evidenceAudit(drf.kind || 'draft', m.evidence);
-      if (!reviewDraft(answer, m.evidence)) {
+      if (!reviewDraft(answer, evidence, ready)) {
         const box = { asis: 'fs-asis', tobe: 'fs-tobe', docs: 'fs-docs' }[drf.kind] || 'fs-draft';
         U().ui.open[box + '-paste'] = true; rerenderStep1();
         const ta = document.getElementById(box + '-answer');
         if (ta) ta.value = answer;
       } else rerenderStep1();
     });
-    H.on('draft-error', function (m) { APB.busy.done('error'); drf.running = false; drf.status = ''; drf.error = String(m.message || 'Drafting failed').slice(0, 400); rerenderStep1(); });
+    H.on('draft-error', function (m) { drf.phase = ''; APB.busy.done('error'); drf.running = false; drf.status = ''; drf.error = String(m.message || 'Drafting failed').slice(0, 400); rerenderStep1(); });
   }
 
   /* Objects to read: the typed list in step 1. */
@@ -831,13 +843,35 @@
     drf.running = true; drf.kind = 'docs'; drf.mode = mode; drf.error = ''; drf.log = [];
     APB.busy.start('docs', mode, function () { actions['fs-draft-stop'](); });
     drf.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Copilot is reading ' + list.map(function (d) { return d.name; }).join(' and ') + ' and checking SAP (read-only)…';
-    const prompt = APB.fsDraft.docsPrompt(S.get(), list);
+    // VS Code, automatic: phase 1 searches SAP with a small prompt, phase 2 writes the FS from the full documents
+    // without tools – the documents are processed twice instead of once per tool round
+    drf.phase = mode === 'auto' && H.isVscode ? 'search' : '';
+    drf.docs = list; drf.found = null; drf.ev1 = null; drf.answer1 = '';
+    const prompt = drf.phase ? APB.fsDraft.docsSearchPrompt(S.get(), list) : APB.fsDraft.docsPrompt(S.get(), list);
+    if (drf.phase) { drf.status = '1/2 Searching the SAP system (read-only)…'; APB.busy.progress('1/2 Searching the SAP system (read-only) with a short brief of the documents…', 'info'); }
     U().auditAdd('ai-input', { job: 'docs', documents: list.map(function (d) { return d.role + ': ' + d.name + ' (' + d.chars + ' chars, fp ' + APB.gov.fingerprint({ t: d.text }) + ')'; }), promptChars: prompt.length });
     // instructions hidden in the documents are fenced as data; flag them for the reviewer as well
     drf.docFlags = [];
     list.forEach(function (d) { APB.guard.injection(d.text).forEach(function (f) { drf.docFlags.push({ where: d.name, excerpt: f.excerpt }); }); });
     if (drf.docFlags.length) U().auditAdd('guard-flag', { job: 'docs', flags: drf.docFlags.length, where: 'uploaded documents', first: drf.docFlags[0].excerpt });
     H.post({ type: 'read-program', mode: mode, prompt: prompt });
+    rerenderStep1();
+  }
+
+  /* Phase 1 answered: keep its SAP findings and evidence, then write the FS from the full documents without tools. */
+  function docsWritePhase(m) {
+    const answer = APB.guard.unmask(String(m.text || ''));
+    const r = APB.fsDraft.parse(answer);
+    drf.found = r.draft || {};
+    drf.ev1 = m.evidence || null;
+    drf.answer1 = answer;
+    drf.phase = 'write';
+    APB.guard.evidenceAudit('docs', m.evidence);
+    const u = APB.guard.usageText(m.evidence);
+    drf.log.push({ text: 'SAP search done' + (u ? ' · ' + u : ''), status: 'done' });
+    drf.status = '2/2 Writing the FS from the documents…';
+    APB.busy.progress('2/2 Writing the functional spec from the documents and the SAP findings (no SAP access)…', 'info');
+    H.post({ type: 'draft', prompt: APB.fsDraft.docsPrompt(S.get(), drf.docs || [], { findings: APB.fsDraft.findingsText(drf.found) }) });
     rerenderStep1();
   }
 
@@ -967,7 +1001,7 @@
       H.post({ type: 'draft', mode: 'chat', prompt: APB.fsDraft.prompt(s) });
       rerenderStep1();
     },
-    'fs-draft-stop': function () { APB.busy.done('stopped'); if (drf.mode !== 'chat') H.post({ type: 'stop' }); drf.running = false; drf.mode = ''; drf.status = ''; rerenderStep1(); },
+    'fs-draft-stop': function () { APB.busy.done('stopped'); if (drf.mode !== 'chat') H.post({ type: 'stop' }); drf.running = false; drf.mode = ''; drf.status = ''; drf.phase = ''; rerenderStep1(); },
     'fs-prog-auto': function () { readProgram('auto'); },
     'fs-prog-chat': function () { readProgram('chat'); },
     'fs-prog-copy': function () {

@@ -121,8 +121,9 @@
   }
 
   /* outcome: result | error | stopped | reset | replaced (recorded in the audit trail) */
-  function done(outcome) {
-    if (job) audit('ai-end', { job: job.kind, outcome: outcome || 'closed', seconds: Math.round((Date.now() - started) / 1000), steps: steps, model: job.model });
+  /* extra: token / artifact usage of the job (APB.guard.usageAudit) */
+  function done(outcome, extra) {
+    if (job) audit('ai-end', Object.assign({ job: job.kind, outcome: outcome || 'closed', seconds: Math.round((Date.now() - started) / 1000), steps: steps, model: job.model }, extra || {}));
     job = null;
     clearInterval(rot); clearInterval(tick);
     if (el) el.hidden = true;

@@ -123,3 +123,77 @@ test('builder: local usage statistics count events without content, export CSV, 
   APB.gov.audit.add({ id: 's1' }, 'export', {});
   assert.strictEqual(APB.guard.usage().months[m].events.export, undefined);
 });
+
+/* fake for speed / usage: tools take time, the model counts tokens */
+function timedFake(o) {
+  const sent = [];
+  let turn = 0, running = 0;
+  const stats = { maxParallel: 0 };
+  const model = { name: 'GPT-5', family: 'gpt-5', id: 'gpt-5',
+    countTokens: o.noCount ? undefined : async (t) => Math.ceil(String(t).length / 3),
+    sendRequest: async (messages) => {
+      sent.push(messages.slice());
+      const parts = o.script[Math.min(turn++, o.script.length - 1)];
+      return { stream: (async function* () { for (const p of parts) yield p.call ? new ToolCallPart('c' + turn + p.call[1].name, p.call[0], p.call[1]) : new TextPart(p.text); })() };
+    } };
+  return { sent, stats,
+    LanguageModelTextPart: TextPart, LanguageModelToolCallPart: ToolCallPart, LanguageModelToolResultPart: ToolResultPart,
+    LanguageModelChatMessage: { User: (c) => ({ role: 'user', content: c }), Assistant: (c) => ({ role: 'assistant', content: c }) },
+    lm: { selectChatModels: async () => [model], tools: [{ name: 'abap_search_objects' }, { name: 'abap_get_source' }],
+      invokeTool: async (name, opts) => {
+        running++; stats.maxParallel = Math.max(stats.maxParallel, running);
+        await new Promise((r) => setTimeout(r, 30));
+        running--;
+        return { content: [new TextPart(name === 'abap_get_source' ? 'REPORT ' + opts.input.name + '.\n' + 'x'.repeat(o.big || 10) : 'Found ' + opts.input.name)] };
+      } } };
+}
+
+test('speed: the calls of one round run in parallel (max 4); long results are shortened for the model', async () => {
+  const calls = ['A', 'B', 'C', 'D', 'E', 'F'].map((n) => ({ call: ['abap_search_objects', { name: 'ZHR*' + n + '*' }] }));
+  const vs = timedFake({ script: [calls.concat([{ call: ['abap_get_source', { name: 'ZHR_BIG' }] }]), [{ text: 'dewa-sap-context-pack {}' }]], big: 50000 });
+  const guard = { maxResultChars: 5000 };
+  const t0 = Date.now();
+  await runner.run(vs, { prompt: 'p', guard: guard, onProgress: () => {} });
+  assert.strictEqual(vs.stats.maxParallel, 4);
+  assert.ok(Date.now() - t0 < 7 * 30, 'not one after another');
+  const results = vs.sent[1][vs.sent[1].length - 1].content;
+  assert.strictEqual(results.length, 7, 'every call answered, in order');
+  const big = results[6].content.map((p) => p.value).join('');
+  assert.ok(big.length < 5600 && /… shortened \(500\d\d chars in total\)/.test(big));
+  assert.ok(guard.evidence.names.includes('ZHR_BIG'), 'evidence from the full result');
+  assert.match(vs.sent[0][0].content, /send up to 4 independent tool calls in one turn/);
+});
+
+test('usage: tokens counted with the model tokenizer (or estimated), searches vs ABAP artifacts read', async () => {
+  const script = [[{ call: ['abap_search_objects', { name: 'ZHR*BONUS*' }] }, { call: ['abap_get_source', { name: 'ZWHR_BONUS_POST' }] }], [{ text: 'dewa-sap-context-pack {}' }]];
+  const progress = [];
+  const vs = timedFake({ script });
+  const guard = {};
+  await runner.run(vs, { prompt: 'p', guard: guard, onProgress: (p) => progress.push(p) });
+  const ev = guard.evidence;
+  assert.strictEqual(ev.usage.requests, 2);
+  assert.ok(ev.usage.inputTokens > 0 && ev.usage.outputTokens > 0 && ev.usage.estimated === false);
+  assert.strictEqual(ev.searches, 1);
+  assert.deepStrictEqual(ev.artifacts.map((a) => a.name), ['ZWHR_BONUS_POST']);
+  assert.ok(progress.some((p) => p.key === 'usage' && /tokens · 1 SAP search · 1 ABAP artifact read$/.test(p.text)));
+  const est = timedFake({ script, noCount: true });
+  const g2 = {};
+  await runner.run(est, { prompt: 'p', guard: g2, onProgress: () => {} });
+  assert.strictEqual(g2.evidence.usage.estimated, true);
+  assert.match(G.usageLine(g2.evidence), /^≈ /);
+  // the draft runner (no tools) reports usage too
+  const g3 = {};
+  await drafter.run(timedFake({ script: [[{ text: '{"frs": []}' }]] }), { prompt: 'p', guard: g3, onProgress: () => {} });
+  assert.strictEqual(g3.evidence.usage.requests, 1);
+  assert.ok(G.isSearchTool('abap_search_objects') && G.isSearchTool('adtQuickSearch') && !G.isSearchTool('abap_get_source'));
+});
+
+test('builder: usage text and audit fields; two phases combine', () => {
+  const APB = loadBuilder();
+  const a = { calls: [1, 2], names: ['A'], searches: 2, artifacts: [{ name: 'ZA' }], usage: { requests: 3, inputTokens: 9000, outputTokens: 800 } };
+  const b = { calls: [], names: [], usage: { requests: 1, inputTokens: 30000, outputTokens: 2500 } };
+  const ev = APB.guard.combineEvidence(a, b);
+  assert.strictEqual(APB.guard.usageText(ev), 'Copilot used 42,300 tokens (39,000 in · 3,300 out, 4 model calls) · 2 SAP searches · 1 ABAP artifact read: ZA');
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(APB.guard.usageAudit(ev))), { tokensIn: 39000, tokensOut: 3300, tokensEstimated: '', modelCalls: 4, sapSearches: 2, artifactsRead: 1, artifacts: 'ZA' });
+  assert.strictEqual(APB.guard.usageText(null), '');
+});

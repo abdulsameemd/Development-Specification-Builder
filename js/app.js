@@ -393,7 +393,7 @@
       rerenderSap();
     });
     H.on('devctx-result', function (m) {
-      APB.busy.done('result');
+      APB.busy.done('result', APB.guard.usageAudit(m.evidence));
       sap.running = false; sap.status = ''; sap.mode = '';
       sap.log.push({ text: 'Result received', status: 'done' });
       const answer = String(m.text || '');
@@ -845,11 +845,13 @@
       const jobs = Object.keys(b.jobs).map(function (k) {
         const j = b.jobs[k], ok = j.outcomes.result || 0;
         const models = Object.keys(j.models).sort(function (x, y) { return j.models[y] - j.models[x]; }).slice(0, 2).join(', ');
-        return '<tr><td>' + esc(JOB[k] || k) + '</td>' + num(j.runs) + '<td class="num">' + (j.runs ? Math.round(ok * 100 / j.runs) : 0) + '%</td><td class="num">' + (j.runs ? Math.round(j.seconds / j.runs) : 0) + ' s</td>' + num(j.runs ? Math.round(j.steps / j.runs) : 0) + '<td>' + esc(models || '–') + '</td></tr>';
+        const tok = j.tokens || 0;
+        return '<tr><td>' + esc(JOB[k] || k) + '</td>' + num(j.runs) + '<td class="num">' + (j.runs ? Math.round(ok * 100 / j.runs) : 0) + '%</td><td class="num">' + (j.runs ? Math.round(j.seconds / j.runs) : 0) + ' s</td>' +
+          '<td class="num">' + tok.toLocaleString('en') + (j.runs > 1 ? '<br><span class="muted small">∅ ' + Math.round(tok / j.runs).toLocaleString('en') + '</span>' : '') + '</td>' + num(j.artifacts) + '<td>' + esc(models || '–') + '</td></tr>';
       }).join('');
       const acc = b.partsAccepted || 0, dec = b.partsDeclined || 0;
       return '<h3>' + esc(m) + '</h3>' +
-        (jobs ? '<table class="usage-table"><thead><tr><th>AI job</th><th class="num">Runs</th><th class="num">With result</th><th class="num">Avg. time</th><th class="num">Avg. steps</th><th>Model</th></tr></thead><tbody>' + jobs + '</tbody></table>' : '') +
+        (jobs ? '<table class="usage-table"><thead><tr><th>AI job</th><th class="num">Runs</th><th class="num">With result</th><th class="num">Avg. time</th><th class="num">Tokens</th><th class="num">ABAP artifacts read</th><th>Model</th></tr></thead><tbody>' + jobs + '</tbody></table>' : '') +
         '<table class="usage-table"><tbody>' +
         '<tr><td>AI parts accepted / declined in review</td><td class="num">' + acc + ' / ' + dec + (acc + dec ? ' (' + Math.round(acc * 100 / (acc + dec)) + '% accepted)' : '') + '</td></tr>' +
         '<tr><td>SAP names not verified in AI drafts</td>' + num(b.namesUnverified) + '</tr>' +

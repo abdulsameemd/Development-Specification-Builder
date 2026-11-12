@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.21
+
+- **Faster *Generate FS from the documents*.** The job now runs in two phases (VS Code, automatic): (1) the read-only SAP search gets a short brief – the SAP names found in the documents, the start of each document, module and title – instead of the full documents; (2) the full documents and the SAP findings go to Copilot once, without tools, to write the FS. Before, every SAP tool round sent the whole documents again. SAP facts in the review (objects, candidates, programs read, current logic, type of change) come only from phase 1. Copilot Chat and Copy prompt work as before.
+- **Faster SAP tool loop for every job:** up to 4 independent SAP calls run at the same time, and long tool results (e.g. a whole program source) are shortened to 12,000 characters for the model – new setting `dewaSpecBuilder.maxToolResultChars`; the grounding check still uses the full result.
+- **Token consumption and ABAP artifacts read** for every Copilot job: tokens in / out counted with the model's tokenizer (≈ when estimated), model calls, SAP searches and the ABAP artifacts read – live in the busy overlay, in the review dialog (*Copilot used 42,300 tokens … · 3 ABAP artifacts read: …*), in the audit trail (*AI job finished*) and in **Usage** (tokens and artifacts per job; CSV).
+
 ## 1.0.20
 
 - **The BRD upload searches the SAP system by process** – also when the BRD names no SAP object. From 3–6 business keywords of the documents, Copilot looks (read-only) for DEWA's custom objects of the module (`ZHR*<keyword>*`, `ZWHR*<keyword>*`, `ZFI*…` – prefixes per module, changeable with the new setting `dewaSpecBuilder.namespaces`), standard transactions and Fiori apps whose description matches, released CDS views / APIs and BAdIs of the area, and reads the logic of the best matches.

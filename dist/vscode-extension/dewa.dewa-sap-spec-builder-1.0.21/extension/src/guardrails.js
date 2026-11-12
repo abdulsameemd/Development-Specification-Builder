@@ -89,4 +89,66 @@ function notAllowedError(models, allowed) {
   return e;
 }
 
-module.exports = { injection: injection, mask: mask, names: names, allowedModels: allowedModels, notAllowedError: notAllowedError, modelLabel: modelLabel };
+/* ------------------------------------------------------------- usage: tokens, model calls */
+/* Wraps model.sendRequest: counts the tokens of everything sent and received with the model's own tokenizer
+   (model.countTokens); falls back to characters / 4, marked as estimated. Totals land in ev.usage. */
+function partText(p) {
+  if (p == null) return '';
+  if (typeof p === 'string') return p;
+  if (typeof p.value === 'string') return p.value;
+  if (p.name && p.input !== undefined) return p.name + ' ' + JSON.stringify(p.input); // tool call
+  if (Array.isArray(p.content)) return p.content.map(partText).join('\n');         // tool result
+  return '';
+}
+function messageText(m) { return Array.isArray(m && m.content) ? m.content.map(partText).join('\n') : partText(m && m.content); }
+function meter(model, ev, onUsage) {
+  const u = ev.usage = ev.usage || { requests: 0, inputTokens: 0, outputTokens: 0, estimated: false };
+  const cache = new WeakMap();
+  async function count(text, token) {
+    if (!text) return 0;
+    if (typeof model.countTokens === 'function') {
+      try { const n = await model.countTokens(text, token); if (typeof n === 'number' && n >= 0) return n; } catch (e) { /* fall back */ }
+    }
+    u.estimated = true;
+    return Math.ceil(text.length / 4);
+  }
+  async function inputTokens(messages, token) {
+    let n = 0;
+    for (const m of messages) {
+      if (m && typeof m === 'object' && cache.has(m)) { n += cache.get(m); continue; }
+      const c = await count(messageText(m), token);
+      if (m && typeof m === 'object') cache.set(m, c);
+      n += c;
+    }
+    return n;
+  }
+  return {
+    /* → { stream } like sendRequest; the answer's text is counted when collect() is called with it */
+    send: async function (messages, options, token) {
+      u.requests++;
+      u.inputTokens += await inputTokens(messages, token);
+      return model.sendRequest(messages, options, token);
+    },
+    answered: async function (text, calls, token) {
+      u.outputTokens += await count(String(text || '') + (calls || []).map(partText).join('\n'), token);
+      if (onUsage) onUsage(u);
+    },
+    usage: u
+  };
+}
+function fmtTokens(n) { return n >= 10000 ? Math.round(n / 1000) + 'k' : n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n); }
+function usageLine(ev) {
+  const u = ev.usage || { inputTokens: 0, outputTokens: 0 };
+  const art = (ev.artifacts || []).length;
+  return (u.estimated ? '≈ ' : '') + fmtTokens(u.inputTokens + u.outputTokens) + ' tokens' +
+    (ev.searches !== undefined ? ' · ' + ev.searches + ' SAP search' + (ev.searches === 1 ? '' : 'es') + ' · ' + art + ' ABAP artifact' + (art === 1 ? '' : 's') + ' read' : '');
+}
+
+const SEARCH_WORDS = ['search', 'find', 'list', 'query', 'where', 'lookup', 'browse', 'quick'];
+/* A tool that looks objects up (search) rather than reading one object (source, metadata, outline …). */
+function isSearchTool(name) {
+  const w = String(name).replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase().split(/[^a-z0-9]+/);
+  return w.some(function (x) { return SEARCH_WORDS.indexOf(x) >= 0; });
+}
+
+module.exports = { meter: meter, usageLine: usageLine, isSearchTool: isSearchTool, messageText: messageText, injection: injection, mask: mask, names: names, allowedModels: allowedModels, notAllowedError: notAllowedError, modelLabel: modelLabel };

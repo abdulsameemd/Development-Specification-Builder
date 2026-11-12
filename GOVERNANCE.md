@@ -170,4 +170,10 @@ average time and steps, model), review decisions (accepted / declined parts, unv
 guardrail warnings, approvals and requests, gate blocks and overrides, exports. No spec content is kept and nothing is
 sent anywhere. Header → **Usage** shows the last three months and exports a CSV (to collect centrally if wanted).
 `off` counts nothing.
+
+**Tokens and ABAP artifacts.** Every Copilot job counts the tokens it sends and receives with the model's own
+tokenizer (`countTokens`; marked ≈ if the model cannot count), the number of model calls, the SAP searches and the
+ABAP artifacts read (distinct objects whose source or metadata a read tool returned). They are shown live in the busy
+overlay, in the AI review dialog (with the names of the artifacts read), in the audit trail (*AI job finished*:
+tokensIn, tokensOut, modelCalls, sapSearches, artifactsRead, artifacts) and in **Usage** per job and month.
 - SAP access is read-only by design (see SECURITY.md); the SAP MCP servers should also run with read-only SAP users.

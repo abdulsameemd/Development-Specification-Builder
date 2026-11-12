@@ -161,14 +161,15 @@ function createRouter(vscode, context, deps) {
       if (cts) { deps.post({ type: 'draft-error', code: 'BUSY', message: 'Copilot is already working on a request.' }); return true; }
       cts = new vscode.CancellationTokenSource();
       try {
+        const g = guardOpts(deps.config());
         const text = await drafter.run(vscode, {
-          guard: guardOpts(deps.config()),
+          guard: g,
           prompt: m.prompt,
           model: deps.config().get('model', ''),
           token: cts.token,
-          onProgress: function (p) { deps.post({ type: 'draft-progress', text: p.text }); }
+          onProgress: function (p) { deps.post(p.key ? { type: 'draft-progress', key: p.key, status: p.status, text: p.text } : { type: 'draft-progress', text: p.text }); }
         });
-        deps.post({ type: 'draft-result', text: text });
+        deps.post({ type: 'draft-result', text: text, evidence: g.evidence });
       } catch (e) {
         deps.post({ type: 'draft-error', code: e.code || 'FAILED', message: String(e && e.message || e) });
       } finally {
@@ -278,6 +279,7 @@ function createRouter(vscode, context, deps) {
 function guardOpts(cfg) {
   const arr = function (k) { const v = cfg.get(k, []); return Array.isArray(v) ? v : []; };
   return { allowedModels: arr('models.allowed').map(String), masking: cfg.get('masking', true) !== false, maskingPatterns: arr('masking.patterns'),
+    maxResultChars: Number(cfg.get('maxToolResultChars', 12000)) || 12000,
     evidence: { calls: [], names: [], flags: 0, masked: 0 } };
 }
 
