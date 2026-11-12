@@ -141,6 +141,20 @@
           "minimum": 2000,
           "maximum": 100000,
           "markdownDescription": "Longest SAP tool result (characters) passed to the model per call – e.g. a whole program source is shortened to this. Smaller = faster and fewer tokens; the grounding check still uses the full result."
+        },
+        "dewaSpecBuilder.toolTimeoutSeconds": {
+          "type": "number",
+          "default": 60,
+          "minimum": 10,
+          "maximum": 600,
+          "markdownDescription": "Longest wait for one SAP tool call. A call that does not answer in time is skipped and the job goes on (shown with ⏱ in the log)."
+        },
+        "dewaSpecBuilder.sapTimeBudgetSeconds": {
+          "type": "number",
+          "default": 300,
+          "minimum": 30,
+          "maximum": 3600,
+          "markdownDescription": "Time budget for reading SAP in one job (default 5 minutes). When it is used up, no more SAP calls are made and Copilot writes the answer from what was read. *Finish now* in the busy overlay does the same at any time."
         }
       }
     },

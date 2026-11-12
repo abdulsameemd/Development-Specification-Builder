@@ -80,6 +80,31 @@ function resultSize(result) {
   return ((result && result.content) || []).reduce(function (n, p) { return n + (typeof p.value === 'string' ? p.value.length : 0); }, 0);
 }
 
+/* Time limits: nothing in a job may wait forever. */
+function timeoutError(what, ms, code) { const e = new Error(what + ' did not answer within ' + Math.round(ms / 1000) + ' s.'); e.code = code; return e; }
+/* Resolves like p, or rejects with code after ms; onTick(seconds) every tickMs while waiting. */
+function withTimeout(p, ms, code, what, onTick, tickMs) {
+  let timer = null, tick = null;
+  const started = Date.now();
+  return Promise.race([
+    Promise.resolve(p).finally(function () { clearTimeout(timer); clearInterval(tick); }),
+    new Promise(function (_, reject) {
+      if (ms > 0) timer = setTimeout(function () { clearInterval(tick); reject(timeoutError(what, ms, code)); }, ms);
+      if (onTick && tickMs > 0) tick = setInterval(function () { onTick(Math.round((Date.now() - started) / 1000)); }, tickMs);
+    })
+  ]);
+}
+/* Reads a model answer stream; fails when nothing arrives for idleMs. */
+async function readStream(stream, idleMs, onPart) {
+  const it = stream[Symbol.asyncIterator]();
+  for (;;) {
+    const r = await withTimeout(it.next(), idleMs, 'MODEL_TIMEOUT', 'Copilot');
+    if (r.done) return;
+    onPart(r.value);
+  }
+}
+const TOOL_TIMEOUT_MS = 60000, BUDGET_MS = 300000, IDLE_MS = 120000, TICK_MS = 15000;
+
 function cancelled(token) {
   if (token && token.isCancellationRequested) { const e = new Error('Discovery stopped.'); e.code = 'CANCELLED'; throw e; }
 }
@@ -124,14 +149,25 @@ async function run(vscode, opts) {
   const maxChars = Math.max(2000, Number(guard.maxResultChars) || MAX_RESULT_CHARS);
   // tokens of every request and answer (model.countTokens), shown live and returned with the evidence
   const meter = guardrails.meter(model, ev, function () { progress({ key: 'usage', text: guardrails.usageLine(ev), status: 'info' }); });
+  const toolMs = opts.toolTimeoutMs !== undefined ? Number(opts.toolTimeoutMs) : TOOL_TIMEOUT_MS;
+  const budgetMs = opts.budgetMs !== undefined ? Number(opts.budgetMs) : BUDGET_MS;
+  const idleMs = opts.idleMs !== undefined ? Number(opts.idleMs) : IDLE_MS;
+  const tickMs = opts.tickMs !== undefined ? Number(opts.tickMs) : TICK_MS;
+  const t0 = Date.now();
+  /* why tools must stop now: the SAP time budget is used up, or the user pressed "Finish now" */
+  function stopReason() {
+    if (opts.shouldFinish && opts.shouldFinish()) return 'Finish now';
+    if (budgetMs > 0 && Date.now() - t0 > budgetMs) return 'SAP time budget (' + Math.round(budgetMs / 60000 * 10) / 10 + ' min) used';
+    return '';
+  }
   async function ask(withTools) {
-    const response = await meter.send(messages, withTools ? { tools: offered, justification: JUSTIFICATION } : { justification: JUSTIFICATION }, opts.token);
+    const response = await withTimeout(meter.send(messages, withTools ? { tools: offered, justification: JUSTIFICATION } : { justification: JUSTIFICATION }, opts.token), idleMs, 'MODEL_TIMEOUT', 'Copilot');
     let text = '';
     const calls = [];
-    for await (const part of response.stream) {
+    await readStream(response.stream, idleMs, function (part) {
       if (part instanceof vscode.LanguageModelTextPart) text += part.value;
       else if (withTools && part instanceof vscode.LanguageModelToolCallPart) calls.push(part);
-    }
+    });
     await meter.answered(text, calls, opts.token);
     return { text: text, calls: calls };
   }
@@ -151,7 +187,8 @@ async function run(vscode, opts) {
     const sig = call.name + ' ' + JSON.stringify(call.input || {});
     progress({ key: key, text: describeCall(call), status: 'running' });
     try {
-      const r = await vscode.lm.invokeTool(call.name, { input: call.input, toolInvocationToken: undefined }, opts.token);
+      const r = await withTimeout(vscode.lm.invokeTool(call.name, { input: call.input, toolInvocationToken: undefined }, opts.token), toolMs, 'TOOL_TIMEOUT', describeCall(call),
+        function (sec) { progress({ key: key, text: 'Waiting ' + sec + ' s for ' + describeCall(call) + ' … (if VS Code asks to allow an SAP tool, allow it)', status: 'running' }); }, tickMs);
       progress({ key: key, text: describeCall(call) + ' · ' + resultSize(r) + ' chars', status: 'done' });
       const raw = (r.content || []).map(function (p) { return typeof p.value === 'string' ? p.value : ''; }).join('');
       seen[sig] = raw;
@@ -182,6 +219,11 @@ async function run(vscode, opts) {
     } catch (err) {
       delete seen[sig]; // a failed call may be tried again
       cancelled(opts.token);
+      if (err && err.code === 'TOOL_TIMEOUT') {
+        ev.timeouts = (ev.timeouts || 0) + 1;
+        progress({ key: key, text: '⏱ ' + describeCall(call) + ' · no answer after ' + Math.round(toolMs / 1000) + ' s – skipped', status: 'error' });
+        return new vscode.LanguageModelToolResultPart(call.callId, [new vscode.LanguageModelTextPart('Timed out after ' + Math.round(toolMs / 1000) + ' s – continue without this result.')]);
+      }
       progress({ key: key, text: describeCall(call) + ' · ' + String(err && err.message || err).slice(0, 120), status: 'error' });
       return new vscode.LanguageModelToolResultPart(call.callId, [new vscode.LanguageModelTextPart('Tool error: ' + String(err && err.message || err))]);
     }
@@ -190,6 +232,8 @@ async function run(vscode, opts) {
 
   for (let round = 0; round < maxRounds; round++) {
     cancelled(opts.token);
+    const why = stopReason();
+    if (why) return finish('', why);
     const a = await ask(true);
     const text = a.text, calls = a.calls;
     if (!calls.length) return finish(text, 'No ' + result.label + ' in the answer');
@@ -221,6 +265,10 @@ async function run(vscode, opts) {
     for (let k = 0; k < run.length; k += PARALLEL_CALLS) {
       cancelled(opts.token);
       const batch = run.slice(k, k + PARALLEL_CALLS);
+      if (k > 0 && stopReason()) {
+        batch.concat(run.slice(k + PARALLEL_CALLS)).forEach(function (i) { delete seen[calls[i].name + ' ' + JSON.stringify(calls[i].input || {})]; results[i] = new vscode.LanguageModelToolResultPart(calls[i].callId, [new vscode.LanguageModelTextPart('Not run: ' + stopReason() + '. Write the answer from what you have.')]); });
+        break;
+      }
       const out = await Promise.all(batch.map(function (i) { return invoke(calls[i]); }));
       batch.forEach(function (i, n) { results[i] = out[n]; });
     }
@@ -234,4 +282,4 @@ async function run(vscode, opts) {
 /* Agent file → plain instructions (front matter removed). */
 function instructionsFromAgentFile(text) { return String(text || '').replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, '').trim(); }
 
-module.exports = { MAX_CALLS: MAX_CALLS, run: run, selectTools: selectTools, isWriteTool: isWriteTool, pickModel: pickModel, hasPack: hasPack, words: words, describeCall: describeCall, instructionsFromAgentFile: instructionsFromAgentFile, DEFAULT_ALLOW: DEFAULT_ALLOW, WRITE_VERBS: WRITE_VERBS };
+module.exports = { MAX_CALLS: MAX_CALLS, withTimeout: withTimeout, readStream: readStream, IDLE_MS: IDLE_MS, run: run, selectTools: selectTools, isWriteTool: isWriteTool, pickModel: pickModel, hasPack: hasPack, words: words, describeCall: describeCall, instructionsFromAgentFile: instructionsFromAgentFile, DEFAULT_ALLOW: DEFAULT_ALLOW, WRITE_VERBS: WRITE_VERBS };

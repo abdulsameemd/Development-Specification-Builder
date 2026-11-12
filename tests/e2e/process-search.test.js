@@ -30,6 +30,15 @@ test('BRD without SAP names: phase 1 searches SAP (short brief), phase 2 writes 
     const prompt = await p.evaluate(() => window.__posted.filter((m) => m.type === 'read-program').pop().prompt);
     assert.match(prompt, /SEARCH THE SAP SYSTEM BY PROCESS/);
     assert.match(prompt, /prefixes of the module HCM: ZHR\*, ZWHR\*/);
+    const phase1 = await p.evaluate(() => window.__posted.filter((m) => m.type === 'read-program').pop());
+    assert.strictEqual(phase1.maxRounds, 8, 'phase 1 is a short search');
+    // the busy overlay offers "Finish now" for the SAP search: it asks the extension to stop calling SAP
+    const fin = p.locator('.busy [data-busy="finish"]');
+    assert.ok(await fin.isVisible());
+    await fin.click();
+    assert.ok(await p.evaluate(() => window.__posted.some((m) => m.type === 'finish-now')));
+    assert.match(await p.locator('.busy-step').innerText(), /Finishing with what was read so far/);
+    assert.ok(await fin.isDisabled());
 
     const draft = { kind: 'fs-draft', version: 1, title: 'Off-cycle bonus payments', changeType: 'new',
       candidates: [

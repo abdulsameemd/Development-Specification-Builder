@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.22
+
+- **SAP jobs can no longer hang.** Each SAP tool call has a time limit (60 s, `dewaSpecBuilder.toolTimeoutSeconds`): a call that does not answer is skipped (⏱ in the log) and the job goes on. While a call runs, the log says every 15 s what it is waiting for – and reminds you to allow the SAP tool if VS Code asks for it.
+- **Time budget for reading SAP** (5 minutes, `dewaSpecBuilder.sapTimeBudgetSeconds`): then no more SAP calls are made and Copilot writes the answer from what was read. The SAP search of the BRD job (phase 1) uses at most 8 rounds.
+- **Finish now** in the busy overlay (next to Stop): stop reading SAP at any time and get the result from what was read so far – for the BRD job the FS is then written as usual. **Stop** still cancels and keeps nothing. Recorded in the audit trail.
+- A Copilot answer that stops arriving for 2 minutes ends the job with a clear message instead of waiting forever.
+
 ## 1.0.21
 
 - **Faster *Generate FS from the documents*.** The job now runs in two phases (VS Code, automatic): (1) the read-only SAP search gets a short brief – the SAP names found in the documents, the start of each document, module and title – instead of the full documents; (2) the full documents and the SAP findings go to Copilot once, without tools, to write the FS. Before, every SAP tool round sent the whole documents again. SAP facts in the review (objects, candidates, programs read, current logic, type of change) come only from phase 1. Copilot Chat and Copy prompt work as before.

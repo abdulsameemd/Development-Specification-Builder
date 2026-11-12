@@ -11789,7 +11789,7 @@ window.APB_CONFIG = {
 
   /* Markdown table of the trail (newest last), for the documents. */
   const LABELS = {
-    'ai-start': 'AI job started', 'ai-input': 'AI input', 'ai-end': 'AI job finished', review: 'AI result reviewed', approved: 'Approved',
+    'ai-start': 'AI job started', 'ai-input': 'AI input', 'ai-end': 'AI job finished', 'ai-finish-now': 'Finish now pressed', review: 'AI result reviewed', approved: 'Approved',
     'approval-requested': 'Approval requested', 'gate-blocked': 'Gate blocked', 'gate-override': 'Gate overridden', handoff: 'Handed over', 'created-from': 'Created from',
     export: 'Exported', uploaded: 'Uploaded', 'example-loaded': 'Example loaded', trimmed: 'Older entries summarised', masked: 'Personal data masked', 'guard-flag': 'Guardrail warning'
   };
@@ -16235,6 +16235,7 @@ window.APB_CONFIG = {
       '<p class="busy-line" aria-live="polite"></p><p class="busy-step"></p>' +
       '<div class="busy-meta"><span class="busy-time">0:00</span><span class="busy-count"></span></div>' +
       '<div class="busy-actions"><button type="button" class="btn btn-ghost btn-sm" data-busy="hide">Keep working</button>' +
+      '<button type="button" class="btn btn-ghost btn-sm" data-busy="finish" title="No more SAP calls – Copilot writes the answer from what it has read so far">Finish now</button>' +
       '<button type="button" class="btn btn-ghost btn-sm" data-busy="stop">Stop</button></div></div></div>';
     document.body.appendChild(el);
     pill = document.createElement('button');
@@ -16247,6 +16248,14 @@ window.APB_CONFIG = {
       const b = e.target.closest('[data-busy]');
       if (!b || !job) return;
       if (b.dataset.busy === 'hide') minimize();
+      if (b.dataset.busy === 'finish' && !job.finishing) {
+        // the extension stops calling SAP tools; the job then writes its answer from what was read
+        job.finishing = true;
+        if (APB.host && APB.host.post) APB.host.post({ type: 'finish-now' });
+        audit('ai-finish-now', { job: job.kind });
+        job.last = 'Finishing with what was read so far…';
+        render();
+      }
       if (b.dataset.busy === 'stop') { const stop = job.onStop; done('stopped'); if (stop) stop(); }
     });
     pill.addEventListener('click', function () { if (job) { pill.hidden = true; el.hidden = false; } });
@@ -16263,6 +16272,9 @@ window.APB_CONFIG = {
     el.querySelector('.busy-step').innerHTML = job.last ? '<span aria-hidden="true">›</span> ' + esc(job.last) : '';
     el.querySelector('.busy-count').textContent = steps ? steps + ' step' + (steps > 1 ? 's' : '') : '';
     el.querySelector('[data-busy="stop"]').textContent = job.chat ? 'Stop waiting' : 'Stop';
+    const fin = el.querySelector('[data-busy="finish"]');
+    fin.hidden = job.chat || !cfg.sap || !(APB.host && APB.host.isVscode); // only automatic jobs that read SAP in VS Code
+    fin.disabled = !!job.finishing;
     pill.querySelector('.busy-pill-text').textContent = cfg.title.replace(/^AI is /, '').replace(/^\w/, function (c) { return c.toUpperCase(); }) + '…';
   }
 
@@ -17165,7 +17177,8 @@ window.APB_CONFIG = {
     drf.docFlags = [];
     list.forEach(function (d) { APB.guard.injection(d.text).forEach(function (f) { drf.docFlags.push({ where: d.name, excerpt: f.excerpt }); }); });
     if (drf.docFlags.length) U().auditAdd('guard-flag', { job: 'docs', flags: drf.docFlags.length, where: 'uploaded documents', first: drf.docFlags[0].excerpt });
-    H.post({ type: 'read-program', mode: mode, prompt: prompt });
+    // phase 1 is a short search: fewer tool rounds (the extension also caps it with its own settings)
+    H.post(drf.phase ? { type: 'read-program', mode: mode, prompt: prompt, maxRounds: 8 } : { type: 'read-program', mode: mode, prompt: prompt });
     rerenderStep1();
   }
 

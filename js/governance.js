@@ -149,7 +149,7 @@
 
   /* Markdown table of the trail (newest last), for the documents. */
   const LABELS = {
-    'ai-start': 'AI job started', 'ai-input': 'AI input', 'ai-end': 'AI job finished', review: 'AI result reviewed', approved: 'Approved',
+    'ai-start': 'AI job started', 'ai-input': 'AI input', 'ai-end': 'AI job finished', 'ai-finish-now': 'Finish now pressed', review: 'AI result reviewed', approved: 'Approved',
     'approval-requested': 'Approval requested', 'gate-blocked': 'Gate blocked', 'gate-override': 'Gate overridden', handoff: 'Handed over', 'created-from': 'Created from',
     export: 'Exported', uploaded: 'Uploaded', 'example-loaded': 'Example loaded', trimmed: 'Older entries summarised', masked: 'Personal data masked', 'guard-flag': 'Guardrail warning'
   };

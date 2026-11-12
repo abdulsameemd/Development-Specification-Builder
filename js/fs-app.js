@@ -854,7 +854,8 @@
     drf.docFlags = [];
     list.forEach(function (d) { APB.guard.injection(d.text).forEach(function (f) { drf.docFlags.push({ where: d.name, excerpt: f.excerpt }); }); });
     if (drf.docFlags.length) U().auditAdd('guard-flag', { job: 'docs', flags: drf.docFlags.length, where: 'uploaded documents', first: drf.docFlags[0].excerpt });
-    H.post({ type: 'read-program', mode: mode, prompt: prompt });
+    // phase 1 is a short search: fewer tool rounds (the extension also caps it with its own settings)
+    H.post(drf.phase ? { type: 'read-program', mode: mode, prompt: prompt, maxRounds: 8 } : { type: 'read-program', mode: mode, prompt: prompt });
     rerenderStep1();
   }
 

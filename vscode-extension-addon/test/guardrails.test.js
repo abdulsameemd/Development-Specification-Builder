@@ -197,3 +197,59 @@ test('builder: usage text and audit fields; two phases combine', () => {
   assert.deepStrictEqual(JSON.parse(JSON.stringify(APB.guard.usageAudit(ev))), { tokensIn: 39000, tokensOut: 3300, tokensEstimated: '', modelCalls: 4, sapSearches: 2, artifactsRead: 1, artifacts: 'ZA' });
   assert.strictEqual(APB.guard.usageText(null), '');
 });
+
+/* fake whose tools / model can hang */
+function hangFake(o) {
+  let turn = 0;
+  const invoked = [];
+  const model = { name: 'GPT-5', family: 'gpt-5', id: 'gpt-5',
+    sendRequest: async (messages, options) => {
+      let parts = o.script[Math.min(turn++, o.script.length - 1)];
+      if (parts !== 'hang' && !(options && options.tools)) parts = [{ text: 'dewa-sap-context-pack {"kind":"dewa-sap-context-pack"}' }]; // asked for the answer without tools
+      if (parts === 'hang') return { stream: (async function* () { await new Promise(() => {}); })() };
+      return { stream: (async function* () { for (const p of parts) yield p.call ? new ToolCallPart('c' + turn + p.call[1].name, p.call[0], p.call[1]) : new TextPart(p.text); })() };
+    } };
+  return { invoked,
+    LanguageModelTextPart: TextPart, LanguageModelToolCallPart: ToolCallPart, LanguageModelToolResultPart: ToolResultPart,
+    LanguageModelChatMessage: { User: (c) => ({ role: 'user', content: c }), Assistant: (c) => ({ role: 'assistant', content: c }) },
+    lm: { selectChatModels: async () => [model], tools: [{ name: 'abap_search_objects' }, { name: 'abap_get_source' }],
+      invokeTool: async (name, opts) => {
+        invoked.push(opts.input.name);
+        if (o.hangs && o.hangs.includes(opts.input.name)) return new Promise(() => {});
+        if (o.slow) await new Promise((r) => setTimeout(r, o.slow));
+        return { content: [new TextPart('Found ' + opts.input.name)] };
+      } } };
+}
+const DONE = [{ text: 'dewa-sap-context-pack {"kind":"dewa-sap-context-pack"}' }];
+
+test('time limits: a tool call that never answers is skipped after the timeout, with waiting messages; the job finishes', async () => {
+  const vs = hangFake({ script: [[{ call: ['abap_search_objects', { name: 'HANGS' }] }, { call: ['abap_search_objects', { name: 'OK' }] }], DONE], hangs: ['HANGS'] });
+  const progress = [];
+  const guard = {};
+  const out = await runner.run(vs, { prompt: 'p', guard, toolTimeoutMs: 200, tickMs: 60, onProgress: (p) => progress.push(p) });
+  assert.match(out, /dewa-sap-context-pack/);
+  assert.strictEqual(guard.evidence.timeouts, 1);
+  assert.ok(progress.some((p) => /^Waiting \d+ s for abap_search_objects HANGS … \(if VS Code asks to allow an SAP tool, allow it\)$/.test(p.text)));
+  assert.ok(progress.some((p) => /^⏱ abap_search_objects HANGS · no answer after 0 s – skipped$/.test(p.text)) || progress.some((p) => /⏱ abap_search_objects HANGS/.test(p.text)));
+});
+
+test('time limits: the SAP time budget and "Finish now" stop further SAP calls and ask for the answer from what was read', async () => {
+  const many = (n) => [{ call: ['abap_search_objects', { name: 'S' + n }] }];
+  const script = [many(1), many(2), many(3), many(4), DONE];
+  const budget = hangFake({ script: script.slice(), slow: 80 });
+  const progress = [];
+  const out = await runner.run(budget, { prompt: 'p', guard: {}, budgetMs: 120, onProgress: (p) => progress.push(p) });
+  assert.ok(budget.invoked.length < 4, 'stopped early: ' + budget.invoked.join());
+  assert.ok(progress.some((p) => /SAP time budget \(.* min\) used – asking for the context pack/.test(p.text)));
+  assert.match(out, /dewa-sap-context-pack/);
+  let stop = false;
+  const fin = hangFake({ script: script.slice() });
+  fin.lm.invokeTool = async (name, opts) => { fin.invoked.push(opts.input.name); stop = true; return { content: [new TextPart('Found')] }; };
+  await runner.run(fin, { prompt: 'p', guard: {}, shouldFinish: () => stop, onProgress: () => {} });
+  assert.deepStrictEqual(fin.invoked, ['S1'], 'no SAP call after Finish now');
+});
+
+test('time limits: a Copilot answer that stops arriving ends the job with a clear error', async () => {
+  await assert.rejects(runner.run(hangFake({ script: ['hang'] }), { prompt: 'p', guard: {}, idleMs: 100 }), (e) => e.code === 'MODEL_TIMEOUT' && /Copilot did not answer within 0 s/.test(e.message));
+  await assert.rejects(drafter.run(hangFake({ script: ['hang'] }), { prompt: 'p', guard: {}, idleMs: 100 }), (e) => e.code === 'MODEL_TIMEOUT');
+});
