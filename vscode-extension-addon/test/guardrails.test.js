@@ -148,12 +148,12 @@ function timedFake(o) {
       } } };
 }
 
-test('speed: the calls of one round run in parallel (max 4); long results are shortened for the model', async () => {
+test('speed (parallelToolCalls 4): after the first call alone, up to 4 calls run in parallel; long results are shortened', async () => {
   const calls = ['A', 'B', 'C', 'D', 'E', 'F'].map((n) => ({ call: ['abap_search_objects', { name: 'ZHR*' + n + '*' }] }));
   const vs = timedFake({ script: [calls.concat([{ call: ['abap_get_source', { name: 'ZHR_BIG' }] }]), [{ text: 'dewa-sap-context-pack {}' }]], big: 50000 });
   const guard = { maxResultChars: 5000 };
   const t0 = Date.now();
-  await runner.run(vs, { prompt: 'p', guard: guard, onProgress: () => {} });
+  await runner.run(vs, { prompt: 'p', guard: guard, parallel: 4, onProgress: () => {} });
   assert.strictEqual(vs.stats.maxParallel, 4);
   assert.ok(Date.now() - t0 < 7 * 30, 'not one after another');
   const results = vs.sent[1][vs.sent[1].length - 1].content;
@@ -226,7 +226,7 @@ test('time limits: a tool call that never answers is skipped after the timeout, 
   const vs = hangFake({ script: [[{ call: ['abap_search_objects', { name: 'HANGS' }] }, { call: ['abap_search_objects', { name: 'OK' }] }], DONE], hangs: ['HANGS'] });
   const progress = [];
   const guard = {};
-  const out = await runner.run(vs, { prompt: 'p', guard, toolTimeoutMs: 200, tickMs: 60, onProgress: (p) => progress.push(p) });
+  const out = await runner.run(vs, { prompt: 'p', guard, toolTimeoutMs: 200, firstCallTimeoutMs: 200, tickMs: 60, onProgress: (p) => progress.push(p) });
   assert.match(out, /dewa-sap-context-pack/);
   assert.strictEqual(guard.evidence.timeouts, 1);
   assert.ok(progress.some((p) => /^Waiting \d+ s for abap_search_objects HANGS … \(if VS Code asks to allow an SAP tool, allow it\)$/.test(p.text)));
@@ -252,4 +252,36 @@ test('time limits: the SAP time budget and "Finish now" stop further SAP calls a
 test('time limits: a Copilot answer that stops arriving ends the job with a clear error', async () => {
   await assert.rejects(runner.run(hangFake({ script: ['hang'] }), { prompt: 'p', guard: {}, idleMs: 100 }), (e) => e.code === 'MODEL_TIMEOUT' && /Copilot did not answer within 0 s/.test(e.message));
   await assert.rejects(drafter.run(hangFake({ script: ['hang'] }), { prompt: 'p', guard: {}, idleMs: 100 }), (e) => e.code === 'MODEL_TIMEOUT');
+});
+
+test('default: SAP calls run one at a time; the first call may take longer than the per-call limit (logon)', async () => {
+  const calls = ['A', 'B', 'C'].map((n) => ({ call: ['abap_search_objects', { name: 'Z*' + n + '*' }] }));
+  const vs = timedFake({ script: [calls, [{ text: 'dewa-sap-context-pack {}' }]] });
+  await runner.run(vs, { prompt: 'p', guard: {}, onProgress: () => {} });
+  assert.strictEqual(vs.stats.maxParallel, 1);
+  assert.match(vs.sent[0][0].content, /Call one tool at a time/);
+  assert.doesNotMatch(vs.sent[0][0].content, /send up to 4/);
+  // first call 120 ms with a 50 ms per-call limit: allowed (first-call limit 300 ms); a later slow call is skipped
+  const slow = hangFake({ script: [[{ call: ['abap_search_objects', { name: 'LOGON' }] }, { call: ['abap_search_objects', { name: 'NEXT' }] }], DONE], slow: 120 });
+  const guard = {};
+  await runner.run(slow, { prompt: 'p', guard, toolTimeoutMs: 50, firstCallTimeoutMs: 300, onProgress: () => {} });
+  assert.strictEqual(guard.evidence.timeouts, 1, 'only the second call timed out');
+  assert.ok(guard.evidence.calls.some((c) => c.target === 'LOGON'));
+});
+
+test('refused SAP access: recognised with the destinations; after 3 refusals in a row no more SAP calls', async () => {
+  const msg = 'No SAP object could be read: the available destinations (SBE_210, SBE_210_E0099009073_EN) are blocked by ADT MCP Server access restrictions, so every search returns 0.';
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(G.accessBlocked(msg).destinations)), ['SBE_210', 'SBE_210_E0099009073_EN']);
+  assert.ok(G.accessBlocked('HTTP 403 Forbidden'));
+  assert.strictEqual(G.accessBlocked('REPORT ZX.\n' + 'WRITE / text.\n'.repeat(300) + 'AUTHORITY-CHECK – user not authorized'), null, 'long source is not a refusal');
+  assert.strictEqual(G.accessBlocked('Found ZHR_OFFCYCLE_UPLOAD'), null);
+  const script = [1, 2, 3, 4, 5].map((n) => [{ call: ['abap_search_objects', { name: 'S' + n }] }]).concat([DONE]);
+  const vs = hangFake({ script });
+  vs.lm.invokeTool = async (name, opts) => { vs.invoked.push(opts.input.name); return { content: [new TextPart('Destination SBE_210 is blocked by ADT MCP Server access restrictions.')] }; };
+  const guard = {}, progress = [];
+  await runner.run(vs, { prompt: 'p', guard, onProgress: (p) => progress.push(p) });
+  assert.deepStrictEqual(vs.invoked, ['S1', 'S2', 'S3']);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(guard.evidence.blocked)), { count: 3, destinations: ['SBE_210'], first: 'Destination SBE_210 is blocked by ADT MCP Server access restrictions.' });
+  assert.ok(progress.some((p) => /SAP access refused by the ADT MCP server – asking for/.test(p.text)));
+  assert.ok(progress.some((p) => /^⛔ abap_search_objects S1 · refused by the ADT MCP server/.test(p.text)));
 });

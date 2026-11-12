@@ -409,6 +409,7 @@
       disc.running = false;
       const answer = String(m.text || '');
       APB.guard.evidenceAudit('discovery', m.evidence);
+      if (APB.guard.blockedText(m.evidence)) U().toast(APB.guard.blockedText(m.evidence), 15000);
       if (!importText(answer, disc.mode === 'chat' ? 'Copilot Chat' : 'Copilot')) {
         disc.error = 'The answer did not contain a valid context pack. The model\'s answer is shown below – fix or complete it and click Import pasted pack, try again (setting dewaSpecBuilder.model selects a stronger model), or run it in Copilot Chat.';
         U().ui.open['fs-paste'] = true;
@@ -727,6 +728,7 @@
       out.push('<p class="guard-warn">⚠ Text that looks like instructions to the AI was found (' + gd.flags.length + ') and treated as data – read the related parts carefully:</p><ul class="small">' +
         gd.flags.slice(0, 4).map(function (f) { return '<li>' + esc(f.where) + ': “' + esc(f.excerpt) + '”</li>'; }).join('') + '</ul>');
     }
+    if (gd.blocked) out.unshift('<p class="guard-warn"><strong>⛔ ' + esc(gd.blocked) + '</strong></p>');
     if (gd.usage) out.push('<p class="guard-usage">' + esc(gd.usage) + '</p>');
     return out.length ? '<div class="guard-box" role="note">' + out.join('') + '</div>' : '';
   }
@@ -753,6 +755,7 @@
     drf.guard = { names: names, ground: APB.guard.ground(names, evidence, S.get()), flags: flags };
     if (flags.length && drf.pendingKind !== 'docs') U().auditAdd('guard-flag', { job: drf.pendingKind, flags: flags.length, where: 'AI answer', first: flags[0].excerpt });
     drf.guard.usage = APB.guard.usageText(evidence);
+    drf.guard.blocked = APB.guard.blockedText(evidence);
     document.getElementById('draft-guard').innerHTML = guardHtml(drf.guard);
     document.getElementById('draft-list').innerHTML = parts.map(function (p) {
       const shown = p.unticked ? 25 : 4; // candidates: every one with the reason it was found
@@ -870,6 +873,7 @@
     APB.guard.evidenceAudit('docs', m.evidence);
     const u = APB.guard.usageText(m.evidence);
     drf.log.push({ text: 'SAP search done' + (u ? ' · ' + u : ''), status: 'done' });
+    if (APB.guard.blockedText(m.evidence)) drf.log.push({ text: APB.guard.blockedText(m.evidence), status: 'blocked' });
     drf.status = '2/2 Writing the FS from the documents…';
     APB.busy.progress('2/2 Writing the functional spec from the documents and the SAP findings (no SAP access)…', 'info');
     H.post({ type: 'draft', prompt: APB.fsDraft.docsPrompt(S.get(), drf.docs || [], { findings: APB.fsDraft.findingsText(drf.found) }) });

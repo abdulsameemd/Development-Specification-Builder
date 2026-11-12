@@ -151,4 +151,20 @@ function isSearchTool(name) {
   return w.some(function (x) { return SEARCH_WORDS.indexOf(x) >= 0; });
 }
 
-module.exports = { meter: meter, usageLine: usageLine, isSearchTool: isSearchTool, messageText: messageText, injection: injection, mask: mask, names: names, allowedModels: allowedModels, notAllowedError: notAllowedError, modelLabel: modelLabel };
+/* ------------------------------------------------------------- refused SAP access */
+/* The ADT MCP server refused the call (destination not allowed, no authorization, 401/403 …). Only short answers
+   are checked, and only their start, so ABAP source that mentions "not authorized" is not taken for a refusal.
+   → null or { message, destinations: [...] } */
+const BLOCKED = /\b(blocked|access restrictions?|not (allowed|permitted|authori[sz]ed)|unauthori[sz]ed|forbidden|access denied|no authori[sz]ation|status 40[13]|\b40[13]\b)/i;
+function accessBlocked(text) {
+  const t = String(text || '');
+  if (!t || t.length > 3000) return null;
+  const head = t.slice(0, 600);
+  if (!BLOCKED.test(head)) return null;
+  const dest = [];
+  const m = /destinations?\b([\s\S]{0,240})/i.exec(t);
+  if (m) m[1].replace(/\b[A-Z][A-Z0-9]*_[A-Z0-9_]+\b/g, function (d) { if (dest.indexOf(d) < 0) dest.push(d); return d; });
+  return { message: head.replace(/\s+/g, ' ').trim().slice(0, 300), destinations: dest.slice(0, 10) };
+}
+
+module.exports = { accessBlocked: accessBlocked, meter: meter, usageLine: usageLine, isSearchTool: isSearchTool, messageText: messageText, injection: injection, mask: mask, names: names, allowedModels: allowedModels, notAllowedError: notAllowedError, modelLabel: modelLabel };

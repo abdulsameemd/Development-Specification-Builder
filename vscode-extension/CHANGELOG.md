@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.23
+
+- **Fix: SAP reading failed with "destinations … blocked by ADT MCP Server access restrictions" since 1.0.21.** 1.0.21 started up to 4 SAP calls at the same moment. The ABAP ADT MCP server keeps one logon session per destination and refused the destination when several calls started together. SAP calls now run **one at a time again** (as in 1.0.20); new setting `dewaSpecBuilder.parallelToolCalls` (1–4, default 1) for MCP servers that support parallel calls.
+- **The first SAP call of a job runs alone and may take up to 3 minutes** (logon to the destination); the 60-second limit applies to the calls after it.
+- **Refused SAP access is recognised:** a refused call shows ⛔ with the server's message; after 3 refusals in a row no more SAP calls are made. The review dialog says plainly that SAP could not be read, for which destination, and what to do; the audit trail records it (*AI job finished*: sapBlocked).
+
 ## 1.0.22
 
 - **SAP jobs can no longer hang.** Each SAP tool call has a time limit (60 s, `dewaSpecBuilder.toolTimeoutSeconds`): a call that does not answer is skipped (⏱ in the log) and the job goes on. While a call runs, the log says every 15 s what it is waiting for – and reminds you to allow the SAP tool if VS Code asks for it.
