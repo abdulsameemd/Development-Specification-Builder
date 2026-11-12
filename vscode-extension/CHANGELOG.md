@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.25
+
+- **Audit trail in the documents is readable.** Each event is written as a sentence instead of raw field names – e.g. *Read BRD / solution document: result received · 94 s · model GPT-5 · 4 model calls · 42,300 tokens (39,000 in / 3,300 out) · 6 SAP searches · 3 ABAP artifacts read: …*; reviews list the parts taken and declined by name, the candidates taken and the SAP names verified / not verified.
+- **AI usage summary** above the events: per AI job the runs (with result), time, model calls, tokens (in / out), SAP searches and ABAP artifacts read, with a total – in the Word and Markdown documents of Functional and Technical specs.
+- **Word tables size their columns by content** (short columns narrow, details wide, no words broken inside a column) – for all tables, not only the audit trail.
+
 ## 1.0.24
 
 - **AS-IS and TO-BE as swimlane diagrams.** One lane per role, one numbered box per step with its transaction / app, arrows in step order. AS-IS steps with a pain point are marked (red border, ⚠); TO-BE steps are coloured by change – unchanged, changed, new, automated – with a legend. Long processes continue in further diagrams (8 steps each).

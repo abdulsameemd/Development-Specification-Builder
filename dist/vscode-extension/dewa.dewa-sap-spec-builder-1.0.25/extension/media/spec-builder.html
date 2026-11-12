@@ -11797,17 +11797,93 @@ window.APB_CONFIG = {
     'approval-requested': 'Approval requested', 'gate-blocked': 'Gate blocked', 'gate-override': 'Gate overridden', handoff: 'Handed over', 'created-from': 'Created from',
     export: 'Exported', uploaded: 'Uploaded', 'example-loaded': 'Example loaded', trimmed: 'Older entries summarised', masked: 'Personal data masked', 'guard-flag': 'Guardrail warning'
   };
-  function detail(e) {
-    const d = e.data || {};
+  /* Readable details per event (the raw data stays in the spec and in .dewa/audit/*.jsonl). */
+  const JOBS = { docs: 'Read BRD / solution document', program: 'Read existing objects', asis: 'AS-IS process', tobe: 'TO-BE process',
+    draft: 'Generate FS', discovery: 'System discovery', devctx: 'Check & read in SAP', clipboard: 'Prompt copied',
+    // message types of the prompts (masking happens when a prompt is sent)
+    'read-program': 'Copilot job reading SAP', 'read-dev': 'Check & read in SAP', discover: 'System discovery', 'open-chat': 'Copilot Chat' };
+  const OUTCOMES = { result: 'result received', error: 'failed', stopped: 'stopped by the user', reset: 'cancelled (new spec opened)', replaced: 'replaced by another job', closed: 'closed' };
+  function num(v) { return Number(v || 0).toLocaleString('en'); }
+  function list(v) { return Array.isArray(v) ? v.join(', ') : String(v || ''); }
+  function job(d) { return JOBS[d.job] || String(d.job || ''); }
+  /* review part ids (frs, rules, objects …) → the names shown in the review dialog */
+  function parts(ids) {
+    const P = (APB.fsDraft && APB.fsDraft.PARTS) || [];
+    return [].concat(ids || []).map(function (id) {
+      const p = P.filter(function (x) { return x.id === id; })[0];
+      return p ? p.label.replace(/\s*\(.*\)$/, '') : String(id);
+    });
+  }
+  function tokens(d) {
+    const i = Number(d.tokensIn || 0), o = Number(d.tokensOut || 0);
+    return i + o ? (d.tokensEstimated ? '≈ ' : '') + num(i + o) + ' tokens (' + num(i) + ' in / ' + num(o) + ' out)' : '';
+  }
+  const DETAIL = {
+    'ai-start': function (d) { return [job(d), d.mode, d.sapRead === 'read-only' ? 'reads SAP read-only' : ''].filter(Boolean).join(' · '); },
+    'ai-end': function (d) {
+      return [job(d) + ': ' + (OUTCOMES[d.outcome] || d.outcome || ''), d.seconds !== undefined ? d.seconds + ' s' : '', d.model ? 'model ' + d.model : '',
+        d.modelCalls ? d.modelCalls + ' model call' + (d.modelCalls == 1 ? '' : 's') : '', tokens(d),
+        d.sapSearches ? d.sapSearches + ' SAP search' + (d.sapSearches == 1 ? '' : 'es') : '',
+        d.artifactsRead ? d.artifactsRead + ' ABAP artifact' + (d.artifactsRead == 1 ? '' : 's') + ' read' + (d.artifacts ? ': ' + d.artifacts : '') : '',
+        d.sapBlocked ? 'SAP refused: ' + d.sapBlocked : ''].filter(Boolean).join(' · ');
+    },
+    'ai-input': function (d) { return [job(d), d.documents ? 'documents: ' + list(d.documents) : '', d.promptChars ? 'prompt ' + num(d.promptChars) + ' characters' : ''].filter(Boolean).join(' · '); },
+    'ai-finish-now': function (d) { return job(d) + ': no more SAP calls, answer from what was read'; },
+    review: function (d) {
+      const acc = parts(d.accepted), dec = parts(d.declined);
+      return [job(d), acc.length ? 'taken: ' + acc.join(', ') : 'nothing taken', dec.length ? 'declined: ' + dec.join(', ') : '',
+        d.added && [].concat(d.added).length ? 'added ' + list(d.added) : '',
+        d.candidatesOffered ? 'candidates ' + d.candidatesTaken.split(',').filter(Boolean).length + ' of ' + d.candidatesOffered + ' taken' + (d.candidatesTaken ? ' (' + d.candidatesTaken + ')' : '') : '',
+        d.grounded || d.unverified ? num(d.grounded) + ' SAP names verified, ' + num(d.unverified) + ' not verified' + (d.unverifiedNames && [].concat(d.unverifiedNames).length ? ' (' + list(d.unverifiedNames) + ')' : '') : '',
+        d.guardFlags ? d.guardFlags + ' guardrail warning' + (d.guardFlags == 1 ? '' : 's') : ''].filter(Boolean).join(' · ');
+    },
+    masked: function (d) { return num(d.items) + ' personal data item' + (d.items == 1 ? '' : 's') + ' masked' + (d.kinds ? ' (' + d.kinds + ')' : '') + (d.job ? ' · ' + (JOBS[d.job] || d.job) : ''); },
+    'guard-flag': function (d) { return num(d.flags) + ' instruction-like text' + (d.flags == 1 ? '' : 's') + ' in ' + (d.where || 'the input') + ', treated as data' + (d.first ? ': “' + d.first + '”' : ''); },
+    approved: function (d) { return [d.gate ? 'gate ' + d.gate : '', d.version ? 'version ' + d.version : '', d.fingerprint ? 'fingerprint ' + d.fingerprint : ''].filter(Boolean).join(' · '); },
+    'approval-requested': function (d) { return 'from ' + (list(d.to) || 'the approvers'); },
+    'gate-blocked': function (d) { return 'gate ' + d.gate + ': ' + d.reason; },
+    'gate-override': function (d) { return 'gate ' + d.gate + ' – continued without approval: ' + d.reason; },
+    export: function (d) { return [d.to, d.file, d.approval ? 'approval: ' + d.approval : ''].filter(Boolean).join(' · '); },
+    uploaded: function (d) { return [d.file, d.mode === 'exact' ? 'restored exactly' : d.mode === 'partial' ? 'read best-effort' : '', d.replaced ? 'replaced the ' + d.replaced : '', d.approval ? 'approval: ' + d.approval : ''].filter(Boolean).join(' · '); }
+  };
+  function generic(d) {
     return Object.keys(d).filter(function (k) { return d[k] !== '' && d[k] !== null && d[k] !== undefined; }).map(function (k) {
       const v = Array.isArray(d[k]) ? d[k].join(', ') : typeof d[k] === 'object' ? JSON.stringify(d[k]) : String(d[k]);
       return k + ': ' + v;
-    }).join('; ').replace(/\|/g, '/').replace(/\s+/g, ' ').slice(0, 300);
+    }).join('; ');
+  }
+  function detail(e) {
+    const d = e.data || {};
+    let t = '';
+    try { t = DETAIL[e.type] ? DETAIL[e.type](d) : generic(d); } catch (err) { t = generic(d); }
+    return String(t).replace(/\|/g, '/').replace(/\s+/g, ' ').trim().slice(0, 400);
+  }
+  /* Totals of the AI jobs in this spec's trail (finished jobs only). */
+  function usageSummary(listE) {
+    const by = {}, order = [];
+    listE.forEach(function (e) {
+      if (e.type !== 'ai-end') return;
+      const d = e.data || {}, k = d.job || 'other';
+      if (!by[k]) { by[k] = { runs: 0, ok: 0, seconds: 0, calls: 0, tin: 0, tout: 0, est: false, searches: 0, art: 0 }; order.push(k); }
+      const b = by[k];
+      b.runs++; if (d.outcome === 'result') b.ok++;
+      b.seconds += Number(d.seconds || 0); b.calls += Number(d.modelCalls || 0); b.tin += Number(d.tokensIn || 0); b.tout += Number(d.tokensOut || 0);
+      b.est = b.est || !!d.tokensEstimated; b.searches += Number(d.sapSearches || 0); b.art += Number(d.artifactsRead || 0);
+    });
+    if (!order.length) return '';
+    const t = { runs: 0, ok: 0, seconds: 0, calls: 0, tin: 0, tout: 0, est: false, searches: 0, art: 0 };
+    const row = function (name, b) {
+      return '| ' + name + ' | ' + b.runs + ' (' + b.ok + ' with result) | ' + num(b.seconds) + ' s | ' + num(b.calls) + ' | ' + (b.tin + b.tout ? (b.est ? '≈ ' : '') + num(b.tin + b.tout) + ' (' + num(b.tin) + ' / ' + num(b.tout) + ')' : '–') + ' | ' + num(b.searches) + ' | ' + num(b.art) + ' |';
+    };
+    const rows = order.map(function (k) { const b = by[k]; Object.keys(t).forEach(function (f) { t[f] = f === 'est' ? t.est || b.est : t[f] + b[f]; }); return row(JOBS[k] || k, b); });
+    if (order.length > 1) rows.push(row('**Total**', t));
+    return '**AI usage**\n\n| AI job | Runs | Time | Model calls | Tokens (in / out) | SAP searches | ABAP artifacts read |\n|---|---|---|---|---|---|---|\n' + rows.join('\n');
   }
   function auditMd(s) {
     const list = (s && s.audit) || [];
     if (!list.length) return '';
-    return '| Time (UTC) | By | Event | Details |\n|---|---|---|---|\n' + list.map(function (e) {
+    const sum = usageSummary(list);
+    return (sum ? sum + '\n\n**Events**\n\n' : '') + '| Time (UTC) | By | Event | Details |\n|---|---|---|---|\n' + list.map(function (e) {
       return '| ' + e.at.replace('T', ' ').slice(0, 19) + ' | ' + (e.by || '–').replace(/\|/g, '/') + ' | ' + (LABELS[e.type] || e.type) + ' | ' + (detail(e) || '–') + ' |';
     }).join('\n');
   }
@@ -11822,7 +11898,7 @@ window.APB_CONFIG = {
     setFromAuth: setFromAuth, policy: function () { return JSON.parse(JSON.stringify(pol)); }, account: account, mode: mode,
     kindOf: kindOf, approvers: approvers, canApprove: canApprove, fingerprint: fingerprint, status: status,
     approvalBlockers: approvalBlockers, approve: approve, gate: gate, requestOf: requestOf,
-    audit: { add: add, md: auditMd, normalize: normalizeAudit, LABELS: LABELS }, normalizeApproval: normalizeApproval, approvalMd: approvalMd
+    audit: { add: add, md: auditMd, detail: detail, usageSummary: usageSummary, normalize: normalizeAudit, LABELS: LABELS }, normalizeApproval: normalizeApproval, approvalMd: approvalMd
   };
 })(window.APB = window.APB || {});
 
@@ -15831,6 +15907,37 @@ window.APB_CONFIG = {
       runsOf(text).map(function (r) { return run(r); }).join('') + '<w:bookmarkEnd w:id="' + bookmark + '"/></w:p>';
   }
 
+  /* Column widths by content: short columns (IDs, dates, Yes/No) stay narrow, long text (details, descriptions) gets
+     the room – instead of equal columns. Every column keeps at least ~1.6 cm. */
+  function contentWidths(head, rows) {
+    if (head.length < 2 || !rows.length) return null;
+    const MIN = 900;
+    const weight = head.map(function (h, i) {
+      const lens = rows.map(function (r) { return String(r[i] == null ? '' : r[i]).replace(/\*\*|`/g, '').length; });
+      const avg = lens.reduce(function (a, b) { return a + b; }, 0) / lens.length;
+      const max = Math.max.apply(null, lens.concat([String(h).length]));
+      return Math.max(4, Math.min(60, avg * 0.7 + Math.min(max, 60) * 0.3));
+    });
+    // never narrower than the longest word of the column (no "Unchang-ed"), within reason
+    const minW = head.map(function (h, i) {
+      const words = [String(h)].concat(rows.map(function (r) { return String(r[i] == null ? '' : r[i]); })).join(' ').replace(/\*\*|`/g, '').split(/[\s/]+/);
+      const longest = Math.min(22, Math.max.apply(null, words.map(function (x) { return x.length; })));
+      return Math.max(MIN, Math.min(2600, longest * 110 + 220));
+    });
+    const sum = weight.reduce(function (a, b) { return a + b; }, 0);
+    const w = weight.map(function (x, i) { return Math.max(minW[i], Math.floor(TEXT_W * x / sum)); });
+    // too wide in total: take the excess from the columns that have more than their minimum
+    let over = w.reduce(function (a, b) { return a + b; }, 0) - TEXT_W;
+    for (let guard = 0; over > 0 && guard < 20; guard++) {
+      const spare = w.map(function (x, i) { return Math.max(0, x - minW[i]); });
+      const total = spare.reduce(function (a, b) { return a + b; }, 0);
+      if (!total) break;
+      w.forEach(function (x, i) { const cut = Math.min(spare[i], Math.ceil(over * spare[i] / total)); w[i] -= cut; });
+      over = w.reduce(function (a, b) { return a + b; }, 0) - TEXT_W;
+    }
+    return w;
+  }
+
   function table(head, rows, opts) {
     opts = opts || {};
     const n = Math.max(head.length, 1);
@@ -15839,7 +15946,7 @@ window.APB_CONFIG = {
       return '<w:tc><w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/>' + (isHead ? '<w:shd w:val="clear" w:color="auto" w:fill="' + (opts.headFill || 'E6F4CF') + '"/>' : '') + '</w:tcPr>' +
         textPara(text, 'TableText', '', isHead ? '<w:b/>' : '') + '</w:tc>';
     }
-    const widths = opts.widths || head.map(function () { return colW; });
+    const widths = opts.widths || contentWidths(head, rows) || head.map(function () { return colW; });
     return '<w:tbl><w:tblPr><w:tblStyle w:val="SpecTable"/><w:tblW w:w="5000" w:type="pct"/><w:tblLayout w:type="autofit"/><w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>' +
       '<w:tblGrid>' + widths.map(function (w) { return '<w:gridCol w:w="' + w + '"/>'; }).join('') + '</w:tblGrid>' +
       (opts.noHead ? '' : '<w:tr><w:trPr><w:tblHeader/><w:cantSplit/></w:trPr>' + head.map(function (h, i) { return cell(h, true, widths[i]); }).join('') + '</w:tr>') +

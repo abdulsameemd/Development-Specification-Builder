@@ -102,6 +102,37 @@
       runsOf(text).map(function (r) { return run(r); }).join('') + '<w:bookmarkEnd w:id="' + bookmark + '"/></w:p>';
   }
 
+  /* Column widths by content: short columns (IDs, dates, Yes/No) stay narrow, long text (details, descriptions) gets
+     the room – instead of equal columns. Every column keeps at least ~1.6 cm. */
+  function contentWidths(head, rows) {
+    if (head.length < 2 || !rows.length) return null;
+    const MIN = 900;
+    const weight = head.map(function (h, i) {
+      const lens = rows.map(function (r) { return String(r[i] == null ? '' : r[i]).replace(/\*\*|`/g, '').length; });
+      const avg = lens.reduce(function (a, b) { return a + b; }, 0) / lens.length;
+      const max = Math.max.apply(null, lens.concat([String(h).length]));
+      return Math.max(4, Math.min(60, avg * 0.7 + Math.min(max, 60) * 0.3));
+    });
+    // never narrower than the longest word of the column (no "Unchang-ed"), within reason
+    const minW = head.map(function (h, i) {
+      const words = [String(h)].concat(rows.map(function (r) { return String(r[i] == null ? '' : r[i]); })).join(' ').replace(/\*\*|`/g, '').split(/[\s/]+/);
+      const longest = Math.min(22, Math.max.apply(null, words.map(function (x) { return x.length; })));
+      return Math.max(MIN, Math.min(2600, longest * 110 + 220));
+    });
+    const sum = weight.reduce(function (a, b) { return a + b; }, 0);
+    const w = weight.map(function (x, i) { return Math.max(minW[i], Math.floor(TEXT_W * x / sum)); });
+    // too wide in total: take the excess from the columns that have more than their minimum
+    let over = w.reduce(function (a, b) { return a + b; }, 0) - TEXT_W;
+    for (let guard = 0; over > 0 && guard < 20; guard++) {
+      const spare = w.map(function (x, i) { return Math.max(0, x - minW[i]); });
+      const total = spare.reduce(function (a, b) { return a + b; }, 0);
+      if (!total) break;
+      w.forEach(function (x, i) { const cut = Math.min(spare[i], Math.ceil(over * spare[i] / total)); w[i] -= cut; });
+      over = w.reduce(function (a, b) { return a + b; }, 0) - TEXT_W;
+    }
+    return w;
+  }
+
   function table(head, rows, opts) {
     opts = opts || {};
     const n = Math.max(head.length, 1);
@@ -110,7 +141,7 @@
       return '<w:tc><w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/>' + (isHead ? '<w:shd w:val="clear" w:color="auto" w:fill="' + (opts.headFill || 'E6F4CF') + '"/>' : '') + '</w:tcPr>' +
         textPara(text, 'TableText', '', isHead ? '<w:b/>' : '') + '</w:tc>';
     }
-    const widths = opts.widths || head.map(function () { return colW; });
+    const widths = opts.widths || contentWidths(head, rows) || head.map(function () { return colW; });
     return '<w:tbl><w:tblPr><w:tblStyle w:val="SpecTable"/><w:tblW w:w="5000" w:type="pct"/><w:tblLayout w:type="autofit"/><w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>' +
       '<w:tblGrid>' + widths.map(function (w) { return '<w:gridCol w:w="' + w + '"/>'; }).join('') + '</w:tblGrid>' +
       (opts.noHead ? '' : '<w:tr><w:trPr><w:tblHeader/><w:cantSplit/></w:trPr>' + head.map(function (h, i) { return cell(h, true, widths[i]); }).join('') + '</w:tr>') +
