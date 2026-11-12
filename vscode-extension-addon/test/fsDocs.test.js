@@ -116,3 +116,28 @@ test('process-search candidates are offered unticked with the reason and merged 
   const objs = plain(m.state.context.objects).map((o) => o.name + ' | ' + o.note);
   assert.deepStrictEqual(objs, ['ZHR_OFFCYCLE_UPLOAD | exists in SAP', 'PC00_M02_CALC | candidate – description contains payroll · Start payroll · SAP standard']);
 });
+
+test('two phases: the SAP search gets a short brief, the writing step gets the documents and the findings without tools', () => {
+  const st = APB.fs.model.blank();
+  st.context.module = 'HCM';
+  const long = 'Intro of the BRD. Uses transaction PC00_M02_CALC and report ZHR_OFFCYCLE_UPLOAD, BAPI_ACC_DOCUMENT_POST, infotype PA0015.\n' + 'filler '.repeat(4000) + '\nLATE_SECTION_MARKER with ZWHR_LATE_PROGRAM';
+  const docs = [{ role: 'brd', name: 'BRD.docx', label: 'Word', text: long }];
+  const p1 = APB.fsDraft.docsSearchPrompt(st, docs);
+  assert.ok(p1.startsWith(APB.fsDraft.PROGRAM_MARK));
+  assert.ok(p1.length < 12000, 'short: ' + p1.length);
+  assert.ok(!p1.includes('LATE_SECTION_MARKER'), 'not the full document');
+  assert.match(p1, /SAP names found in the documents[^\n]*PC00_M02_CALC[^\n]*ZHR_OFFCYCLE_UPLOAD[^\n]*BAPI_ACC_DOCUMENT_POST[^\n]*PA0015[^\n]*ZWHR_LATE_PROGRAM/);
+  assert.match(p1, /SEARCH THE SAP SYSTEM BY PROCESS/);
+  const found = { changeType: 'enhancement', changeNote: 'ZHR_OFFCYCLE_UPLOAD exists', objects: [{ type: 'PROG', name: 'ZHR_OFFCYCLE_UPLOAD', note: 'exists in SAP' }],
+    candidates: [{ type: 'TRAN', name: 'PC00_M02_CALC', note: 'candidate – payroll' }], programs: [], currentLogic: 'Uploads memos.' };
+  const p2 = APB.fsDraft.docsPrompt(st, docs, { findings: APB.fsDraft.findingsText(found) });
+  assert.ok(p2.startsWith(APB.fsDraft.MARK), 'no tools: the draft route');
+  assert.match(p2, /You have no tools in this step/);
+  assert.match(p2, /- Type of change: enhancement – ZHR_OFFCYCLE_UPLOAD exists/);
+  assert.match(p2, /LATE_SECTION_MARKER/, 'full documents');
+  assert.ok(!/SEARCH THE SAP SYSTEM BY PROCESS/.test(p2));
+  const merged = plain(APB.fsDraft.withFindings({ title: 'T', objects: [{ type: 'PROG', name: 'ZINVENTED' }], changeType: 'new' }, found));
+  assert.deepStrictEqual([merged.title, merged.changeType, merged.objects.map((o) => o.name), merged.candidates.length, merged.currentLogic], ['T', 'enhancement', ['ZHR_OFFCYCLE_UPLOAD'], 1, 'Uploads memos.']);
+  // letters-only names (VBAK) look like ordinary words – the model finds those from the text
+  assert.deepStrictEqual(plain(APB.fsDraft.sapNames('see VBAK, LFA1 and SE38; not THE or AND. Z_A1 ok')), ['LFA1', 'SE38', 'Z_A1']);
+});

@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.22
+
+- **SAP jobs can no longer hang.** Each SAP tool call has a time limit (60 s, `dewaSpecBuilder.toolTimeoutSeconds`): a call that does not answer is skipped (⏱ in the log) and the job goes on. While a call runs, the log says every 15 s what it is waiting for – and reminds you to allow the SAP tool if VS Code asks for it.
+- **Time budget for reading SAP** (5 minutes, `dewaSpecBuilder.sapTimeBudgetSeconds`): then no more SAP calls are made and Copilot writes the answer from what was read. The SAP search of the BRD job (phase 1) uses at most 8 rounds.
+- **Finish now** in the busy overlay (next to Stop): stop reading SAP at any time and get the result from what was read so far – for the BRD job the FS is then written as usual. **Stop** still cancels and keeps nothing. Recorded in the audit trail.
+- A Copilot answer that stops arriving for 2 minutes ends the job with a clear message instead of waiting forever.
+
+## 1.0.21
+
+- **Faster *Generate FS from the documents*.** The job now runs in two phases (VS Code, automatic): (1) the read-only SAP search gets a short brief – the SAP names found in the documents, the start of each document, module and title – instead of the full documents; (2) the full documents and the SAP findings go to Copilot once, without tools, to write the FS. Before, every SAP tool round sent the whole documents again. SAP facts in the review (objects, candidates, programs read, current logic, type of change) come only from phase 1. Copilot Chat and Copy prompt work as before.
+- **Faster SAP tool loop for every job:** up to 4 independent SAP calls run at the same time, and long tool results (e.g. a whole program source) are shortened to 12,000 characters for the model – new setting `dewaSpecBuilder.maxToolResultChars`; the grounding check still uses the full result.
+- **Token consumption and ABAP artifacts read** for every Copilot job: tokens in / out counted with the model's tokenizer (≈ when estimated), model calls, SAP searches and the ABAP artifacts read – live in the busy overlay, in the review dialog (*Copilot used 42,300 tokens … · 3 ABAP artifacts read: …*), in the audit trail (*AI job finished*) and in **Usage** (tokens and artifacts per job; CSV).
+
 ## 1.0.20
 
 - **The BRD upload searches the SAP system by process** – also when the BRD names no SAP object. From 3–6 business keywords of the documents, Copilot looks (read-only) for DEWA's custom objects of the module (`ZHR*<keyword>*`, `ZWHR*<keyword>*`, `ZFI*…` – prefixes per module, changeable with the new setting `dewaSpecBuilder.namespaces`), standard transactions and Fiori apps whose description matches, released CDS views / APIs and BAdIs of the area, and reads the logic of the best matches.

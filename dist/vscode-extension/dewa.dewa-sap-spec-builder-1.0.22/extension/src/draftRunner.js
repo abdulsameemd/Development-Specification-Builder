@@ -3,7 +3,7 @@
    offered: the model only sees the business requirement the builder sends, and the builder shows the result
    for review before anything is added to the spec. */
 
-const { pickModel } = require('./discoveryRunner');
+const { pickModel, withTimeout, readStream, IDLE_MS } = require('./discoveryRunner');
 const guardrails = require('./guardrails');
 
 const MARKER = 'FS-DRAFT v1';
@@ -15,10 +15,12 @@ function cancelled(token) {
   if (token && token.isCancellationRequested) { const e = new Error('Drafting stopped.'); e.code = 'CANCELLED'; throw e; }
 }
 
-async function ask(vscode, model, messages, token) {
-  const response = await model.sendRequest(messages, { justification: JUSTIFICATION }, token);
+async function ask(vscode, meter, messages, token, idleMs) {
+  // a Copilot answer that stops arriving for idleMs ends the job with a clear error instead of waiting forever
+  const response = await withTimeout(meter.send(messages, { justification: JUSTIFICATION }, token), idleMs, 'MODEL_TIMEOUT', 'Copilot');
   let out = '';
-  for await (const part of response.stream) { if (part instanceof vscode.LanguageModelTextPart) out += part.value; cancelled(token); }
+  await readStream(response.stream, idleMs, function (part) { if (part instanceof vscode.LanguageModelTextPart) out += part.value; cancelled(token); });
+  await meter.answered(out, [], token);
   return out;
 }
 
@@ -36,16 +38,20 @@ async function run(vscode, opts) {
   if (!allowed.length) throw guardrails.notAllowedError(models, allowedList);
   const model = pickModel(allowed, opts.model);
   progress({ text: 'Model ' + (model.name || model.id || 'Copilot') + ' · drafting…' });
+  const guard = opts.guard || {};
+  const ev = guard.evidence = guard.evidence || { calls: [], names: [], flags: 0, masked: 0 };
+  const meter = guardrails.meter(model, ev, function () { progress({ key: 'usage', text: guardrails.usageLine(ev), status: 'info' }); });
   const M = vscode.LanguageModelChatMessage;
   const messages = [M.User(String(opts.prompt || ''))];
   cancelled(opts.token);
-  const text = await ask(vscode, model, messages, opts.token);
+  const idleMs = opts.idleMs !== undefined ? Number(opts.idleMs) : IDLE_MS;
+  const text = await ask(vscode, meter, messages, opts.token, idleMs);
   if (hasDraft(text)) return text;
   // One repair turn when the JSON is missing (small models sometimes answer in prose only).
   progress({ text: 'Asking for the JSON block…' });
   messages.push(M.Assistant([new vscode.LanguageModelTextPart(text || '(no answer)')]));
   messages.push(M.User('Return the draft now as exactly one ```json block (kind "fs-draft", version 1) with the structure from the first message.'));
-  const again = await ask(vscode, model, messages, opts.token);
+  const again = await ask(vscode, meter, messages, opts.token, idleMs);
   return hasDraft(again) ? again : [text, again].filter(Boolean).join('\n\n');
 }
 

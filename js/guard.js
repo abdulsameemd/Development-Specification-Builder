@@ -129,6 +129,39 @@
     if (ev.flags) APB.ui.auditAdd('guard-flag', { job: String(job || ''), flags: Number(ev.flags) || 0, where: 'SAP tool results' });
   }
 
+  /* ------------------------------------------------------------- token / artifact usage of one AI job */
+  function usageOf(ev) {
+    const u = (ev && ev.usage) || {};
+    return { requests: u.requests || 0, tokensIn: u.inputTokens || 0, tokensOut: u.outputTokens || 0, estimated: !!u.estimated,
+      searches: (ev && ev.searches) || 0, artifacts: ((ev && ev.artifacts) || []).map(function (a) { return a.name; }), calls: ((ev && ev.calls) || []).length };
+  }
+  /* Two phases of one job (BRD: SAP search + writing) → one evidence. */
+  function combineEvidence(a, b) {
+    if (!a) return b || null;
+    if (!b) return a;
+    const ua = a.usage || {}, ub = b.usage || {};
+    const art = (a.artifacts || []).slice();
+    (b.artifacts || []).forEach(function (x) { if (!art.some(function (y) { return y.name === x.name; })) art.push(x); });
+    return { calls: (a.calls || []).concat(b.calls || []), names: (a.names || []).concat(b.names || []), flags: (a.flags || 0) + (b.flags || 0), masked: (a.masked || 0) + (b.masked || 0),
+      searches: (a.searches || 0) + (b.searches || 0), artifacts: art,
+      usage: { requests: (ua.requests || 0) + (ub.requests || 0), inputTokens: (ua.inputTokens || 0) + (ub.inputTokens || 0), outputTokens: (ua.outputTokens || 0) + (ub.outputTokens || 0), estimated: !!(ua.estimated || ub.estimated) } };
+  }
+  function n(v) { return Number(v || 0).toLocaleString('en'); }
+  /* "Copilot used 48,210 tokens (45,900 in · 2,310 out, 9 model calls) · 7 SAP searches · 3 ABAP artifacts read: A, B, C" */
+  function usageText(ev) {
+    const u = usageOf(ev);
+    if (!u.requests && !u.calls) return '';
+    const parts = ['Copilot used ' + (u.estimated ? '≈ ' : '') + n(u.tokensIn + u.tokensOut) + ' tokens (' + n(u.tokensIn) + ' in · ' + n(u.tokensOut) + ' out, ' + u.requests + ' model call' + (u.requests === 1 ? '' : 's') + ')'];
+    if (u.calls) parts.push(u.searches + ' SAP search' + (u.searches === 1 ? '' : 'es'), u.artifacts.length + ' ABAP artifact' + (u.artifacts.length === 1 ? '' : 's') + ' read' + (u.artifacts.length ? ': ' + u.artifacts.slice(0, 12).join(', ') + (u.artifacts.length > 12 ? ' …' : '') : ''));
+    return parts.join(' · ');
+  }
+  /* For the audit entry "AI job finished". */
+  function usageAudit(ev) {
+    if (!ev) return {};
+    const u = usageOf(ev);
+    return { tokensIn: u.tokensIn, tokensOut: u.tokensOut, tokensEstimated: u.estimated ? 'yes' : '', modelCalls: u.requests, sapSearches: u.searches, artifactsRead: u.artifacts.length, artifacts: u.artifacts.slice(0, 20).join(', ') };
+  }
+
   /* Every prompt leaving the builder (VS Code message or clipboard): masked, and the masking is audited. */
   function outbound(text, job) {
     const r = mask(text);
@@ -163,6 +196,9 @@
     if (e.type === 'ai-end' && d.job) {
       const j = b.jobs[d.job] = b.jobs[d.job] || { runs: 0, outcomes: {}, seconds: 0, steps: 0, models: {} };
       j.runs++; inc(j.outcomes, String(d.outcome || 'closed')); j.seconds += Number(d.seconds) || 0; j.steps += Number(d.steps) || 0;
+      j.tokens = (j.tokens || 0) + (Number(d.tokensIn) || 0) + (Number(d.tokensOut) || 0);
+      j.artifacts = (j.artifacts || 0) + (Number(d.artifactsRead) || 0);
+      j.searches = (j.searches || 0) + (Number(d.sapSearches) || 0);
       if (d.model) inc(j.models, String(d.model).slice(0, 40));
     }
     if (e.type === 'review') {
@@ -184,7 +220,8 @@
       ['partsAccepted', 'partsDeclined', 'namesUnverified', 'itemsMasked', 'injectionFlags'].forEach(function (k) { if (b[k]) rows.push([m, k, b[k]]); });
       Object.keys(b.jobs).forEach(function (j) {
         const x = b.jobs[j];
-        rows.push([m, 'job:' + j + ':runs', x.runs], [m, 'job:' + j + ':avgSeconds', x.runs ? Math.round(x.seconds / x.runs) : 0]);
+        rows.push([m, 'job:' + j + ':runs', x.runs], [m, 'job:' + j + ':avgSeconds', x.runs ? Math.round(x.seconds / x.runs) : 0],
+          [m, 'job:' + j + ':tokens', x.tokens || 0], [m, 'job:' + j + ':sapSearches', x.searches || 0], [m, 'job:' + j + ':abapArtifactsRead', x.artifacts || 0]);
         Object.keys(x.outcomes).forEach(function (o) { rows.push([m, 'job:' + j + ':outcome:' + o, x.outcomes[o]]); });
         Object.keys(x.models).forEach(function (o) { rows.push([m, 'job:' + j + ':model:' + o, x.models[o]]); });
       });
@@ -196,7 +233,7 @@
     setPolicy: setPolicy, policy: function () { return { masking: pol.masking, telemetry: pol.telemetry, patterns: pol.patterns.length }; },
     injection: injection, fence: fence, FENCE_RULE: FENCE_RULE,
     draftNames: draftNames, ground: ground,
-    mask: mask, unmask: unmask, outbound: outbound, evidenceAudit: evidenceAudit,
+    mask: mask, unmask: unmask, outbound: outbound, evidenceAudit: evidenceAudit, usageText: usageText, usageAudit: usageAudit, combineEvidence: combineEvidence,
     record: record, usage: usage, resetUsage: resetUsage, usageCsv: usageCsv
   };
 })(window.APB = window.APB || {});

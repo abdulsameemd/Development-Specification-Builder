@@ -51,6 +51,7 @@ function safeName(name) {
 /* Message router (one per panel). deps: { post, chat, getAuth, signIn, agentInstructions, config } */
 function createRouter(vscode, context, deps) {
   let cts = null;
+  let finishNow = false; // set by "Finish now", read by the tool loop
   const chat = deps.chat || fsDiscovery.create(vscode);
 
   function reply(m, ok, value) { if (m.id) deps.post(ok ? { type: 'reply', id: m.id, ok: true, value: value } : { type: 'reply', id: m.id, ok: false, error: String(value) }); }
@@ -123,7 +124,7 @@ function createRouter(vscode, context, deps) {
         return true;
       }
       if (cts) { deps.post({ type: 'discovery-error', code: 'BUSY', message: 'A discovery is already running.' }); return true; }
-      cts = new vscode.CancellationTokenSource();
+      cts = new vscode.CancellationTokenSource(); finishNow = false;
       const cfg = deps.config();
       try {
         const g = guardOpts(cfg);
@@ -133,6 +134,7 @@ function createRouter(vscode, context, deps) {
           instructions: deps.agentInstructions(),
           allowPatterns: cfg.get('discoveryTools', []),
           maxRounds: cfg.get('maxToolRounds', 25),
+          toolTimeoutMs: seconds(cfg, 'toolTimeoutSeconds', 60), budgetMs: seconds(cfg, 'sapTimeBudgetSeconds', 300), shouldFinish: function () { return finishNow; },
           model: cfg.get('model', ''),
           exclude: [submitTool.TOOL_NAME],
           token: cts.token,
@@ -159,16 +161,17 @@ function createRouter(vscode, context, deps) {
         return true;
       }
       if (cts) { deps.post({ type: 'draft-error', code: 'BUSY', message: 'Copilot is already working on a request.' }); return true; }
-      cts = new vscode.CancellationTokenSource();
+      cts = new vscode.CancellationTokenSource(); finishNow = false;
       try {
+        const g = guardOpts(deps.config());
         const text = await drafter.run(vscode, {
-          guard: guardOpts(deps.config()),
+          guard: g,
           prompt: m.prompt,
           model: deps.config().get('model', ''),
           token: cts.token,
-          onProgress: function (p) { deps.post({ type: 'draft-progress', text: p.text }); }
+          onProgress: function (p) { deps.post(p.key ? { type: 'draft-progress', key: p.key, status: p.status, text: p.text } : { type: 'draft-progress', text: p.text }); }
         });
-        deps.post({ type: 'draft-result', text: text });
+        deps.post({ type: 'draft-result', text: text, evidence: g.evidence });
       } catch (e) {
         deps.post({ type: 'draft-error', code: e.code || 'FAILED', message: String(e && e.message || e) });
       } finally {
@@ -190,7 +193,7 @@ function createRouter(vscode, context, deps) {
         return true;
       }
       if (cts) { deps.post({ type: 'draft-error', code: 'BUSY', message: 'Copilot is already working on a request.' }); return true; }
-      cts = new vscode.CancellationTokenSource();
+      cts = new vscode.CancellationTokenSource(); finishNow = false;
       const cfg = deps.config();
       try {
         const g = guardOpts(cfg);
@@ -198,7 +201,8 @@ function createRouter(vscode, context, deps) {
           guard: g,
           prompt: m.prompt,
           allowPatterns: cfg.get('discoveryTools', []),
-          maxRounds: cfg.get('maxToolRounds', 25),
+          maxRounds: Math.min(cfg.get('maxToolRounds', 25), Number(m.maxRounds) > 0 ? Number(m.maxRounds) : 60),
+          toolTimeoutMs: seconds(cfg, 'toolTimeoutSeconds', 60), budgetMs: seconds(cfg, 'sapTimeBudgetSeconds', 300), shouldFinish: function () { return finishNow; },
           model: cfg.get('model', ''),
           exclude: [submitTool.TOOL_NAME, submitTool.DRAFT_TOOL_NAME],
           token: cts.token,
@@ -226,7 +230,7 @@ function createRouter(vscode, context, deps) {
         return true;
       }
       if (cts) { deps.post({ type: 'devctx-error', code: 'BUSY', message: 'Copilot is already working on a request.' }); return true; }
-      cts = new vscode.CancellationTokenSource();
+      cts = new vscode.CancellationTokenSource(); finishNow = false;
       const cfg = deps.config();
       try {
         const g = guardOpts(cfg);
@@ -235,6 +239,7 @@ function createRouter(vscode, context, deps) {
           prompt: m.prompt,
           allowPatterns: cfg.get('discoveryTools', []),
           maxRounds: cfg.get('maxToolRounds', 25),
+          toolTimeoutMs: seconds(cfg, 'toolTimeoutSeconds', 60), budgetMs: seconds(cfg, 'sapTimeBudgetSeconds', 300), shouldFinish: function () { return finishNow; },
           model: cfg.get('model', ''),
           exclude: [submitTool.TOOL_NAME, submitTool.DRAFT_TOOL_NAME, submitTool.DEV_TOOL_NAME],
           token: cts.token,
@@ -250,6 +255,8 @@ function createRouter(vscode, context, deps) {
       return true;
     },
     stop: function () { if (cts) cts.cancel(); return true; },
+    /* "Finish now": no more SAP calls – the running job writes its answer from what was read so far. */
+    'finish-now': function () { if (cts) finishNow = true; return true; },
     'open-chat': async function (m) {
       if (CHAT_AGENTS.indexOf(m.agent) < 0 || !str(m.prompt, 400000)) return false;
       await chat.openChat(m.prompt, { mode: m.agent });
@@ -275,9 +282,12 @@ function createRouter(vscode, context, deps) {
 
 /* Panel lifecycle: one builder tab, restored after a restart, plus the chat-to-panel pack delivery. */
 /* Guardrail settings for one AI job; evidence is filled by the tool loop (see guardrails.js). */
+function seconds(cfg, key, def) { const v = Number(cfg.get(key, def)); return (v > 0 ? v : def) * 1000; }
+
 function guardOpts(cfg) {
   const arr = function (k) { const v = cfg.get(k, []); return Array.isArray(v) ? v : []; };
   return { allowedModels: arr('models.allowed').map(String), masking: cfg.get('masking', true) !== false, maskingPatterns: arr('masking.patterns'),
+    maxResultChars: Number(cfg.get('maxToolResultChars', 12000)) || 12000,
     evidence: { calls: [], names: [], flags: 0, masked: 0 } };
 }
 

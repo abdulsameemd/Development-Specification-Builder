@@ -63,6 +63,7 @@
       '<p class="busy-line" aria-live="polite"></p><p class="busy-step"></p>' +
       '<div class="busy-meta"><span class="busy-time">0:00</span><span class="busy-count"></span></div>' +
       '<div class="busy-actions"><button type="button" class="btn btn-ghost btn-sm" data-busy="hide">Keep working</button>' +
+      '<button type="button" class="btn btn-ghost btn-sm" data-busy="finish" title="No more SAP calls – Copilot writes the answer from what it has read so far">Finish now</button>' +
       '<button type="button" class="btn btn-ghost btn-sm" data-busy="stop">Stop</button></div></div></div>';
     document.body.appendChild(el);
     pill = document.createElement('button');
@@ -75,6 +76,14 @@
       const b = e.target.closest('[data-busy]');
       if (!b || !job) return;
       if (b.dataset.busy === 'hide') minimize();
+      if (b.dataset.busy === 'finish' && !job.finishing) {
+        // the extension stops calling SAP tools; the job then writes its answer from what was read
+        job.finishing = true;
+        if (APB.host && APB.host.post) APB.host.post({ type: 'finish-now' });
+        audit('ai-finish-now', { job: job.kind });
+        job.last = 'Finishing with what was read so far…';
+        render();
+      }
       if (b.dataset.busy === 'stop') { const stop = job.onStop; done('stopped'); if (stop) stop(); }
     });
     pill.addEventListener('click', function () { if (job) { pill.hidden = true; el.hidden = false; } });
@@ -91,6 +100,9 @@
     el.querySelector('.busy-step').innerHTML = job.last ? '<span aria-hidden="true">›</span> ' + esc(job.last) : '';
     el.querySelector('.busy-count').textContent = steps ? steps + ' step' + (steps > 1 ? 's' : '') : '';
     el.querySelector('[data-busy="stop"]').textContent = job.chat ? 'Stop waiting' : 'Stop';
+    const fin = el.querySelector('[data-busy="finish"]');
+    fin.hidden = job.chat || !cfg.sap || !(APB.host && APB.host.isVscode); // only automatic jobs that read SAP in VS Code
+    fin.disabled = !!job.finishing;
     pill.querySelector('.busy-pill-text').textContent = cfg.title.replace(/^AI is /, '').replace(/^\w/, function (c) { return c.toUpperCase(); }) + '…';
   }
 
@@ -121,8 +133,9 @@
   }
 
   /* outcome: result | error | stopped | reset | replaced (recorded in the audit trail) */
-  function done(outcome) {
-    if (job) audit('ai-end', { job: job.kind, outcome: outcome || 'closed', seconds: Math.round((Date.now() - started) / 1000), steps: steps, model: job.model });
+  /* extra: token / artifact usage of the job (APB.guard.usageAudit) */
+  function done(outcome, extra) {
+    if (job) audit('ai-end', Object.assign({ job: job.kind, outcome: outcome || 'closed', seconds: Math.round((Date.now() - started) / 1000), steps: steps, model: job.model }, extra || {}));
     job = null;
     clearInterval(rot); clearInterval(tick);
     if (el) el.hidden = true;

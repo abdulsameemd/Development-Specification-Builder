@@ -2,7 +2,7 @@
   "name": "dewa-sap-spec-builder",
   "displayName": "DEWA SAP Spec Builder",
   "description": "Functional and development specifications for SAP, inside VS Code – with read-only SAP system discovery through GitHub Copilot and the SAP MCP servers.",
-  "version": "1.0.20",
+  "version": "1.0.22",
   "publisher": "dewa",
   "license": "UNLICENSED",
   "private": true,
@@ -170,6 +170,27 @@
           },
           "default": {},
           "markdownDescription": "DEWA's custom name prefixes per module, used when a BRD is uploaded to search the SAP system by process (read-only, `<prefix>*<keyword>*`). Overrides the built-in list for the modules you name, e.g. `{\"HCM\": [\"ZHR\", \"ZWHR\", \"ZPY\"], \"FI/CO\": [\"ZFI\", \"ZWFI\"]}`. Module keys: FI/CO, MM, SD, IS-U, CRM, PS/PM, HCM, Cross-module."
+        },
+        "dewaSpecBuilder.maxToolResultChars": {
+          "type": "number",
+          "default": 12000,
+          "minimum": 2000,
+          "maximum": 100000,
+          "markdownDescription": "Longest SAP tool result (characters) passed to the model per call – e.g. a whole program source is shortened to this. Smaller = faster and fewer tokens; the grounding check still uses the full result."
+        },
+        "dewaSpecBuilder.toolTimeoutSeconds": {
+          "type": "number",
+          "default": 60,
+          "minimum": 10,
+          "maximum": 600,
+          "markdownDescription": "Longest wait for one SAP tool call. A call that does not answer in time is skipped and the job goes on (shown with ⏱ in the log)."
+        },
+        "dewaSpecBuilder.sapTimeBudgetSeconds": {
+          "type": "number",
+          "default": 300,
+          "minimum": 30,
+          "maximum": 3600,
+          "markdownDescription": "Time budget for reading SAP in one job (default 5 minutes). When it is used up, no more SAP calls are made and Copilot writes the answer from what was read. *Finish now* in the busy overlay does the same at any time."
         },
         "dewaSpecBuilder.installAgent": {
           "type": "boolean",
