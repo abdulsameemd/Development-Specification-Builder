@@ -24,7 +24,8 @@
         i++;
         while (i < lines.length && !/^```/.test(lines[i])) buf.push(lines[i++]);
         i++;
-        blocks.push({ t: 'code', lines: buf });
+        const fl = /^```mermaid/.test(l) && APB.flow ? APB.flow.fromBlock(buf) : null;
+        blocks.push(fl ? { t: 'flow', flow: fl } : { t: 'code', lines: buf });
       } else if (/^#{1,6}\s/.test(l)) {
         blocks.push({ t: 'h', level: /^#+/.exec(l)[0].length, text: l.replace(/^#+\s+/, '') });
         i++;
@@ -118,8 +119,21 @@
       }).join('') + '</w:tbl>' + para('', 'Spacer');
   }
 
-  function render(blocks, meta) {
+  /* An image (PNG) as an inline picture, scaled to the text width at most. */
+  const EMU_PX = 9525, EMU_TWIP = 635;
+  function picture(img, n) {
+    let cx = img.w * EMU_PX, cy = img.h * EMU_PX;
+    const max = TEXT_W * EMU_TWIP;
+    if (cx > max) { cy = Math.round(cy * max / cx); cx = max; }
+    return '<w:p><w:pPr><w:spacing w:after="120"/><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="' + cx + '" cy="' + cy + '"/><wp:docPr id="' + n + '" name="Process flow ' + n + '"/>' +
+      '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">' +
+      '<pic:nvPicPr><pic:cNvPr id="' + n + '" name="flow' + n + '.png"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdFlow' + n + '"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>' +
+      '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="' + cx + '" cy="' + cy + '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>';
+  }
+
+  function render(blocks, meta, images) {
     const body = [];
+    let used = 0; // images are taken in document order, one per 8-step diagram part
     const toc = [];
     const nums = []; // one numbering instance per ordered list so each restarts at 1
     let skipping = !!meta; // the title page replaces the Markdown title and its control table
@@ -137,6 +151,17 @@
           b.lines.forEach(function (l) { body.push(para(run({ t: l || ' ' }), 'Code')); });
           body.push(para('', 'Spacer'));
           break;
+        case 'flow': {
+          // swimlane diagram as picture(s); without images (e.g. no browser canvas) the steps as text
+          const parts = Math.ceil(b.flow.steps.length / ((APB.flow && APB.flow.PER_DIAGRAM) || 8));
+          if (images && images.length >= used + parts) {
+            for (let k = 0; k < parts; k++) { used++; body.push(picture(images[used - 1], used)); }
+          } else {
+            APB.flow.textLines(b.flow.steps).forEach(function (l) { body.push(para(run({ t: l }), 'Code')); });
+            body.push(para('', 'Spacer'));
+          }
+          break;
+        }
         case 'table':
           body.push(table(b.head, b.rows));
           break;
@@ -152,7 +177,7 @@
         }
       }
     });
-    return { body: body.join(''), toc: toc, nums: nums };
+    return { body: body.join(''), toc: toc, nums: nums, images: images ? images.slice(0, used) : [] };
   }
 
   function titlePage(meta, toc) {
@@ -174,14 +199,14 @@
       (tocField ? textPara('Contents', 'TOCHeading') + tocField + para('<w:r><w:br w:type="page"/></w:r>') : '');
   }
 
-  function documentXml(md, meta) {
+  function documentXml(md, meta, images) {
     bookmark = 0;
-    const r = render(parse(md), meta);
+    const r = render(parse(md), meta, images);
     const sect = '<w:sectPr>' + (meta ? '<w:headerReference w:type="default" r:id="rIdHeader"/><w:footerReference w:type="default" r:id="rIdFooter"/>' : '') +
       '<w:pgSz w:w="' + PAGE_W + '" w:h="' + PAGE_H + '"/><w:pgMar w:top="' + MARGIN + '" w:right="' + MARGIN + '" w:bottom="' + MARGIN + '" w:left="' + MARGIN + '" w:header="567" w:footer="567" w:gutter="0"/>' +
       (meta ? '<w:titlePg/>' : '') + '</w:sectPr>';
-    return { xml: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>' +
-      (meta ? titlePage(meta, r.toc) : '') + r.body + sect + '</w:body></w:document>', nums: r.nums };
+    return { xml: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><w:body>' +
+      (meta ? titlePage(meta, r.toc) : '') + r.body + sect + '</w:body></w:document>', nums: r.nums, images: r.images };
   }
 
   function stylesXml() {
@@ -240,12 +265,15 @@
       para(run({ t: (meta.kind || 'Specification') + '  ·  Page ' }) + field('PAGE') + run({ t: ' of ' }) + field('NUMPAGES'), 'Footer') + '</w:ftr>';
   }
 
-  function package_(md, meta) {
-    const doc = documentXml(md, meta);
+  /* opts.images: PNGs of the process flow diagrams in document order (APB.flow.pngs(md)) */
+  function package_(md, meta, opts) {
+    const doc = documentXml(md, meta, opts && opts.images);
+    const imgs = doc.images || [];
     const now = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
     const files = [
       ['[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
         '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>' +
+        (imgs.length ? '<Default Extension="png" ContentType="image/png"/>' : '') +
         '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
         '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
         '<Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>' +
@@ -265,6 +293,7 @@
         '<Relationship Id="rIdNumbering" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>' +
         '<Relationship Id="rIdSettings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>' +
         (meta ? '<Relationship Id="rIdHeader" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/><Relationship Id="rIdFooter" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>' : '') +
+        imgs.map(function (im, i) { return '<Relationship Id="rIdFlow' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/flow' + (i + 1) + '.png"/>'; }).join('') +
         '</Relationships>'],
       ['word/document.xml', doc.xml],
       ['word/styles.xml', stylesXml()],
@@ -273,6 +302,7 @@
       ['word/settings.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' + (meta ? '<w:updateFields w:val="true"/>' : '') + '<w:defaultTabStop w:val="720"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>']
     ];
     if (meta) files.push(['word/header1.xml', headerXml(meta)], ['word/footer1.xml', footerXml(meta)]);
+    imgs.forEach(function (im, i) { files.push(['word/media/flow' + (i + 1) + '.png', im.png]); });
     return zip(files);
   }
 

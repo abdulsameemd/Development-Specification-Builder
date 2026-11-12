@@ -720,3 +720,7 @@ div.link-banner p { margin: 0 0 6px; }
 .fs-or { display: flex; align-items: center; gap: 12px; margin: 18px 0 6px; color: var(--muted); font-size: .85rem; }
 .fs-or::before, .fs-or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
 .guard-usage { color: var(--muted); font-size: .85rem; }
+
+/* AS-IS / TO-BE swimlane diagrams (js/flow-diagram.js) in the preview and the finished document */
+.flow-diagram { margin: 10px 0 14px; overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 6px; }
+.flow-diagram svg { display: block; max-width: none; height: auto; }

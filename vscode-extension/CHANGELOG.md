@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.24
+
+- **AS-IS and TO-BE as swimlane diagrams.** One lane per role, one numbered box per step with its transaction / app, arrows in step order. AS-IS steps with a pain point are marked (red border, ⚠); TO-BE steps are coloured by change – unchanged, changed, new, automated – with a legend. Long processes continue in further diagrams (8 steps each).
+- Shown in the builder preview and the finished document, embedded as pictures in the **Word** document, and written to the **Markdown** as a Mermaid flowchart (lanes as subgraphs) that GitHub and VS Code with Mermaid support render; the step tables stay below the diagrams.
+- **Technical spec:** a Technical spec created from the FS takes over the TO-BE process and shows it as *Business Process (TO-BE)* with the diagram and the steps.
+
 ## 1.0.23
 
 - **Fix: SAP reading failed with "destinations … blocked by ADT MCP Server access restrictions" since 1.0.21.** 1.0.21 started up to 4 SAP calls at the same moment. The ABAP ADT MCP server keeps one logon session per destination and refused the destination when several calls started together. SAP calls now run **one at a time again** (as in 1.0.20); new setting `dewaSpecBuilder.parallelToolCalls` (1–4, default 1) for MCP servers that support parallel calls.

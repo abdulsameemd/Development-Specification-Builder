@@ -604,6 +604,7 @@
       rules: rules.map(function (b) { b.id = S.uid(); return b; }),
       acceptance: acceptance.map(function (a) { a.id = S.uid(); return a; }),
       assumptions: docRef + ctLabel,
+      processToBe: s.process.toBe || [],
       quality: quality
     });
   }
@@ -676,7 +677,8 @@
       objects: objects.map(function (o) { o.id = S.uid(); o.detail = {}; return o; }),
       rules: rules.map(function (b) { b.id = S.uid(); return b; }),
       acceptance: acceptance.map(function (a) { a.id = S.uid(); return a; }),
-      assumptions: docRef
+      assumptions: docRef,
+      processToBe: s.process.toBe || []
     });
   }
 
@@ -1146,9 +1148,14 @@
       const s = S.get();
       if (FC.checkMandatory(s).length) { U().toast(mandatoryMsg(s)); return; }
       U().auditAdd('export', { to: 'Word file', file: FM.docxFilename(s), approval: APB.gov.status(s).state });
-      const bytes = APB.docx.fromMarkdown(FM.build(s), FM.docMeta(s));
-      APB.exporter.downloadBytes(FM.docxFilename(s), bytes, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-      U().toast(U().savedMsg(FM.docxFilename(s)));
+      const md = FM.build(s);
+      const save = function (images) {
+        const bytes = APB.docx.fromMarkdown(md, FM.docMeta(s), { images: images });
+        APB.exporter.downloadBytes(FM.docxFilename(s), bytes, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        U().toast(U().savedMsg(FM.docxFilename(s)));
+      };
+      // the AS-IS / TO-BE swimlanes go into Word as pictures; if drawing fails, as numbered steps
+      (APB.flow ? APB.flow.pngs(md) : Promise.resolve([])).then(save, function () { save(null); });
     }
   };
 

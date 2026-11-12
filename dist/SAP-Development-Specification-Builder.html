@@ -736,6 +736,10 @@ div.link-banner p { margin: 0 0 6px; }
 .fs-or::before, .fs-or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
 .guard-usage { color: var(--muted); font-size: .85rem; }
 
+/* AS-IS / TO-BE swimlane diagrams (js/flow-diagram.js) in the preview and the finished document */
+.flow-diagram { margin: 10px 0 14px; overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 6px; }
+.flow-diagram svg { display: block; max-width: none; height: auto; }
+
 </style>
 </head>
 <body>
@@ -12077,6 +12081,214 @@ window.APB_CONFIG = {
 
 </script>
   <script>
+/* Process flow diagrams (AS-IS / TO-BE) as swimlanes: one lane per role, one box per step, arrows in step order.
+   - svg(steps, kind)      → SVG markup (builder preview, Word via PNG); 8 steps per diagram, longer flows continue
+                              in the next diagram;
+   - markdown(steps, kind) → a ```mermaid block (renders as a flowchart in GitHub / VS Code with Mermaid support and
+                              stays readable for Copilot) whose first line carries the steps as JSON
+                              ("%% apb-flow {...}"), so the builder and the Word export redraw the same swimlanes;
+   - fromBlock(lines)      → { kind, steps } from such a block, or null;
+   - pngs(md)              → Promise of [{ png, w, h }] for every flow block of a document (browser only).
+   kind: 'asIs' (pain points marked ⚠) | 'toBe' (boxes coloured by change: unchanged / changed / new / automated). */
+(function (APB) {
+  'use strict';
+
+  const PER_DIAGRAM = 8;
+  const LABEL_W = 132, COL_W = 158, BOX_W = 134, BOX_H = 66, LANE_H = 96, TOP = 40, PAD = 10;
+  const FONT = "Arial, 'Segoe UI', Helvetica, sans-serif";
+  const MARKS = {
+    unchanged: { label: 'Unchanged', fill: '#f2f4f5', stroke: '#9aa5ab' },
+    changed: { label: 'Changed', fill: '#fff3d6', stroke: '#d79a00' },
+    new: { label: 'New', fill: '#e2efff', stroke: '#2f6fd6' },
+    automated: { label: 'Automated', fill: '#e3f6e3', stroke: '#2e9a47' }
+  };
+  const PLAIN = { fill: '#ffffff', stroke: '#7d8c93' };
+
+  function str(v) { return typeof v === 'string' ? v.replace(/`/g, "'").trim() : ''; } // no ` – it would end the Markdown code block
+  function x(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  /* rows of the process grid → [{ step, role, tx, mark, pain }] (empty rows dropped) */
+  function steps(list, kind) {
+    return (Array.isArray(list) ? list : []).filter(function (r) { return r && str(r.step); }).slice(0, 60).map(function (r) {
+      const mark = kind === 'toBe' ? (MARKS[str(r.change)] ? str(r.change) : '') : '';
+      return { step: str(r.step).slice(0, 160), role: str(r.role).slice(0, 60), tx: str(r.tx).slice(0, 60), mark: mark, pain: kind === 'asIs' ? str(r.pain).slice(0, 160) : '' };
+    });
+  }
+
+  /* words → at most `max` lines of about `width` characters (last line ends with … when cut) */
+  function wrap(text, width, max) {
+    const words = String(text).split(/\s+/).filter(Boolean);
+    const lines = [];
+    let cur = '';
+    words.forEach(function (w) {
+      while (w.length > width) { if (cur) { lines.push(cur); cur = ''; } lines.push(w.slice(0, width - 1) + '-'); w = w.slice(width - 1); }
+      if (!cur) cur = w; else if ((cur + ' ' + w).length <= width) cur += ' ' + w; else { lines.push(cur); cur = w; }
+    });
+    if (cur) lines.push(cur);
+    if (lines.length > max) { lines.length = max; lines[max - 1] = lines[max - 1].slice(0, width - 1).replace(/\s+\S*$/, '') + '…'; }
+    return lines;
+  }
+
+  function lanesOf(all) {
+    const lanes = [];
+    all.forEach(function (s) { const r = s.role || 'Role not set'; if (lanes.indexOf(r) < 0) lanes.push(r); });
+    return lanes.length ? lanes : ['Role not set'];
+  }
+
+  /* one swimlane diagram for steps[from .. from+PER_DIAGRAM) of `all` → { svg, w, h } */
+  function part(all, kind, from) {
+    const lanes = lanesOf(all);
+    const list = all.slice(from, from + PER_DIAGRAM);
+    const cont = from + PER_DIAGRAM < all.length;
+    const w = LABEL_W + list.length * COL_W + (cont ? 54 : 16);
+    const h = TOP + lanes.length * LANE_H + PAD;
+    const out = [];
+    out.push('<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" font-family="' + FONT + '" role="img" aria-label="' +
+      x((kind === 'toBe' ? 'Proposed process (TO-BE)' : 'Current process (AS-IS)') + ', steps ' + (from + 1) + ' to ' + (from + list.length)) + '">');
+    out.push('<defs><marker id="apbArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4b5a61"/></marker></defs>');
+    out.push('<rect x="0" y="0" width="' + w + '" height="' + h + '" fill="#ffffff"/>');
+    // legend
+    let lx = 8;
+    const legend = kind === 'toBe' ? Object.keys(MARKS).map(function (k) { return [MARKS[k].fill, MARKS[k].stroke, MARKS[k].label]; }) : [[PLAIN.fill, '#c62828', '⚠ Pain point']];
+    out.push('<text x="' + lx + '" y="22" font-size="12" font-weight="700" fill="#1d2b30">' + (kind === 'toBe' ? 'TO-BE' : 'AS-IS') + (all.length > PER_DIAGRAM ? ' · steps ' + (from + 1) + '–' + (from + list.length) + ' of ' + all.length : '') + '</text>');
+    lx = 150 + (all.length > PER_DIAGRAM ? 110 : 0);
+    legend.forEach(function (l) {
+      out.push('<rect x="' + lx + '" y="12" width="14" height="12" rx="3" fill="' + l[0] + '" stroke="' + l[1] + '"/><text x="' + (lx + 19) + '" y="22" font-size="11" fill="#33444b">' + x(l[2]) + '</text>');
+      lx += 30 + l[2].length * 6.2;
+    });
+    // lanes
+    lanes.forEach(function (r, i) {
+      const y = TOP + i * LANE_H;
+      out.push('<rect x="0" y="' + y + '" width="' + w + '" height="' + LANE_H + '" fill="' + (i % 2 ? '#f7f9fa' : '#ffffff') + '" stroke="#d3dadd"/>');
+      out.push('<rect x="0" y="' + y + '" width="' + (LABEL_W - 8) + '" height="' + LANE_H + '" fill="#eef2f3" stroke="#d3dadd"/>');
+      wrap(r, 17, 3).forEach(function (t, k, arr) {
+        out.push('<text x="' + ((LABEL_W - 8) / 2) + '" y="' + (y + LANE_H / 2 - (arr.length - 1) * 7 + k * 14 + 4) + '" font-size="11.5" font-weight="700" fill="#24343a" text-anchor="middle">' + x(t) + '</text>');
+      });
+    });
+    // boxes
+    const pos = list.map(function (s, i) {
+      const lane = lanes.indexOf(s.role || 'Role not set');
+      return { x: LABEL_W + i * COL_W + (COL_W - BOX_W) / 2, y: TOP + lane * LANE_H + (LANE_H - BOX_H) / 2 };
+    });
+    // arrows first (under the boxes)
+    for (let i = 0; i < list.length - 1; i++) {
+      const a = pos[i], b = pos[i + 1];
+      const ax = a.x + BOX_W, ay = a.y + BOX_H / 2, bx = b.x, by = b.y + BOX_H / 2;
+      const mx = ax + (bx - ax) / 2;
+      const d = ay === by ? 'M' + ax + ',' + ay + ' L' + (bx - 2) + ',' + by : 'M' + ax + ',' + ay + ' L' + mx + ',' + ay + ' L' + mx + ',' + by + ' L' + (bx - 2) + ',' + by;
+      out.push('<path d="' + d + '" fill="none" stroke="#4b5a61" stroke-width="1.6" marker-end="url(#apbArrow)"/>');
+    }
+    if (cont) {
+      const a = pos[pos.length - 1];
+      out.push('<path d="M' + (a.x + BOX_W) + ',' + (a.y + BOX_H / 2) + ' L' + (w - 10) + ',' + (a.y + BOX_H / 2) + '" fill="none" stroke="#4b5a61" stroke-width="1.6" stroke-dasharray="4 3" marker-end="url(#apbArrow)"/>');
+    }
+    list.forEach(function (s, i) {
+      const p = pos[i], n = from + i + 1;
+      const c = s.mark ? MARKS[s.mark] : PLAIN;
+      const pain = !!s.pain;
+      out.push('<g><title>' + x(n + '. ' + s.step + (s.tx ? ' · ' + s.tx : '') + (s.mark ? ' · ' + MARKS[s.mark].label : '') + (pain ? ' · Pain point: ' + s.pain : '')) + '</title>');
+      out.push('<rect x="' + p.x + '" y="' + p.y + '" width="' + BOX_W + '" height="' + BOX_H + '" rx="8" fill="' + c.fill + '" stroke="' + (pain ? '#c62828' : c.stroke) + '" stroke-width="' + (pain ? 2 : 1.4) + '"/>');
+      out.push('<circle cx="' + (p.x + 12) + '" cy="' + (p.y + 12) + '" r="9" fill="#24343a"/><text x="' + (p.x + 12) + '" y="' + (p.y + 16) + '" font-size="10.5" font-weight="700" fill="#ffffff" text-anchor="middle">' + n + '</text>');
+      if (pain) out.push('<text x="' + (p.x + BOX_W - 12) + '" y="' + (p.y + 16) + '" font-size="13" fill="#c62828" text-anchor="middle">⚠</text>');
+      const lines = wrap(s.step, pain ? 16 : 18, s.tx ? 2 : 3); // leaves room for the ⚠ marker and the box edge
+      lines.forEach(function (t, k) { out.push('<text x="' + (p.x + 26) + '" y="' + (p.y + 16 + k * 13) + '" font-size="11" fill="#1d2b30">' + x(t) + '</text>'); });
+      if (s.tx) out.push('<text x="' + (p.x + BOX_W / 2) + '" y="' + (p.y + BOX_H - 8) + '" font-size="10" font-family="Consolas, \'Courier New\', monospace" fill="#3d5560" text-anchor="middle">' + x(wrap(s.tx, 20, 1)[0]) + '</text>');
+      out.push('</g>');
+    });
+    out.push('</svg>');
+    return { svg: out.join(''), w: w, h: h };
+  }
+
+  /* all diagrams of one flow (8 steps each) → [{ svg, w, h }] */
+  function diagrams(all, kind) {
+    const outs = [];
+    for (let i = 0; i < all.length; i += PER_DIAGRAM) outs.push(part(all, kind, i));
+    return outs;
+  }
+  function svg(all, kind) { return diagrams(all, kind).map(function (d) { return d.svg; }).join(''); }
+
+  /* ------------------------------------------------------------- Markdown (Mermaid) */
+  const MARK = '%% apb-flow ';
+  function label(t) { return String(t).replace(/"/g, "'").replace(/[\[\]{}<>|]/g, ' ').replace(/\s+/g, ' ').trim(); }
+  function markdown(all, kind) {
+    if (all.length < 2) return '';
+    const lanes = lanesOf(all);
+    const lines = ['```mermaid', MARK + JSON.stringify({ kind: kind, steps: all }), 'flowchart LR'];
+    lanes.forEach(function (r, li) {
+      lines.push('  subgraph L' + (li + 1) + '["' + label(r) + '"]', '    direction LR');
+      all.forEach(function (s, i) { if ((s.role || 'Role not set') === r) lines.push('    s' + (i + 1) + '["' + (i + 1) + '. ' + label(s.step) + (s.tx ? '<br/>' + label(s.tx) : '') + (s.pain ? ' ⚠' : '') + '"]'); });
+      lines.push('  end');
+    });
+    lines.push('  ' + all.map(function (s, i) { return 's' + (i + 1); }).join(' --> '));
+    if (kind === 'toBe') {
+      Object.keys(MARKS).forEach(function (k) {
+        const ids = all.map(function (s, i) { return s.mark === k ? 's' + (i + 1) : ''; }).filter(Boolean);
+        if (ids.length) lines.push('  classDef ' + k + ' fill:' + MARKS[k].fill + ',stroke:' + MARKS[k].stroke, '  class ' + ids.join(',') + ' ' + k);
+      });
+    } else {
+      const ids = all.map(function (s, i) { return s.pain ? 's' + (i + 1) : ''; }).filter(Boolean);
+      if (ids.length) lines.push('  classDef pain stroke:#c62828,stroke-width:2px', '  class ' + ids.join(',') + ' pain');
+    }
+    lines.push('```');
+    return lines.join('\n');
+  }
+  /* the code lines of a ```mermaid block → { kind, steps } when the builder wrote it, else null */
+  function fromBlock(lines) {
+    const first = (lines || [])[0] || '';
+    if (first.indexOf(MARK) !== 0) return null;
+    try {
+      const d = JSON.parse(first.slice(MARK.length));
+      const kind = d.kind === 'toBe' ? 'toBe' : 'asIs';
+      const list = (Array.isArray(d.steps) ? d.steps : []).map(function (s) {
+        return { step: str(s && s.step).slice(0, 160), role: str(s && s.role).slice(0, 60), tx: str(s && s.tx).slice(0, 60), mark: MARKS[str(s && s.mark)] ? str(s.mark) : '', pain: str(s && s.pain).slice(0, 160) };
+      }).filter(function (s) { return s.step; }).slice(0, 60);
+      return list.length ? { kind: kind, steps: list } : null;
+    } catch (e) { return null; }
+  }
+  /* readable text version (Word without images, plain text) */
+  function textLines(all) {
+    return all.map(function (s, i) { return (i + 1) + '. ' + s.step + (s.role ? ' [' + s.role + ']' : '') + (s.tx ? ' · ' + s.tx : '') + (s.mark ? ' · ' + MARKS[s.mark].label : '') + (s.pain ? ' · ⚠ ' + s.pain : ''); });
+  }
+
+  /* ------------------------------------------------------------- PNG for Word (browser) */
+  function png(d, scale) {
+    scale = scale || 2;
+    return new Promise(function (resolve, reject) {
+      const img = new Image();
+      img.onload = function () {
+        try {
+          const c = document.createElement('canvas');
+          c.width = Math.round(d.w * scale); c.height = Math.round(d.h * scale);
+          const g = c.getContext('2d');
+          g.fillStyle = '#ffffff'; g.fillRect(0, 0, c.width, c.height);
+          g.drawImage(img, 0, 0, c.width, c.height);
+          c.toBlob(function (b) {
+            if (!b) { reject(new Error('no image')); return; }
+            b.arrayBuffer().then(function (buf) { resolve({ png: new Uint8Array(buf), w: d.w, h: d.h }); }, reject);
+          }, 'image/png');
+        } catch (e) { reject(e); }
+      };
+      img.onerror = function () { reject(new Error('The flow diagram could not be drawn.')); };
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(d.svg);
+    });
+  }
+  /* every flow block of a Markdown document → images in document order (one per 8-step part) */
+  function pngs(md) {
+    const jobs = [];
+    const re = /```mermaid\n([^\n]*)\n/g;
+    let m;
+    while ((m = re.exec(String(md || '')))) {
+      const f = fromBlock([m[1]]);
+      if (f) diagrams(f.steps, f.kind).forEach(function (d) { jobs.push(png(d)); });
+    }
+    return Promise.all(jobs);
+  }
+
+  APB.flow = { steps: steps, svg: svg, diagrams: diagrams, markdown: markdown, fromBlock: fromBlock, textLines: textLines, pngs: pngs, MARKS: MARKS, PER_DIAGRAM: PER_DIAGRAM };
+})(window.APB = window.APB || {});
+
+</script>
+  <script>
 /* Accessors over the configuration (config/*.json, bundled into config-bundle.js). */
 (function (APB) {
   'use strict';
@@ -12168,6 +12380,7 @@ window.APB_CONFIG = {
       rules: [],
       acceptance: [],
       assumptions: '',
+      processToBe: [],
       source: null,
       sapCheck: null,
       approval: null,
@@ -12202,6 +12415,10 @@ window.APB_CONFIG = {
     s.rules = arr(input.rules).map(function (r) { return { id: str(r.id) || uid(), condition: str(r.condition), behavior: str(r.behavior) }; });
     s.acceptance = arr(input.acceptance).map(function (a) { return { id: str(a.id) || uid(), text: str(a.text) }; });
     s.assumptions = str(input.assumptions);
+    // the TO-BE process of the functional spec it was created from (shown as swimlanes in the document)
+    s.processToBe = arr(input.processToBe).filter(function (r) { return r && str(r.step); }).slice(0, 60).map(function (r) {
+      return { step: str(r.step), role: str(r.role), tx: str(r.tx), change: str(r.change) };
+    });
     // link to the functional spec it was created from (spec-link.js); null for specs written directly
     s.source = APB.specLink ? APB.specLink.normalizeSource(input.source) : null;
     // approval (gate G2) and audit trail (governance.js)
@@ -13390,6 +13607,13 @@ window.APB_CONFIG = {
     if (s.requirement.objective.trim()) obj.push(s.requirement.objective.trim());
     if (s.requirement.users.trim()) obj.push('- **Users / Role**: ' + s.requirement.users.trim());
     add('Business Objective', obj.join('\n\n'));
+    // TO-BE process from the functional spec: swimlanes (js/flow-diagram.js) and the step table
+    const toBe = (s.processToBe || []).filter(function (r) { return r && (r.step || '').trim(); });
+    if (toBe.length) {
+      const CH = { unchanged: 'Unchanged', changed: 'Changed', new: 'New', automated: 'Automated' };
+      add('Business Process (TO-BE)', [APB.flow ? APB.flow.markdown(APB.flow.steps(toBe, 'toBe'), 'toBe') : '',
+        table(['#', 'Step', 'Role', 'Transaction / app', 'Change'], toBe.map(function (r, i) { return [String(i + 1), cell(r.step), cell(r.role || '–'), cell(r.tx || '–'), CH[r.change] || '–']; }))].filter(Boolean).join('\n\n'));
+    }
 
     const by = function (st) { return s.objects.filter(function (o) { return o.status === st; }); };
     let ex = by('existing').length ? objectTable(by('existing'), 'Name') : '';
@@ -13481,7 +13705,10 @@ window.APB_CONFIG = {
         i++;
         while (i < lines.length && !/^```/.test(lines[i])) buf.push(lines[i++]);
         i++;
-        html.push('<pre><code>' + esc(buf.join('\n')) + '</code></pre>');
+        // a process flow written by the builder: drawn as swimlanes (js/flow-diagram.js)
+        const fl = /^```mermaid/.test(l) && APB.flow ? APB.flow.fromBlock(buf) : null;
+        if (fl) html.push('<figure class="flow-diagram">' + APB.flow.svg(fl.steps, fl.kind) + '</figure>');
+        else html.push('<pre><code>' + esc(buf.join('\n')) + '</code></pre>');
       } else if (/^#{1,6}\s/.test(l)) {
         const lvl = Math.min(/^#+/.exec(l)[0].length, 6);
         html.push('<h' + lvl + '>' + inline(l.replace(/^#+\s+/, '')) + '</h' + lvl + '>');
@@ -14388,7 +14615,9 @@ window.APB_CONFIG = {
   }
 
   /* AS-IS and TO-BE steps as a simple text flow (Markdown) – Word shows the same block. */
-  function flow(list) {
+  /* the process as a swimlane diagram (js/flow-diagram.js: Mermaid block that the preview and Word redraw) */
+  function flow(list, kind) {
+    if (APB.flow) return APB.flow.markdown(APB.flow.steps(rows(list), kind), kind);
     list = rows(list).filter(function (r) { return (r.step || '').trim(); });
     if (list.length < 2) return '';
     return '```text\n' + list.map(function (r, i) {
@@ -14566,8 +14795,8 @@ window.APB_CONFIG = {
     function add(t, body) { if (body && body.trim()) sections.push({ title: t, body: body.trim() }); }
     add('Business Requirement & Scope', join([businessRequirement(s), scope(s), sub('Stakeholders', simpleGrid('context', 'stakeholders', s.context.stakeholders))]));
     add('Process', join([
-      sub('Current process (AS-IS)', join([processTable(s.process.asIs, 'pain', 'Pain point'), flow(s.process.asIs)])),
-      sub('Proposed process (TO-BE)', join([processTable(s.process.toBe, 'change', 'Change', 'toBe'), flow(s.process.toBe)])),
+      sub('Current process (AS-IS)', join([flow(s.process.asIs, 'asIs'), processTable(s.process.asIs, 'pain', 'Pain point')])),
+      sub('Proposed process (TO-BE)', join([flow(s.process.toBe, 'toBe'), processTable(s.process.toBe, 'change', 'Change', 'toBe')])),
       sub('Variants & exceptions', bullets(s.process.variants))]));
     add('Functional Requirements', join([frSection(s), sub('Business rules & validations', rulesTable(s)), sub('Data requirements', dataTable(s))]));
     add('Current System', join([sap() ? existingObjects(s) : '', programLogic(s), sap() ? sub('SAP system context', systemContext(s).replace(/^### /gm, '#### ')) : '']));
@@ -15524,7 +15753,8 @@ window.APB_CONFIG = {
         i++;
         while (i < lines.length && !/^```/.test(lines[i])) buf.push(lines[i++]);
         i++;
-        blocks.push({ t: 'code', lines: buf });
+        const fl = /^```mermaid/.test(l) && APB.flow ? APB.flow.fromBlock(buf) : null;
+        blocks.push(fl ? { t: 'flow', flow: fl } : { t: 'code', lines: buf });
       } else if (/^#{1,6}\s/.test(l)) {
         blocks.push({ t: 'h', level: /^#+/.exec(l)[0].length, text: l.replace(/^#+\s+/, '') });
         i++;
@@ -15618,8 +15848,21 @@ window.APB_CONFIG = {
       }).join('') + '</w:tbl>' + para('', 'Spacer');
   }
 
-  function render(blocks, meta) {
+  /* An image (PNG) as an inline picture, scaled to the text width at most. */
+  const EMU_PX = 9525, EMU_TWIP = 635;
+  function picture(img, n) {
+    let cx = img.w * EMU_PX, cy = img.h * EMU_PX;
+    const max = TEXT_W * EMU_TWIP;
+    if (cx > max) { cy = Math.round(cy * max / cx); cx = max; }
+    return '<w:p><w:pPr><w:spacing w:after="120"/><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="' + cx + '" cy="' + cy + '"/><wp:docPr id="' + n + '" name="Process flow ' + n + '"/>' +
+      '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">' +
+      '<pic:nvPicPr><pic:cNvPr id="' + n + '" name="flow' + n + '.png"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdFlow' + n + '"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>' +
+      '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="' + cx + '" cy="' + cy + '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>';
+  }
+
+  function render(blocks, meta, images) {
     const body = [];
+    let used = 0; // images are taken in document order, one per 8-step diagram part
     const toc = [];
     const nums = []; // one numbering instance per ordered list so each restarts at 1
     let skipping = !!meta; // the title page replaces the Markdown title and its control table
@@ -15637,6 +15880,17 @@ window.APB_CONFIG = {
           b.lines.forEach(function (l) { body.push(para(run({ t: l || ' ' }), 'Code')); });
           body.push(para('', 'Spacer'));
           break;
+        case 'flow': {
+          // swimlane diagram as picture(s); without images (e.g. no browser canvas) the steps as text
+          const parts = Math.ceil(b.flow.steps.length / ((APB.flow && APB.flow.PER_DIAGRAM) || 8));
+          if (images && images.length >= used + parts) {
+            for (let k = 0; k < parts; k++) { used++; body.push(picture(images[used - 1], used)); }
+          } else {
+            APB.flow.textLines(b.flow.steps).forEach(function (l) { body.push(para(run({ t: l }), 'Code')); });
+            body.push(para('', 'Spacer'));
+          }
+          break;
+        }
         case 'table':
           body.push(table(b.head, b.rows));
           break;
@@ -15652,7 +15906,7 @@ window.APB_CONFIG = {
         }
       }
     });
-    return { body: body.join(''), toc: toc, nums: nums };
+    return { body: body.join(''), toc: toc, nums: nums, images: images ? images.slice(0, used) : [] };
   }
 
   function titlePage(meta, toc) {
@@ -15674,14 +15928,14 @@ window.APB_CONFIG = {
       (tocField ? textPara('Contents', 'TOCHeading') + tocField + para('<w:r><w:br w:type="page"/></w:r>') : '');
   }
 
-  function documentXml(md, meta) {
+  function documentXml(md, meta, images) {
     bookmark = 0;
-    const r = render(parse(md), meta);
+    const r = render(parse(md), meta, images);
     const sect = '<w:sectPr>' + (meta ? '<w:headerReference w:type="default" r:id="rIdHeader"/><w:footerReference w:type="default" r:id="rIdFooter"/>' : '') +
       '<w:pgSz w:w="' + PAGE_W + '" w:h="' + PAGE_H + '"/><w:pgMar w:top="' + MARGIN + '" w:right="' + MARGIN + '" w:bottom="' + MARGIN + '" w:left="' + MARGIN + '" w:header="567" w:footer="567" w:gutter="0"/>' +
       (meta ? '<w:titlePg/>' : '') + '</w:sectPr>';
-    return { xml: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>' +
-      (meta ? titlePage(meta, r.toc) : '') + r.body + sect + '</w:body></w:document>', nums: r.nums };
+    return { xml: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><w:body>' +
+      (meta ? titlePage(meta, r.toc) : '') + r.body + sect + '</w:body></w:document>', nums: r.nums, images: r.images };
   }
 
   function stylesXml() {
@@ -15740,12 +15994,15 @@ window.APB_CONFIG = {
       para(run({ t: (meta.kind || 'Specification') + '  ·  Page ' }) + field('PAGE') + run({ t: ' of ' }) + field('NUMPAGES'), 'Footer') + '</w:ftr>';
   }
 
-  function package_(md, meta) {
-    const doc = documentXml(md, meta);
+  /* opts.images: PNGs of the process flow diagrams in document order (APB.flow.pngs(md)) */
+  function package_(md, meta, opts) {
+    const doc = documentXml(md, meta, opts && opts.images);
+    const imgs = doc.images || [];
     const now = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
     const files = [
       ['[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
         '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>' +
+        (imgs.length ? '<Default Extension="png" ContentType="image/png"/>' : '') +
         '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
         '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
         '<Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>' +
@@ -15765,6 +16022,7 @@ window.APB_CONFIG = {
         '<Relationship Id="rIdNumbering" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>' +
         '<Relationship Id="rIdSettings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>' +
         (meta ? '<Relationship Id="rIdHeader" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/><Relationship Id="rIdFooter" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>' : '') +
+        imgs.map(function (im, i) { return '<Relationship Id="rIdFlow' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/flow' + (i + 1) + '.png"/>'; }).join('') +
         '</Relationships>'],
       ['word/document.xml', doc.xml],
       ['word/styles.xml', stylesXml()],
@@ -15773,6 +16031,7 @@ window.APB_CONFIG = {
       ['word/settings.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' + (meta ? '<w:updateFields w:val="true"/>' : '') + '<w:defaultTabStop w:val="720"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>']
     ];
     if (meta) files.push(['word/header1.xml', headerXml(meta)], ['word/footer1.xml', footerXml(meta)]);
+    imgs.forEach(function (im, i) { files.push(['word/media/flow' + (i + 1) + '.png', im.png]); });
     return zip(files);
   }
 
@@ -16938,6 +17197,7 @@ window.APB_CONFIG = {
       rules: rules.map(function (b) { b.id = S.uid(); return b; }),
       acceptance: acceptance.map(function (a) { a.id = S.uid(); return a; }),
       assumptions: docRef + ctLabel,
+      processToBe: s.process.toBe || [],
       quality: quality
     });
   }
@@ -17010,7 +17270,8 @@ window.APB_CONFIG = {
       objects: objects.map(function (o) { o.id = S.uid(); o.detail = {}; return o; }),
       rules: rules.map(function (b) { b.id = S.uid(); return b; }),
       acceptance: acceptance.map(function (a) { a.id = S.uid(); return a; }),
-      assumptions: docRef
+      assumptions: docRef,
+      processToBe: s.process.toBe || []
     });
   }
 
@@ -17480,9 +17741,14 @@ window.APB_CONFIG = {
       const s = S.get();
       if (FC.checkMandatory(s).length) { U().toast(mandatoryMsg(s)); return; }
       U().auditAdd('export', { to: 'Word file', file: FM.docxFilename(s), approval: APB.gov.status(s).state });
-      const bytes = APB.docx.fromMarkdown(FM.build(s), FM.docMeta(s));
-      APB.exporter.downloadBytes(FM.docxFilename(s), bytes, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-      U().toast(U().savedMsg(FM.docxFilename(s)));
+      const md = FM.build(s);
+      const save = function (images) {
+        const bytes = APB.docx.fromMarkdown(md, FM.docMeta(s), { images: images });
+        APB.exporter.downloadBytes(FM.docxFilename(s), bytes, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        U().toast(U().savedMsg(FM.docxFilename(s)));
+      };
+      // the AS-IS / TO-BE swimlanes go into Word as pictures; if drawing fails, as numbered steps
+      (APB.flow ? APB.flow.pngs(md) : Promise.resolve([])).then(save, function () { save(null); });
     }
   };
 
