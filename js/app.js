@@ -464,7 +464,7 @@
     const refs = C.unlistedReferences(s);
     const perfRelevant = D.performanceRelevant(s.types);
     // performance questions only where they matter (or when already answered)
-    const quality = D.quality.filter(function (f) { return !f.perfOnly || perfRelevant || V.isFilled(s.quality[f.id]); });
+    const quality = D.quality.filter(function (f) { return f.id !== 'testData' && (!f.perfOnly || perfRelevant || V.isFilled(s.quality[f.id])); });
     const index = s.objects.length ? '<nav class="obj-index" aria-label="Objects">' + s.objects.map(function (o) {
       const done = APB.rap.isDraftTable(s, o) || (D.hasBuilder(o) ? C.detailFilled(o) : true);
       return '<a href="#obj-' + o.id + '" data-action="jump" data-id="' + o.id + '" class="' + (done ? 'ok' : 'todo') + '">' + esc(o.name || o.type) + '</a>';
@@ -477,7 +477,20 @@
       }).join(' ') + '</div>' : '') +
       (s.objects.length ? s.objects.map(artifactCard).join('') : '<p class="empty">No objects yet. Add them in <button type="button" class="link" data-action="goto" data-step="3">step 3</button>.</p>') +
       '<section class="card" aria-labelledby="h-q"><h3 id="h-q">Authorization, testing &amp; clean core</h3>' + fieldsBlock(quality, s.quality, 'quality', { noAdvanced: true }) + '</section>' +
+      testDataCard(s) +
       nav(true, 'Continue');
+  }
+
+  /* Test data (SAP HR) for unit / integration tests – handed to Copilot with the sap-test-data MCP server */
+  function testDataCard(s) {
+    const field = D.quality.filter(function (f) { return f.id === 'testData'; })[0];
+    if (!field || !APB.testData) return '';
+    const n = APB.testData.rows(s).length;
+    return '<section class="card td-card" aria-labelledby="h-td"><h3 id="h-td">Test data (SAP HR) <span class="hint">optional · test client only</span></h3>' +
+      fieldsBlock([Object.assign({}, field, { label: 'Records needed in the test client' })], s.quality, 'quality', { noAdvanced: true }) +
+      '<p class="muted small">Add a scenario: ' + APB.testData.SCENARIOS.map(function (x) { return '<button type="button" class="chip" data-action="td-scenario" data-id="' + esc(x.id) + '">+ ' + esc(x.label) + '</button>'; }).join(' ') + '</p>' +
+      '<div class="gen-actions"><button type="button" class="btn btn-ghost" data-action="td-chat">' + (H.isVscode ? '✦ Prepare test data in Copilot Chat' : '✦ Copy test data prompt') + '</button>' +
+      '<span class="muted small">' + (n ? n + ' row' + (n === 1 ? '' : 's') + ' · ' : '') + 'Copilot uses the <code>sap-test-data</code> MCP server (read-only, dry runs; executing always needs your confirmation).</span></div></section>';
   }
 
   function stat(label, html) { return '<div class="stat"><span class="stat-label">' + label + '</span><span class="stat-val">' + html + '</span></div>'; }
@@ -1196,6 +1209,17 @@
       const before = JSON.stringify(APB.guard.usage());
       APB.guard.resetUsage(); openUsage();
       toast('Usage statistics cleared', 8000, { label: 'Undo', run: function () { const u = JSON.parse(before); APB.guard.resetUsage(); try { if (H.isVscode) H.storage.set('apb.usage.v1', JSON.stringify(u)); else localStorage.setItem('apb.usage.v1', JSON.stringify(u)); } catch (e) { /* ignore */ } openUsage(); } });
+    },
+    'td-scenario': function (el) {
+      const add = APB.testData.scenarioRows(el.dataset.id);
+      updateSteps(function (s) { s.quality.testData = APB.testData.rows(s).concat(add); });
+      toast(add.length + ' test data row' + (add.length === 1 ? '' : 's') + ' added – fill in dates and employees');
+    },
+    'td-chat': function () {
+      const s = S.get();
+      auditAdd('export', { to: H.isVscode ? 'Copilot Chat (sap-test-data)' : 'clipboard (test data prompt)', approval: APB.gov.status(s).state });
+      if (H.isVscode) { H.post({ type: 'open-chat', agent: 'agent', prompt: APB.testData.prompt(s) }); toast('Copilot Chat opens in agent mode with the test data request', 6000); return; }
+      Promise.resolve(X.copy(APB.guard.outbound(APB.testData.prompt(s), 'clipboard'))).then(function (ok) { toast(ok ? 'Prompt copied – paste it into Copilot Chat (agent mode) in VS Code with the sap-test-data server' : 'Copy failed', 7000); });
     },
     'gov-settings': function () { H.post({ type: 'open-settings' }); },
     'view-raw': function () { ui.raw = true; renderPreview(); },

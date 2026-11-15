@@ -1,0 +1,30 @@
+{
+ "name": "error_infotype_not_allowed",
+ "call": [
+  "readInfotype",
+  {
+   "kind": "employee",
+   "objectId": "09000001",
+   "infotype": "0021"
+  }
+ ],
+ "request": {
+  "method": "POST",
+  "path": "/infotypes/read",
+  "body": {
+   "kind": "employee",
+   "objectId": "09000001",
+   "infotype": "0021"
+  }
+ },
+ "response": {
+  "status": 403,
+  "body": {
+   "error": {
+    "code": "INFOTYPE_NOT_ALLOWED",
+    "message": "Infotype 0021 is not enabled for test data.",
+    "sapMessages": []
+   }
+  }
+ }
+}

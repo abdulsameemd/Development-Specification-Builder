@@ -1,0 +1,65 @@
+{
+ "id": "absence_with_quota",
+ "version": 1,
+ "title": "Absence with quota deduction",
+ "goal": "Test absence quota deduction logic.",
+ "kind": "employee",
+ "parameters": [
+  {
+   "name": "employee",
+   "description": "Employee with an absence quota (2006)",
+   "required": true
+  },
+  {
+   "name": "absenceType",
+   "description": "Absence type that deducts the quota",
+   "required": true
+  },
+  {
+   "name": "quotaType",
+   "description": "Quota type (subtype of 2006)",
+   "required": true
+  },
+  {
+   "name": "from",
+   "description": "First day",
+   "required": true
+  },
+  {
+   "name": "days",
+   "description": "Length in days",
+   "required": false,
+   "default": "2"
+  }
+ ],
+ "steps": [
+  {
+   "read": {
+    "infotype": "2006",
+    "subtype": "{{quotaType}}"
+   },
+   "note": "Check the quota exists and note the deduction before"
+  },
+  {
+   "infotype": "2001",
+   "subtype": "{{absenceType}}",
+   "operation": "create",
+   "validFrom": "{{from}}",
+   "validTo": "{{from + days - 1}}",
+   "fields": {
+    "AWART": "{{absenceType}}"
+   }
+  },
+  {
+   "read": {
+    "infotype": "2006",
+    "subtype": "{{quotaType}}"
+   },
+   "note": "Read the deduction after"
+  }
+ ],
+ "checks": [
+  "Quota deduction increased by the absence days",
+  "No quota overrun message"
+ ]
+}

@@ -1,0 +1,46 @@
+{
+ "name": "search_without_email",
+ "call": [
+  "searchEmployees",
+  {
+   "personnelArea": "1000",
+   "hasRecord": {
+    "infotype": "0105",
+    "subtype": "0010",
+    "present": false
+   }
+  },
+  5
+ ],
+ "request": {
+  "method": "POST",
+  "path": "/employees/search",
+  "body": {
+   "criteria": {
+    "personnelArea": "1000",
+    "hasRecord": {
+     "infotype": "0105",
+     "subtype": "0010",
+     "present": false
+    }
+   },
+   "limit": 5
+  }
+ },
+ "response": {
+  "status": 200,
+  "body": {
+   "employees": [
+    {
+     "employee": "09000002",
+     "reasons": [
+      "personnel area 1000",
+      "has no active 0105/0010 on 2026-11-15"
+     ]
+    }
+   ],
+   "scanned": 6,
+   "capReached": false
+  }
+ }
+}

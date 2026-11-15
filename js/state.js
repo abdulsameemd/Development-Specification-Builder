@@ -47,7 +47,7 @@
       sapCheck: null,
       approval: null,
       audit: [],
-      quality: { authorization: '', authChecks: [], dataVolume: '', performanceReq: '', testTypes: ['Unit', 'Functional', 'Integration'], testScenarios: '', cleanCore: '', cleanCoreNote: '' },
+      quality: { authorization: '', authChecks: [], dataVolume: '', performanceReq: '', testTypes: ['Unit', 'Functional', 'Integration'], testScenarios: '', testData: [], cleanCore: '', cleanCoreNote: '' },
       dod: defaultDod(),
       meta: { created: now, updated: now }
     };
@@ -95,6 +95,10 @@
     if (s.quality.authObject && !s.quality.authChecks.length) s.quality.authChecks = [{ object: s.quality.authObject }];
     delete s.quality.authObject;
     if (!Array.isArray(s.quality.authChecks)) s.quality.authChecks = [];
+    // test data rows for the sap-test-data MCP server (js/test-data.js)
+    s.quality.testData = arr(s.quality.testData).filter(function (r) { return r && typeof r === 'object'; }).slice(0, 50).map(function (r) {
+      return { scenario: str(r.scenario), employees: str(r.employees), infotype: str(r.infotype), subtype: str(r.subtype), operation: str(r.operation), validFrom: str(r.validFrom), validTo: str(r.validTo), values: str(r.values), check: str(r.check) };
+    });
     if (Array.isArray(input.dod)) s.dod = input.dod.map(function (d) { return { id: str(d.id) || uid(), text: str(d.text), on: d.on !== false }; });
     if (input.meta && typeof input.meta === 'object') {
       s.meta.created = Number(input.meta.created) || s.meta.created;

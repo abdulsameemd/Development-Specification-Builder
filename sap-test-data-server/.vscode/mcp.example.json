@@ -1,0 +1,25 @@
+{
+  "inputs": [
+    { "type": "promptString", "id": "sap-password", "description": "SAP password for the test client (functional user)", "password": true }
+  ],
+  "servers": {
+    "sap-test-data": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${workspaceFolder}/sap-test-data-server/dist/index.js"],
+      "env": {
+        "SAP_HOST": "https://<test-system-host>:<port>",
+        "SAP_CLIENT": "300",
+        "SAP_EXPECTED_SYSTEM": "<test system id>",
+        "SAP_USER": "<functional user>",
+        "SAP_PASSWORD": "${input:sap-password}"
+      }
+    },
+    "sap-test-data-mock": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${workspaceFolder}/sap-test-data-server/dist/index.js"],
+      "env": { "SAP_TESTDATA_MOCK": "1" }
+    }
+  }
+}

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.26
+
+- **Test data (SAP HR) in the Technical spec** (step 4): the records the unit / integration tests need in the SAP test client – employees (criteria), infotype, subtype, operation, dates, values, check after. *Add a scenario* fills rows from the six starter scenarios; the rows and a Copilot instruction go into the document.
+- **Prepare test data in Copilot Chat** opens Copilot in agent mode with the rows for the new **sap-test-data MCP server**: connection check first, describe / find / read, changes only as a dry-run plan, never executed without your confirmation.
+- **New: `sap-test-data-server/`** – MCP server (TypeScript, stdio) for HR test data in client 300, built to the "SAP Test Data Server" specification. Phase 1 (read-only): get_connection_status, describe_infotype, find_employees, read_infotype, list_scenarios, list_runs; plan_changes / execute_plan declared for Phase 2. Required configuration with a password prompt, writes refused unless system / client / allow-list / wrapper version match, masking, a local log without personal data, mock mode, the API-state checker (clean core gate against SAP's published lists – zero findings), ABAP wrapper copies for the read part with a Phase 0 checklist, unit / contract / negative tests and a CI job.
+
 ## 1.0.25
 
 - **Audit trail in the documents is readable.** Each event is written as a sentence instead of raw field names – e.g. *Read BRD / solution document: result received · 94 s · model GPT-5 · 4 model calls · 42,300 tokens (39,000 in / 3,300 out) · 6 SAP searches · 3 ABAP artifacts read: …*; reviews list the parts taken and declined by name, the candidates taken and the SAP names verified / not verified.

@@ -143,6 +143,13 @@ review, and the *CI* check to pass. This is a repository setting; it is not set 
   automatically – keep them out of documents or add a pattern. In Copilot Chat mode, the SAP tool results go through
   Copilot Chat directly and are not masked by the builder.
 
+## Test data in SAP
+
+Test data is created only in the **SAP test client** through the separate `sap-test-data` MCP server and its ABAP
+wrapper, where all policy lives (allow-list of system / client, enabled infotypes, exclusion list, limits, masking –
+see `sap-test-data-server/docs/specification.md` §8). Changes are planned first (dry run) and executed only after the
+developer confirms; every run is kept in SAP's ledger with a before-image for restore. Phase 1 is read-only.
+
 ## Grounding and guardrails
 
 - **Grounding.** When Copilot reads SAP for a draft (documents, existing objects, AS-IS), the extension keeps the

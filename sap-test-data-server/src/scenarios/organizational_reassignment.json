@@ -1,0 +1,46 @@
+{
+ "id": "organizational_reassignment",
+ "version": 1,
+ "title": "Organizational reassignment",
+ "goal": "Test logic depending on organizational assignment.",
+ "kind": "employee",
+ "parameters": [
+  {
+   "name": "employee",
+   "description": "Employee number",
+   "required": true
+  },
+  {
+   "name": "changeDate",
+   "description": "Date of the move",
+   "required": true
+  },
+  {
+   "name": "orgUnit",
+   "description": "New organizational unit (8 digits)",
+   "required": false
+  },
+  {
+   "name": "position",
+   "description": "New position (8 digits)",
+   "required": false
+  }
+ ],
+ "steps": [
+  {
+   "infotype": "0001",
+   "operation": "create",
+   "validFrom": "{{changeDate}}",
+   "validTo": "9999-12-31",
+   "fields": {
+    "ORGEH": "{{orgUnit}}",
+    "PLANS": "{{position}}"
+   },
+   "note": "SAP delimits the previous 0001 record automatically – the plan shows it as an extra item"
+  }
+ ],
+ "checks": [
+  "Previous 0001 ends the day before changeDate",
+  "New 0001 has the new organizational unit / position"
+ ]
+}

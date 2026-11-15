@@ -21,3 +21,22 @@ jobs:
         run: npm run check
       - name: End-to-end tests (built single-file app)
         run: npm run test:e2e
+
+  test-data-server:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sap-test-data-server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: npm ci --no-audit --no-fund
+      - name: Build (strict TypeScript)
+        run: npm run build
+      - name: Tests (unit, contract, mock, negative, MCP over stdio)
+        run: npm test
+      - name: Clean core gate on abap/ (SAP's published API lists)
+        run: npm run check-api-state -- --download

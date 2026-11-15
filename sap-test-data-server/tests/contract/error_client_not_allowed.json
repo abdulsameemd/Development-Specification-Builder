@@ -1,0 +1,21 @@
+{
+ "name": "error_client_not_allowed",
+ "call": [
+  "listRuns",
+  {}
+ ],
+ "request": {
+  "method": "GET",
+  "path": "/runs"
+ },
+ "response": {
+  "status": 403,
+  "body": {
+   "error": {
+    "code": "CLIENT_NOT_ALLOWED",
+    "message": "System T01 client 300 is not on the test data allow-list.",
+    "sapMessages": []
+   }
+  }
+ }
+}
