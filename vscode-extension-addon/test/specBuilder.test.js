@@ -309,6 +309,40 @@ test('an agent file the user edited is not replaced without asking', async () =>
   assert.strictEqual(await installer.install(fakeVscode(), t.ctx, { force: true }), 'updated');
 });
 
+test('both agents are installed; each keeps its own edited-copy protection; the first keeps its old key', async () => {
+  const t = installCtx();
+  fs.writeFileSync(path.join(t.ext, 'agents', 'dewa-abap-change.agent.md'), 'c1');
+  assert.deepStrictEqual(installer.FILES, ['dewa-fs-discovery.agent.md', 'dewa-abap-change.agent.md']);
+  assert.deepStrictEqual(await installer.installAll(fakeVscode(), t.ctx), { 'dewa-fs-discovery.agent.md': 'installed', 'dewa-abap-change.agent.md': 'installed' });
+  const changeDest = path.join(path.dirname(t.dest), 'dewa-abap-change.agent.md');
+  assert.strictEqual(fs.readFileSync(changeDest, 'utf8'), 'c1');
+  assert.ok(t.ctx.globalState.get('dewaSpecBuilder.agentHash'), 'old key for dewa-fs-discovery');
+  fs.writeFileSync(changeDest, 'my change-agent edits');
+  fs.writeFileSync(path.join(t.ext, 'agents', 'dewa-abap-change.agent.md'), 'c2');
+  fs.writeFileSync(path.join(t.ext, 'agents', installer.FILE), 'v2');
+  assert.deepStrictEqual(await installer.installAll(fakeVscode(), t.ctx), { 'dewa-fs-discovery.agent.md': 'updated', 'dewa-abap-change.agent.md': 'modified' });
+  assert.strictEqual(fs.readFileSync(changeDest, 'utf8'), 'my change-agent edits');
+});
+
+test('the dewa-abap-change agent file: front matter, ADT tools only, the confirmation and scope rules', () => {
+  const md = fs.readFileSync(path.join(__dirname, '../agents/dewa-abap-change.agent.md'), 'utf8');
+  const fm = /^---\n([\s\S]*?)\n---\n/.exec(md);
+  assert.ok(fm, 'front matter');
+  assert.match(fm[1], /^description: .*EXISTING custom ABAP/m);
+  assert.match(fm[1], /^tools: \['sap-abap-adt\/\*'\]$/m);
+  for (const rule of [/DEWA-ABAP-CHANGE v1/, /Existing Objects to Change/, /Never modify SAP standard objects/, /starts? with \*\*STOP\*\*/, /\*\*`CONFIRM CHANGE`\*\*/, /where-used/, /backward compatible/, /release or import\s+transports/, /how to revert/]) assert.match(md, rule);
+});
+
+test('the panel accepts the dewa-abap-change agent for Copilot Chat', async () => {
+  const vs = fakeVscode();
+  const { r } = router(vs);
+  await r.handle({ type: 'open-chat', agent: 'dewa-abap-change', prompt: 'DEWA-ABAP-CHANGE v1 …' });
+  const open = vs.calls.commands.filter((c) => c.id === 'workbench.action.chat.open').pop();
+  assert.ok(open, 'Copilot Chat opened');
+  assert.strictEqual(open.args.mode, 'dewa-abap-change');
+  assert.match(open.args.query, /^DEWA-ABAP-CHANGE v1/);
+});
+
 test('the VSIX manifest carries the add-on contributions and the builder extension ID', () => {
   const stage = path.join(__dirname, '../../build/vsix/package.json');
   if (!fs.existsSync(stage)) return; // run scripts/build-vsix.js first

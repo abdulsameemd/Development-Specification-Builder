@@ -481,6 +481,22 @@
       nav(true, 'Continue');
   }
 
+  /* Hand the Technical spec to a Copilot agent. mode: all | new (dewa-abap) | change (dewa-abap-change) */
+  function handOver(mode) {
+    const s = S.get();
+    const agent = mode === 'change' ? 'dewa-abap-change' : 'dewa-abap';
+    const prompt = M.chatPrompt(s, mode === 'all' ? undefined : mode);
+    auditAdd('export', { to: H.isVscode ? 'Copilot Chat (' + agent + ')' : 'clipboard + VS Code (' + agent + ')', approval: APB.gov.status(s).state });
+    if (H.isVscode) {
+      H.post({ type: 'open-chat', agent: agent, prompt: prompt });
+      toast(FA.autoSend() ? 'Copilot Chat is running ' + agent + ' with the specification' : 'Copilot Chat opens with ' + agent + ' and the specification — review it and press Enter', 6000);
+      return;
+    }
+    const copied = X.copyNow(APB.guard.outbound(prompt, 'clipboard'));
+    X.launchVscode();
+    toast(copied ? 'Prompt copied ✓ VS Code is opening — open Copilot Chat (Ctrl+Alt+I), choose ' + agent + ', then Ctrl+V' : 'VS Code is opening — copying failed, use Copy Markdown', 7000);
+  }
+
   /* Test data (SAP HR) for unit / integration tests – handed to Copilot with the sap-test-data MCP server */
   function testDataCard(s) {
     const field = D.quality.filter(function (f) { return f.id === 'testData'; })[0];
@@ -1156,21 +1172,16 @@
       if (isFs()) { FA.actions['fs-discover'](); return; }
       gateGuard('G2', actions['vscode-go']);
     },
-    /* gate G2 passed: hand the development spec to dewa-abap (Copilot Chat, or copy + open VS Code in the browser) */
+    /* gate G2 passed: new objects → dewa-abap, existing objects to change → dewa-abap-change; both → choose (new first) */
     'vscode-go': function () {
       const s = S.get();
-      auditAdd('export', { to: H.isVscode ? 'Copilot Chat (dewa-abap)' : 'clipboard + VS Code', approval: APB.gov.status(s).state });
-      if (H.isVscode) {
-        if (V.checkMandatory(s).length) { toast('Add a requirement and a development object first'); return; }
-        H.post({ type: 'open-chat', agent: 'dewa-abap', prompt: M.chatPrompt(s) });
-        toast(FA.autoSend() ? 'Copilot Chat is running dewa-abap with the specification' : 'Copilot Chat opens with dewa-abap and the specification — review it and press Enter', 6000);
-        return;
-      }
       if (V.checkMandatory(s).length) { toast('Add a requirement and a development object first'); return; }
-      const copied = X.copyNow(APB.guard.outbound(M.chatPrompt(s), 'clipboard'));
-      X.launchVscode();
-      toast(copied ? 'Prompt copied ✓ VS Code is opening — press Ctrl+Alt+I for Copilot Chat, then Ctrl+V' : 'VS Code is opening — copying failed, use Copy Markdown', 7000);
+      const h = M.handoff(s);
+      if (h.hasNew && h.hasChange) { openDialog('#handoff-dialog'); return; }
+      handOver(h.hasChange ? 'change' : 'all');
     },
+    'handoff-new': function () { closeDialogs(); handOver('new'); },
+    'handoff-change': function () { closeDialogs(); handOver('change'); },
     'gov-approve': function () {
       const s = S.get(), kind = APB.gov.kindOf(s);
       if (!APB.gov.canApprove(kind)) { toast('Only the configured approvers can approve'); return; }

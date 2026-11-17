@@ -7,6 +7,7 @@ A practical guide to choosing and working with the DEWA backend agents. The sour
 | Agent | Choose it for | Main output | User checkpoint |
 | --- | --- | --- | --- |
 | `dewa-abap` | Building new ABAP, CDS, RAP, or CAP backend artifacts | One new/changed artifact at a time, with tests and validation status | Type `CONFIRM ARTEFACT` before the next artifact |
+| `dewa-abap-change` | Changing existing custom ABAP objects exactly as a Technical spec describes (objects with status *change*) | One changed object at a time: diff, impact, activation / ABAP Unit / ATC evidence, how to revert | Type `CONFIRM CHANGE` before every write |
 | `dewa-codereview` | Reviewing or safely improving existing ABAP, CDS, RAP, or CAP code | Full review report, findings, safe fixes, and optionally an as-built technical specification | Answer Y/N for flagged changes; type `CONFIRM REVIEW` before handoff |
 | `dewa-adobeagent` | Building or maintaining SAP Adobe Forms and their ABAP integration | Form interface, form object/context, data provider or driver, and validation evidence | One artifact at a time; no named confirmation keyword is specified in this agent |
 
@@ -20,6 +21,7 @@ flowchart TD
     B -->|Yes| C[Use dewa-adobeagent]
     B -->|No| D{Is the code already present?}
     D -->|No - create new backend artifacts| E[Use dewa-abap]
+    D -->|Yes - change it as a Technical spec describes| X[Use dewa-abap-change]
     D -->|Yes - inspect, fix, modernize, or optimize| F[Use dewa-codereview]
     C --> G[Graphical layout work is done in Adobe LiveCycle Designer]
     E --> H[One artifact at a time]
@@ -69,6 +71,30 @@ Use for new backend implementation: ABAP classes, CDS, RAP, CAP, and related ser
 - Use released APIs for ABAP Cloud. If release status is unknown, stop before depending on the object from Cloud code.
 - Do not directly change production, release transports, or import transports without required explicit approval.
 - Review for Clean Core and security evidence through the target system/ATC, not code appearance alone.
+
+## `dewa-abap-change`: Change Existing Code from a Technical Spec
+
+Shipped with the DEWA SAP Spec Builder extension (installed into the VS Code prompts folder next to
+`dewa-fs-discovery`; agent file `vscode-extension-addon/agents/dewa-abap-change.agent.md`, also as the skill
+`docs/agent-kit/skills/abap-change/SKILL.md`). Use it when a Technical spec lists objects under **Existing Objects to
+Change**. The Spec Builder routes the hand-off: new objects → `dewa-abap`, changed objects → `dewa-abap-change`,
+both → *Build new objects* first, then *Change existing objects*. Its prompt starts with `DEWA-ABAP-CHANGE v1`.
+
+### Change Flow (per object, in the spec's order)
+
+1. Stop if the spec is not approved (the instructions start with **STOP**) or what this object needs is `[TO BE CONFIRMED]`.
+2. Read the current source / definition read-only (and the spec's *Current State in SAP*); check locks.
+3. Where-used for changed signatures, interfaces, structures or fields → impact list.
+4. Show the exact diff (changed lines with context), the impact, the transport / package and what stays untouched.
+5. Write only after the developer types `CONFIRM CHANGE`: lock, edit, save, unlock, activate.
+6. Run the object's ABAP Unit tests and ATC (clean core variant); report the real evidence.
+7. Report what changed and how to revert, then wait for `CONFIRM CHANGE` before the next object.
+
+### Important Boundaries
+
+- Only objects listed as *change*, only the customer namespace; never SAP standard (enhancement points / BAdIs only when the spec names them); never unrelated code.
+- Keep signatures and structures backward compatible unless the spec says otherwise.
+- No business data changes, no transport release / import, no production.
 
 ## `dewa-codereview`: Review Existing Code
 

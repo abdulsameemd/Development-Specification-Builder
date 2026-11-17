@@ -26,6 +26,7 @@ function copy(from, to) {
 ['extension.js', 'README.md', 'CHANGELOG.md', 'icon.png', '.vscodeignore'].forEach((f) => copy('vscode-extension/' + f, f));
 fs.readdirSync(path.join(root, 'vscode-extension-addon/src')).filter((f) => f.endsWith('.js')).forEach((f) => copy('vscode-extension-addon/src/' + f, 'src/' + f));
 copy('vscode-extension-addon/agents/dewa-fs-discovery.agent.md', 'agents/dewa-fs-discovery.agent.md');
+copy('vscode-extension-addon/agents/dewa-abap-change.agent.md', 'agents/dewa-abap-change.agent.md');
 copy('dist/SAP-Development-Specification-Builder.html', 'media/spec-builder.html');
 
 // manifest = base + add-on contributions

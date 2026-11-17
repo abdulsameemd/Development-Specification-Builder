@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.27
+
+- **New Copilot agent `dewa-abap-change` for changing existing ABAP.** `dewa-abap` builds new artifacts and `dewa-codereview` reviews code; objects a Technical spec marks as *change* now have their own agent. Per object it reads the current source (read-only), shows the exact diff and the where-used impact, writes only after the developer types **CONFIRM CHANGE**, activates, runs ABAP Unit and ATC, reports the evidence and how to revert – one object at a time. It never touches SAP standard or code the spec does not name, keeps signatures compatible, and stops while the spec is not approved.
+- **Hand-off by object:** new objects → `dewa-abap`, existing objects to change → `dewa-abap-change`; a spec with both offers *1. Build new objects* and *2. Change existing objects* (new first). The Copilot Development Instructions say which agent handles which objects. Every hand-off is in the audit trail.
+- The extension installs both agents into the VS Code prompts folder (an edited copy is never replaced); *DEWA: Reinstall Spec Builder agents* refreshes them. The agent is also available as a skill (`docs/agent-kit/skills/abap-change`).
+
 ## 1.0.26
 
 - **Test data (SAP HR) in the Technical spec** (step 4): the records the unit / integration tests need in the SAP test client – employees (criteria), infotype, subtype, operation, dates, values, check after. *Add a scenario* fills rows from the six starter scenarios; the rows and a Copilot instruction go into the document.

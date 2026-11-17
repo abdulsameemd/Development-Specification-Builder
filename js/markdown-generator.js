@@ -30,6 +30,7 @@
           'Inspect the existing project/repository before writing code.',
           'Reuse existing SAP objects (listed here or found in the repository/system). Do not create duplicate functionality.',
           'Do not invent SAP objects, tables, fields, APIs, CDS views, classes, function modules, workflows, authorization objects, or business rules.',
+          s.objects.some(function (o) { return o.status === 'change'; }) && 'Objects under "Existing Objects to Change" are changed with the dewa-abap-change agent, one at a time: read the current source, show the diff and the impact (where-used), and write only after the developer types CONFIRM CHANGE; keep everything else as is, keep signatures compatible, never modify SAP standard.' + (s.objects.some(function (o) { return o.status === 'new'; }) ? ' Build the new objects first (dewa-abap).' : ''),
           s.sapCheck && 'Current State in SAP was read from the system (read-only): build on it, and re-read an object only when you need more than it shows.',
           'Anything unknown is marked ' + TBC + ': inspect the repository/system where possible, otherwise ask for clarification instead of inventing an implementation.',
           built.length && 'Implement names, signatures, typing, keys and exceptions exactly as given in Technical Design; report any deviation.',
@@ -311,9 +312,26 @@
   function filename() { return 'BUSINESS_REQUIREMENTS.md'; } // the name dewa-abap reads as its requirement source
 
   /* What gets pasted into Copilot Chat: a one-line instruction followed by the full specification. */
-  function chatPrompt(s) {
+  /* Which agents a Technical spec needs: new objects → dewa-abap, existing objects to change → dewa-abap-change. */
+  function handoff(s) {
+    const objs = (s.objects || []).filter(function (o) { return (o.name || '').trim() || o.type; });
+    const hasChange = objs.some(function (o) { return o.status === 'change'; });
+    const hasNew = objs.some(function (o) { return o.status === 'new'; }) || !hasChange;
+    return { hasNew: hasNew, hasChange: hasChange, agents: [hasNew && 'dewa-abap', hasChange && 'dewa-abap-change'].filter(Boolean) };
+  }
+  const CHANGE_MARKER = 'DEWA-ABAP-CHANGE v1';
+
+  /* mode: undefined (whole spec) | 'new' (dewa-abap: new objects only) | 'change' (dewa-abap-change: changed objects only) */
+  function chatPrompt(s, mode) {
+    if (mode === 'change') {
+      return CHANGE_MARKER + '\nChange the existing SAP objects of the development specification below – only those listed under ' +
+        '"Existing Objects to Change", one object at a time. Follow its "Copilot Development Instructions" section; show the diff and the impact ' +
+        'and wait for CONFIRM CHANGE before every write; ask me before guessing anything marked ' + TBC + '.\n\n' + build(s);
+    }
     return 'Implement the SAP development specification below. Follow its "Copilot Development Instructions" section, ' +
-      'reuse the listed existing objects, and ask me before guessing anything marked ' + TBC + '.\n\n' + build(s);
+      'reuse the listed existing objects, and ask me before guessing anything marked ' + TBC + '.' +
+      (mode === 'new' ? ' Build only the NEW objects; the objects under "Existing Objects to Change" are changed afterwards with dewa-abap-change – do not modify them.' : '') +
+      '\n\n' + build(s);
   }
 
   /* ---------- lightweight Markdown → HTML for the preview ---------- */
@@ -385,7 +403,7 @@
   }
 
   APB.markdown = {
-    build: build, sapObjectMd: sapObjectMd, filename: filename, chatPrompt: chatPrompt, toHtml: toHtml, profiles: profiles,
+    build: build, sapObjectMd: sapObjectMd, filename: filename, chatPrompt: chatPrompt, handoff: handoff, CHANGE_MARKER: CHANGE_MARKER, toHtml: toHtml, profiles: profiles,
     // shared with the functional-spec generator (fs-generator.js)
     helpers: { table: table, gridMd: gridMd, renderFields: renderFields, clean: clean, cell: cell, splitLines: splitLines, slug: slug }
   };

@@ -20,7 +20,7 @@ const submitTool = require('./submitPackTool');
 
 const VIEW_TYPE = 'dewaSpecBuilder';
 const STORAGE_KEY = 'dewaSpecBuilder.storage';
-const CHAT_AGENTS = ['dewa-abap', 'dewa-codereview', 'dewa-fs-discovery', 'ask', 'agent']; // agent: built-in agent mode (MCP tools, e.g. sap-test-data)
+const CHAT_AGENTS = ['dewa-abap', 'dewa-abap-change', 'dewa-codereview', 'dewa-fs-discovery', 'ask', 'agent']; // agent: built-in agent mode (MCP tools, e.g. sap-test-data)
 const SAVE_TYPES = { '.md': 'Markdown', '.docx': 'Word document', '.json': 'JSON' };
 const MAX_VALUE = 5 * 1024 * 1024;
 const CHAT_SUFFIX = '\n\nWhen the context pack is ready, call the ' + submitTool.TOOL_NAME + ' tool with it so it is imported into the SAP Spec Builder.';

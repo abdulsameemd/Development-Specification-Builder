@@ -7,13 +7,14 @@ const agentInstaller = require('./src/agentInstaller');
 
 async function installAgent(context, interactive) {
   try {
-    const r = await agentInstaller.install(vscode, context, { ask: interactive, force: false });
+    const all = await agentInstaller.installAll(vscode, context, { ask: interactive, force: false });
     if (interactive) {
-      const msg = { installed: 'installed', updated: 'updated', current: 'already up to date', modified: 'kept (your edited copy was not replaced)', 'missing-source': 'not found in the extension package' }[r] || r;
-      vscode.window.showInformationMessage('dewa-fs-discovery agent ' + msg + '. It is listed in the Copilot Chat agent picker.');
+      const word = { installed: 'installed', updated: 'updated', current: 'up to date', modified: 'kept (your edited copy was not replaced)', 'missing-source': 'not found in the extension package' };
+      const parts = Object.keys(all).map(function (f) { return f.replace(/\.agent\.md$/, '') + ' ' + (word[all[f]] || all[f]); });
+      vscode.window.showInformationMessage('Agents: ' + parts.join(' · ') + '. They are listed in the Copilot Chat agent picker.');
     }
   } catch (e) {
-    if (interactive) vscode.window.showErrorMessage('Could not install the dewa-fs-discovery agent: ' + (e && e.message || e));
+    if (interactive) vscode.window.showErrorMessage('Could not install the Spec Builder agents: ' + (e && e.message || e));
   }
 }
 
