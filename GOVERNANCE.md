@@ -145,7 +145,7 @@ review, and the *CI* check to pass. This is a repository setting; it is not set 
 
 ## Test data in SAP
 
-Test data is created only in the **SAP test client** through the separate `sap-test-data` MCP server and its ABAP
+The Spec Builder does not handle test data. If test data is used, it is created only in the **SAP test client** through the separate, standalone `sap-test-data` MCP server and its ABAP
 wrapper, where all policy lives (allow-list of system / client, enabled infotypes, exclusion list, limits, masking –
 see `sap-test-data-server/docs/specification.md` §8). Changes are planned first (dry run) and executed only after the
 developer confirms; every run is kept in SAP's ledger with a before-image for restore. Phase 1 is read-only.

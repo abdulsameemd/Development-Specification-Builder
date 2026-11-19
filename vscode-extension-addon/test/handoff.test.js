@@ -10,7 +10,7 @@ const vm = require('vm');
 const ROOT = path.join(__dirname, '..', '..');
 const window = {};
 const ctx = vm.createContext({ window, console, Date, JSON, Math });
-['config-bundle', 'host', 'governance', 'flow-diagram', 'test-data', 'object-definitions', 'state', 'validation', 'completeness', 'rap-blueprint', 'dev-sap', 'markdown-generator']
+['config-bundle', 'host', 'governance', 'flow-diagram', 'object-definitions', 'state', 'validation', 'completeness', 'rap-blueprint', 'dev-sap', 'markdown-generator']
   .forEach((f) => vm.runInContext(fs.readFileSync(path.join(ROOT, 'js', f + '.js'), 'utf8'), ctx, { filename: f + '.js' }));
 const APB = window.APB;
 const plain = (x) => JSON.parse(JSON.stringify(x));

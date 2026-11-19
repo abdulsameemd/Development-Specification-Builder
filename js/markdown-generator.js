@@ -38,7 +38,6 @@
           any(ABAP) && 'Use the customer namespace (Z/Y or registered /NAMESPACE/) and the specified naming conventions; follow the Clean ABAP style guide.',
           qa.cleanCore !== 'no' && 'Follow SAP Clean Core principles: prefer released APIs, CDS views, BAPIs and extension points over modifications.',
           any(ABAP) && 'Use modern ABAP syntax (inline declarations, constructor expressions, ABAP SQL with host variables) where the release allows.',
-          APB.testData && APB.testData.rows(s).length && 'Test data: prepare the rows of "Test data (SAP HR)" in the SAP test client with the sap-test-data MCP tools (get_connection_status, describe_infotype, find_employees, read_infotype, plan_changes as a dry run). Never call execute_plan without the developer\'s explicit confirmation of that plan.',
           has(['RAP']) && 'Follow the RAP model: behavior definition and behavior pool as specified; change BO data only through EML.'
         ].concat(APB.rap.instructions(s)).concat([
           has(['CDS']) && 'Use CDS view entities and provide access control (DCL) where authorization checks are specified.',

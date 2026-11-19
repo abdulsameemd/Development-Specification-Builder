@@ -193,7 +193,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.27.vsix`](dist/dewa-sap-spec-builder-1.0.27.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.27.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.28.vsix`](dist/dewa-sap-spec-builder-1.0.28.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.28.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **If the .vsix download is blocked** (the downloaded file is only a few KB, and VS Code says *End of central directory record signature not found*): some company networks replace `.vsix` downloads with a web page. The repository also holds the extension **unpacked** in `dist/vscode-extension/dewa.dewa-sap-spec-builder-<version>/`, as plain files, so no `.vsix` is downloaded:
 
@@ -266,20 +266,11 @@ time: reads the current source, shows the diff and the where-used impact, writes
 then activates and runs ABAP Unit and ATC, and says how to revert. It never touches SAP standard or code the spec
 does not name. Details: [docs/AGENT_WORKFLOWS.md](docs/AGENT_WORKFLOWS.md).
 
-### Test data (SAP HR) and the SAP test data server
+### SAP test data server (separate tool)
 
-A Technical spec can list the **test data** its unit and integration tests need in the SAP **test client 300**
-(step 4 → *Test data (SAP HR)*): which employees, which infotype record, operation, dates, values and the check
-afterwards. *Add a scenario* fills rows from the six starter scenarios (future-dated address change, work e-mail,
-absence, absence with quota, organizational reassignment, position relationship). **Prepare test data in Copilot
-Chat** opens Copilot in agent mode with these rows for the **`sap-test-data` MCP server**; the rows and a Copilot
-instruction also go into the document.
-
-The server lives in [`sap-test-data-server/`](sap-test-data-server/README.md) (TypeScript, MCP over stdio, plus the
-ABAP wrapper copies). **Phase 1 is read-only**: connection status, describe infotype, find employees, read records
-(sensitive fields masked in SAP), scenarios, runs; `plan_changes` / `execute_plan` follow in Phase 2 after the
-Phase 0 checks in SAP ([abap/PHASE0-CHECKLIST.md](sap-test-data-server/abap/PHASE0-CHECKLIST.md)). It has a mock
-mode for trying it without SAP. Setup: [docs/setup-guide.md](sap-test-data-server/docs/setup-guide.md).
+[`sap-test-data-server/`](sap-test-data-server/README.md) is a standalone MCP server for HR test data in the SAP
+test client (Phase 1, read-only, mock mode). It is **not part of the Spec Builder**: the builder and its specs do not
+contain test data. Setup: [docs/setup-guide.md](sap-test-data-server/docs/setup-guide.md).
 
 ## How developers use it (Technical mode)
 

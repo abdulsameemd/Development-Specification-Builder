@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.28
+
+- **Test data (SAP HR) removed from the Technical spec.** The step 4 test data card, *Prepare test data in Copilot Chat*, the test data table in the documents and its Copilot instruction are gone; specs saved with test data rows still open (the rows are ignored). `sap-test-data-server/` stays in the repository as a separate tool and is not used by the builder.
+
 ## 1.0.27
 
 - **New Copilot agent `dewa-abap-change` for changing existing ABAP.** `dewa-abap` builds new artifacts and `dewa-codereview` reviews code; objects a Technical spec marks as *change* now have their own agent. Per object it reads the current source (read-only), shows the exact diff and the where-used impact, writes only after the developer types **CONFIRM CHANGE**, activates, runs ABAP Unit and ATC, reports the evidence and how to revert – one object at a time. It never touches SAP standard or code the spec does not name, keeps signatures compatible, and stops while the spec is not approved.

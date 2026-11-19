@@ -6577,103 +6577,6 @@ window.APB_CONFIG = {
      "placeholder": "One per line, optional \"=> expected result\", e.g.\nValid company code => open items listed per bucket\nCompany code without authorization => no data, message shown\nVendor without open items"
     },
     {
-     "id": "testData",
-     "label": "Test data (SAP HR)",
-     "kind": "grid",
-     "section": "testing",
-     "hint": "Test data the unit / integration tests need in the SAP test client (client 300): which employees, which infotype record. Copilot prepares it with the sap-test-data MCP server – read-only and dry runs only, executing always needs your confirmation.",
-     "columns": [
-      {
-       "id": "scenario",
-       "label": "Test / scenario",
-       "kind": "text",
-       "w": 170,
-       "placeholder": "e.g. TC-1 address valid on key date"
-      },
-      {
-       "id": "employees",
-       "label": "Employees (criteria)",
-       "kind": "text",
-       "w": 180,
-       "placeholder": "e.g. pers. area 1000, no work e-mail"
-      },
-      {
-       "id": "infotype",
-       "label": "Infotype",
-       "kind": "text",
-       "w": 70,
-       "placeholder": "0006"
-      },
-      {
-       "id": "subtype",
-       "label": "Subtype",
-       "kind": "text",
-       "w": 70,
-       "placeholder": "1"
-      },
-      {
-       "id": "operation",
-       "label": "Operation",
-       "kind": "select",
-       "w": 110,
-       "options": [
-        {
-         "value": "",
-         "label": "—"
-        },
-        {
-         "value": "read",
-         "label": "Read only"
-        },
-        {
-         "value": "create",
-         "label": "Create"
-        },
-        {
-         "value": "change",
-         "label": "Change"
-        },
-        {
-         "value": "delimit",
-         "label": "Delimit"
-        },
-        {
-         "value": "delete",
-         "label": "Delete"
-        }
-       ]
-      },
-      {
-       "id": "validFrom",
-       "label": "Valid from",
-       "kind": "text",
-       "w": 100,
-       "placeholder": "YYYY-MM-DD"
-      },
-      {
-       "id": "validTo",
-       "label": "Valid to",
-       "kind": "text",
-       "w": 100,
-       "placeholder": "9999-12-31"
-      },
-      {
-       "id": "values",
-       "label": "Field values",
-       "kind": "text",
-       "w": 180,
-       "placeholder": "e.g. ORT01 = Testcity B"
-      },
-      {
-       "id": "check",
-       "label": "Check after",
-       "kind": "text",
-       "w": 180,
-       "placeholder": "e.g. two records, no overlap"
-      }
-     ]
-    },
-    {
      "id": "cleanCore",
      "label": "Reuse standard SAP (released APIs / CDS / BAPIs) where available?",
      "kind": "radio",
@@ -12476,72 +12379,6 @@ window.APB_CONFIG = {
 
 </script>
   <script>
-/* Test data (SAP HR) for a Technical spec: the rows of quality.testData, the starter scenarios of the sap-test-data
-   MCP server (sap-test-data-server/src/scenarios – keep in step), and the prompt that hands them to Copilot Chat in
-   agent mode. The server is read-only in Phase 1; the prompt asks for dry runs only and never for execute_plan
-   without the developer's confirmation. */
-(function (APB) {
-  'use strict';
-
-  /* starter rows, one per scenario of the server (scenario id → rows of the grid) */
-  const SCENARIOS = [
-    { id: 'future_dated_address_change', label: 'Future-dated address change', rows: [
-      { scenario: 'Address valid on a date', employees: 'Eligible employee with a permanent address', infotype: '0006', subtype: '1', operation: 'delimit', validFrom: '', validTo: '', values: 'End current address the day before the change', check: '' },
-      { scenario: 'Address valid on a date', employees: 'Same employee', infotype: '0006', subtype: '1', operation: 'create', validFrom: '', validTo: '9999-12-31', values: 'ORT01 = Testcity B', check: 'Two records, no overlap, no gap' }] },
-    { id: 'add_work_email', label: 'Add a work e-mail', rows: [
-      { scenario: 'Communication data', employees: 'Employees without a work e-mail (0105/0010)', infotype: '0105', subtype: '0010', operation: 'create', validFrom: '', validTo: '9999-12-31', values: 'USRID_LONG = test.<pernr>@example.invalid', check: 'One active 0105/0010 record' }] },
-    { id: 'open_absence_record', label: 'Open absence record', rows: [
-      { scenario: 'Absence-dependent logic', employees: 'Eligible employee', infotype: '2001', subtype: '0100', operation: 'create', validFrom: '', validTo: '', values: 'AWART = 0100, 3 days', check: 'One absence in the period, no collision' }] },
-    { id: 'absence_with_quota', label: 'Absence with quota deduction', rows: [
-      { scenario: 'Quota deduction', employees: 'Employee with an absence quota (2006)', infotype: '2006', subtype: '01', operation: 'read', validFrom: '', validTo: '', values: '', check: 'Note the deduction before' },
-      { scenario: 'Quota deduction', employees: 'Same employee', infotype: '2001', subtype: '0100', operation: 'create', validFrom: '', validTo: '', values: 'AWART = 0100, 2 days', check: 'Quota deduction increased by 2 days' }] },
-    { id: 'organizational_reassignment', label: 'Organizational reassignment', rows: [
-      { scenario: 'Organizational assignment', employees: 'Eligible employee', infotype: '0001', subtype: '', operation: 'create', validFrom: '', validTo: '9999-12-31', values: 'ORGEH = <new org unit>, PLANS = <new position>', check: 'Previous 0001 ends the day before' }] },
-    { id: 'position_relationship', label: 'Position relationship', rows: [
-      { scenario: 'Organization structure', employees: 'Position S <id> → org unit O <id>', infotype: '1001', subtype: 'A003', operation: 'create', validFrom: '', validTo: '9999-12-31', values: 'SCLAS = O, SOBID = <org unit>', check: 'Relationship A003 exists, inverse B003 by SAP' }] }
-  ];
-
-  function str(v) { return typeof v === 'string' ? v.trim() : ''; }
-  function rowsOf(s) {
-    return ((s && s.quality && s.quality.testData) || []).filter(function (r) { return r && (str(r.infotype) || str(r.scenario) || str(r.employees)); });
-  }
-  function scenarioRows(id) {
-    const sc = SCENARIOS.filter(function (x) { return x.id === id; })[0];
-    return sc ? sc.rows.map(function (r) { return Object.assign({}, r); }) : [];
-  }
-
-  /* The prompt for Copilot Chat (agent mode) with the sap-test-data MCP tools. */
-  function prompt(s) {
-    const rows = rowsOf(s);
-    const name = (s.project && s.project.name || '').trim() || (s.requirement && s.requirement.text || '').trim().split(/\r?\n/)[0].slice(0, 80);
-    const line = function (r, i) {
-      return (i + 1) + '. ' + [str(r.scenario), str(r.employees) && 'employees: ' + str(r.employees), str(r.infotype) && 'infotype ' + str(r.infotype) + (str(r.subtype) ? '/' + str(r.subtype) : ''),
-        str(r.operation) && 'operation ' + str(r.operation), (str(r.validFrom) || str(r.validTo)) && 'valid ' + (str(r.validFrom) || '?') + ' – ' + (str(r.validTo) || '?'),
-        str(r.values) && 'values: ' + str(r.values), str(r.check) && 'check: ' + str(r.check)].filter(Boolean).join(' · ');
-    };
-    return [
-      'Prepare SAP HR test data for the technical specification "' + name + '" with the sap-test-data MCP server (SAP test client only).',
-      '',
-      'Rules:',
-      '- Start with get_connection_status. If writes are refused or the system is not the expected test system, stop and tell me.',
-      '- Use describe_infotype to check fields, subtypes and the policy of each infotype; find_employees to pick eligible test employees (names are never returned); read_infotype to see their current records (sensitive fields come back as ***).',
-      '- For changes use plan_changes only (a dry run) and show me the plan with its warnings. NEVER call execute_plan unless I explicitly confirm that exact plan in this chat.',
-      '- Use list_scenarios when a row matches a saved scenario. Use obviously fake values (e-mail ending .invalid).',
-      '- If a tool says NOT_AVAILABLE_PHASE1, the server is still read-only: give me the employees you would use and the exact plan items instead.',
-      '- Do not read or show personal data beyond what the tools return.',
-      '',
-      'Test data needed:',
-      rows.length ? rows.map(line).join('\n') : '(no rows yet – suggest test data from the test scenarios and acceptance criteria of the spec)',
-      '',
-      'Finish with a table: row, employee(s), infotype/subtype, operation, dates, status (ready / planned / needs decision).'
-    ].join('\n');
-  }
-
-  APB.testData = { SCENARIOS: SCENARIOS, rows: rowsOf, scenarioRows: scenarioRows, prompt: prompt };
-})(window.APB = window.APB || {});
-
-</script>
-  <script>
 /* Accessors over the configuration (config/*.json, bundled into config-bundle.js). */
 (function (APB) {
   'use strict';
@@ -12638,7 +12475,7 @@ window.APB_CONFIG = {
       sapCheck: null,
       approval: null,
       audit: [],
-      quality: { authorization: '', authChecks: [], dataVolume: '', performanceReq: '', testTypes: ['Unit', 'Functional', 'Integration'], testScenarios: '', testData: [], cleanCore: '', cleanCoreNote: '' },
+      quality: { authorization: '', authChecks: [], dataVolume: '', performanceReq: '', testTypes: ['Unit', 'Functional', 'Integration'], testScenarios: '', cleanCore: '', cleanCoreNote: '' },
       dod: defaultDod(),
       meta: { created: now, updated: now }
     };
@@ -12686,10 +12523,7 @@ window.APB_CONFIG = {
     if (s.quality.authObject && !s.quality.authChecks.length) s.quality.authChecks = [{ object: s.quality.authObject }];
     delete s.quality.authObject;
     if (!Array.isArray(s.quality.authChecks)) s.quality.authChecks = [];
-    // test data rows for the sap-test-data MCP server (js/test-data.js)
-    s.quality.testData = arr(s.quality.testData).filter(function (r) { return r && typeof r === 'object'; }).slice(0, 50).map(function (r) {
-      return { scenario: str(r.scenario), employees: str(r.employees), infotype: str(r.infotype), subtype: str(r.subtype), operation: str(r.operation), validFrom: str(r.validFrom), validTo: str(r.validTo), values: str(r.values), check: str(r.check) };
-    });
+    delete s.quality.testData; // removed in 1.0.28 (test data is not part of the builder)
     if (Array.isArray(input.dod)) s.dod = input.dod.map(function (d) { return { id: str(d.id) || uid(), text: str(d.text), on: d.on !== false }; });
     if (input.meta && typeof input.meta === 'object') {
       s.meta.created = Number(input.meta.created) || s.meta.created;
@@ -13658,7 +13492,6 @@ window.APB_CONFIG = {
           any(ABAP) && 'Use the customer namespace (Z/Y or registered /NAMESPACE/) and the specified naming conventions; follow the Clean ABAP style guide.',
           qa.cleanCore !== 'no' && 'Follow SAP Clean Core principles: prefer released APIs, CDS views, BAPIs and extension points over modifications.',
           any(ABAP) && 'Use modern ABAP syntax (inline declarations, constructor expressions, ABAP SQL with host variables) where the release allows.',
-          APB.testData && APB.testData.rows(s).length && 'Test data: prepare the rows of "Test data (SAP HR)" in the SAP test client with the sap-test-data MCP tools (get_connection_status, describe_infotype, find_employees, read_infotype, plan_changes as a dry run). Never call execute_plan without the developer\'s explicit confirmation of that plan.',
           has(['RAP']) && 'Follow the RAP model: behavior definition and behavior pool as specified; change BO data only through EML.'
         ].concat(APB.rap.instructions(s)).concat([
           has(['CDS']) && 'Use CDS view entities and provide access control (DCL) where authorization checks are specified.',
@@ -18760,7 +18593,7 @@ window.APB_CONFIG = {
     const refs = C.unlistedReferences(s);
     const perfRelevant = D.performanceRelevant(s.types);
     // performance questions only where they matter (or when already answered)
-    const quality = D.quality.filter(function (f) { return f.id !== 'testData' && (!f.perfOnly || perfRelevant || V.isFilled(s.quality[f.id])); });
+    const quality = D.quality.filter(function (f) { return !f.perfOnly || perfRelevant || V.isFilled(s.quality[f.id]); });
     const index = s.objects.length ? '<nav class="obj-index" aria-label="Objects">' + s.objects.map(function (o) {
       const done = APB.rap.isDraftTable(s, o) || (D.hasBuilder(o) ? C.detailFilled(o) : true);
       return '<a href="#obj-' + o.id + '" data-action="jump" data-id="' + o.id + '" class="' + (done ? 'ok' : 'todo') + '">' + esc(o.name || o.type) + '</a>';
@@ -18773,7 +18606,6 @@ window.APB_CONFIG = {
       }).join(' ') + '</div>' : '') +
       (s.objects.length ? s.objects.map(artifactCard).join('') : '<p class="empty">No objects yet. Add them in <button type="button" class="link" data-action="goto" data-step="3">step 3</button>.</p>') +
       '<section class="card" aria-labelledby="h-q"><h3 id="h-q">Authorization, testing &amp; clean core</h3>' + fieldsBlock(quality, s.quality, 'quality', { noAdvanced: true }) + '</section>' +
-      testDataCard(s) +
       nav(true, 'Continue');
   }
 
@@ -18791,18 +18623,6 @@ window.APB_CONFIG = {
     const copied = X.copyNow(APB.guard.outbound(prompt, 'clipboard'));
     X.launchVscode();
     toast(copied ? 'Prompt copied ✓ VS Code is opening — open Copilot Chat (Ctrl+Alt+I), choose ' + agent + ', then Ctrl+V' : 'VS Code is opening — copying failed, use Copy Markdown', 7000);
-  }
-
-  /* Test data (SAP HR) for unit / integration tests – handed to Copilot with the sap-test-data MCP server */
-  function testDataCard(s) {
-    const field = D.quality.filter(function (f) { return f.id === 'testData'; })[0];
-    if (!field || !APB.testData) return '';
-    const n = APB.testData.rows(s).length;
-    return '<section class="card td-card" aria-labelledby="h-td"><h3 id="h-td">Test data (SAP HR) <span class="hint">optional · test client only</span></h3>' +
-      fieldsBlock([Object.assign({}, field, { label: 'Records needed in the test client' })], s.quality, 'quality', { noAdvanced: true }) +
-      '<p class="muted small">Add a scenario: ' + APB.testData.SCENARIOS.map(function (x) { return '<button type="button" class="chip" data-action="td-scenario" data-id="' + esc(x.id) + '">+ ' + esc(x.label) + '</button>'; }).join(' ') + '</p>' +
-      '<div class="gen-actions"><button type="button" class="btn btn-ghost" data-action="td-chat">' + (H.isVscode ? '✦ Prepare test data in Copilot Chat' : '✦ Copy test data prompt') + '</button>' +
-      '<span class="muted small">' + (n ? n + ' row' + (n === 1 ? '' : 's') + ' · ' : '') + 'Copilot uses the <code>sap-test-data</code> MCP server (read-only, dry runs; executing always needs your confirmation).</span></div></section>';
   }
 
   function stat(label, html) { return '<div class="stat"><span class="stat-label">' + label + '</span><span class="stat-val">' + html + '</span></div>'; }
@@ -19516,17 +19336,6 @@ window.APB_CONFIG = {
       const before = JSON.stringify(APB.guard.usage());
       APB.guard.resetUsage(); openUsage();
       toast('Usage statistics cleared', 8000, { label: 'Undo', run: function () { const u = JSON.parse(before); APB.guard.resetUsage(); try { if (H.isVscode) H.storage.set('apb.usage.v1', JSON.stringify(u)); else localStorage.setItem('apb.usage.v1', JSON.stringify(u)); } catch (e) { /* ignore */ } openUsage(); } });
-    },
-    'td-scenario': function (el) {
-      const add = APB.testData.scenarioRows(el.dataset.id);
-      updateSteps(function (s) { s.quality.testData = APB.testData.rows(s).concat(add); });
-      toast(add.length + ' test data row' + (add.length === 1 ? '' : 's') + ' added – fill in dates and employees');
-    },
-    'td-chat': function () {
-      const s = S.get();
-      auditAdd('export', { to: H.isVscode ? 'Copilot Chat (sap-test-data)' : 'clipboard (test data prompt)', approval: APB.gov.status(s).state });
-      if (H.isVscode) { H.post({ type: 'open-chat', agent: 'agent', prompt: APB.testData.prompt(s) }); toast('Copilot Chat opens in agent mode with the test data request', 6000); return; }
-      Promise.resolve(X.copy(APB.guard.outbound(APB.testData.prompt(s), 'clipboard'))).then(function (ok) { toast(ok ? 'Prompt copied – paste it into Copilot Chat (agent mode) in VS Code with the sap-test-data server' : 'Copy failed', 7000); });
     },
     'gov-settings': function () { H.post({ type: 'open-settings' }); },
     'view-raw': function () { ui.raw = true; renderPreview(); },
