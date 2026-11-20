@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.0.28
+
+- **Test data (SAP HR) removed from the Technical spec.** The step 4 test data card, *Prepare test data in Copilot Chat*, the test data table in the documents and its Copilot instruction are gone; specs saved with test data rows still open (the rows are ignored). `sap-test-data-server/` stays in the repository as a separate tool and is not used by the builder.
+
+## 1.0.27
+
+- **New Copilot agent `dewa-abap-change` for changing existing ABAP.** `dewa-abap` builds new artifacts and `dewa-codereview` reviews code; objects a Technical spec marks as *change* now have their own agent. Per object it reads the current source (read-only), shows the exact diff and the where-used impact, writes only after the developer types **CONFIRM CHANGE**, activates, runs ABAP Unit and ATC, reports the evidence and how to revert – one object at a time. It never touches SAP standard or code the spec does not name, keeps signatures compatible, and stops while the spec is not approved.
+- **Hand-off by object:** new objects → `dewa-abap`, existing objects to change → `dewa-abap-change`; a spec with both offers *1. Build new objects* and *2. Change existing objects* (new first). The Copilot Development Instructions say which agent handles which objects. Every hand-off is in the audit trail.
+- The extension installs both agents into the VS Code prompts folder (an edited copy is never replaced); *DEWA: Reinstall Spec Builder agents* refreshes them. The agent is also available as a skill (`docs/agent-kit/skills/abap-change`).
+
+## 1.0.26
+
+- **Test data (SAP HR) in the Technical spec** (step 4): the records the unit / integration tests need in the SAP test client – employees (criteria), infotype, subtype, operation, dates, values, check after. *Add a scenario* fills rows from the six starter scenarios; the rows and a Copilot instruction go into the document.
+- **Prepare test data in Copilot Chat** opens Copilot in agent mode with the rows for the new **sap-test-data MCP server**: connection check first, describe / find / read, changes only as a dry-run plan, never executed without your confirmation.
+- **New: `sap-test-data-server/`** – MCP server (TypeScript, stdio) for HR test data in client 300, built to the "SAP Test Data Server" specification. Phase 1 (read-only): get_connection_status, describe_infotype, find_employees, read_infotype, list_scenarios, list_runs; plan_changes / execute_plan declared for Phase 2. Required configuration with a password prompt, writes refused unless system / client / allow-list / wrapper version match, masking, a local log without personal data, mock mode, the API-state checker (clean core gate against SAP's published lists – zero findings), ABAP wrapper copies for the read part with a Phase 0 checklist, unit / contract / negative tests and a CI job.
+
+## 1.0.25
+
+- **Audit trail in the documents is readable.** Each event is written as a sentence instead of raw field names – e.g. *Read BRD / solution document: result received · 94 s · model GPT-5 · 4 model calls · 42,300 tokens (39,000 in / 3,300 out) · 6 SAP searches · 3 ABAP artifacts read: …*; reviews list the parts taken and declined by name, the candidates taken and the SAP names verified / not verified.
+- **AI usage summary** above the events: per AI job the runs (with result), time, model calls, tokens (in / out), SAP searches and ABAP artifacts read, with a total – in the Word and Markdown documents of Functional and Technical specs.
+- **Word tables size their columns by content** (short columns narrow, details wide, no words broken inside a column) – for all tables, not only the audit trail.
+
 ## 1.0.24
 
 - **AS-IS and TO-BE as swimlane diagrams.** One lane per role, one numbered box per step with its transaction / app, arrows in step order. AS-IS steps with a pain point are marked (red border, ⚠); TO-BE steps are coloured by change – unchanged, changed, new, automated – with a legend. Long processes continue in further diagrams (8 steps each).

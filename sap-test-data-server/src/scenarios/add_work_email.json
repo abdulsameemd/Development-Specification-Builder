@@ -1,0 +1,38 @@
+{
+ "id": "add_work_email",
+ "version": 1,
+ "title": "Add a work e-mail",
+ "goal": "Test programs that read communication data.",
+ "kind": "employee",
+ "parameters": [
+  {
+   "name": "employee",
+   "description": "Employee without a work e-mail (find_employees with 0105/0010 present=false)",
+   "required": true
+  },
+  {
+   "name": "validFrom",
+   "description": "Start date",
+   "required": false,
+   "default": "today"
+  }
+ ],
+ "steps": [
+  {
+   "infotype": "0105",
+   "subtype": "0010",
+   "operation": "create",
+   "validFrom": "{{validFrom}}",
+   "validTo": "9999-12-31",
+   "fields": {
+    "USRTY": "0010",
+    "USRID_LONG": "test.{{employee}}@example.invalid"
+   },
+   "note": "Fake address with the reserved .invalid ending"
+  }
+ ],
+ "checks": [
+  "One active 0105/0010 record",
+  "The address ends with .invalid"
+ ]
+}

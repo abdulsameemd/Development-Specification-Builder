@@ -1,0 +1,5 @@
+{ "formatVersion": "1", "objectReleaseInfo": [
+  { "objectType": "FUNC", "objectKey": "BAPI_TRANSACTION_COMMIT", "state": "released" },
+  { "objectType": "CLAS", "objectKey": "CL_ABAP_STRUCTDESCR", "state": "released" },
+  { "objectType": "CLAS", "objectKey": "/UI2/CL_JSON", "state": "released" }
+] }

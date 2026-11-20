@@ -1,0 +1,491 @@
+{
+  "name": "dewa-sap-spec-builder",
+  "displayName": "DEWA SAP Spec Builder",
+  "description": "Functional and development specifications for SAP, inside VS Code – with read-only SAP system discovery through GitHub Copilot and the SAP MCP servers.",
+  "version": "1.0.28",
+  "publisher": "dewa",
+  "license": "UNLICENSED",
+  "private": true,
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abdulsameemd/Development-Specification-Builder.git"
+  },
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "AI",
+    "Other"
+  ],
+  "keywords": [
+    "SAP",
+    "ABAP",
+    "functional specification",
+    "Copilot",
+    "MCP",
+    "Fiori",
+    "CAP",
+    "DEWA"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "onUri",
+    "onCommand:dewa.specBuilder.open",
+    "onWebviewPanel:dewaSpecBuilder"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "dewa.specBuilder.open",
+        "title": "Open SAP Spec Builder",
+        "category": "DEWA"
+      },
+      {
+        "command": "dewa.specBuilder.installAgent",
+        "title": "Reinstall Spec Builder agents (dewa-fs-discovery, dewa-abap-change)",
+        "category": "DEWA"
+      }
+    ],
+    "configuration": {
+      "title": "DEWA SAP Spec Builder",
+      "properties": {
+        "dewaSpecBuilder.discoveryTools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "*abap*",
+            "*adt*",
+            "*fiori*",
+            "*ui5*",
+            "*cap*"
+          ],
+          "markdownDescription": "Tool-name patterns (`*` wildcard) of the SAP MCP servers that **automatic discovery** may use. Tools whose names contain a write verb (create, update, delete, activate, transport, …) are always excluded."
+        },
+        "dewaSpecBuilder.maxToolRounds": {
+          "type": "number",
+          "default": 25,
+          "minimum": 1,
+          "maximum": 60,
+          "description": "Maximum number of tool-calling rounds for automatic discovery."
+        },
+        "dewaSpecBuilder.model": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Copilot model for **automatic discovery**, by family or name (e.g. `claude-sonnet`, `gpt-5`). Empty = the strongest available model; small models (Haiku, mini, flash) are used only when nothing else is available."
+        },
+        "dewaSpecBuilder.chatAutoSend": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Send the prompt in Copilot Chat right away when a Spec Builder button opens Chat (development spec to `dewa-abap`, discovery in Chat, draft in Chat, review of a functional spec). Off: the prompt is only filled in and you press Enter."
+        },
+        "dewaSpecBuilder.gates": {
+          "type": "string",
+          "enum": [
+            "enforce",
+            "warn"
+          ],
+          "default": "enforce",
+          "markdownDescription": "Approval gates. **enforce** (default): a functional spec must be approved before Technical specs are created from it (G1), and a technical spec before `dewa-abap` builds from it (G2). **warn**: the gates only warn, and continuing is recorded in the audit trail. IT can set and lock this setting."
+        },
+        "dewaSpecBuilder.gates.requireSapCheck": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "A technical spec can be approved only after *Check & read in SAP* has run with no unresolved findings."
+        },
+        "dewaSpecBuilder.approvers.functional": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "GitHub accounts (as shown in VS Code's Accounts menu) that may **approve functional specifications** (gate G1). Empty = nobody can approve, so enforced gates stay closed. Example: `[\"fs-lead\", \"ba-manager\"]`. IT distributes it in user or workspace settings (`.vscode/settings.json`); see GOVERNANCE.md."
+        },
+        "dewaSpecBuilder.approvers.technical": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "GitHub accounts that may **approve technical specifications** (gate G2, before `dewa-abap` builds). Example: `[\"tech-lead\"]`. IT distributes it in user or workspace settings (`.vscode/settings.json`); see GOVERNANCE.md."
+        },
+        "dewaSpecBuilder.models.allowed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Copilot models the builder may use (family, name or id; `*` wildcards, a plain word = contains), e.g. `[\"gpt-5*\", \"*sonnet*\"]`. Empty = any GitHub Copilot model. When none of the available models is allowed, AI jobs stop with a message. The model used is recorded in the audit trail."
+        },
+        "dewaSpecBuilder.masking": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Mask personal data before it reaches the AI: e-mail addresses, phone numbers, Emirates IDs, IBANs and card numbers in prompts are replaced by tokens such as `[EMAIL_1]` (restored in the answer before you review it), and in SAP tool results by `[EMAIL]`. Each masking is recorded in the audit trail."
+        },
+        "dewaSpecBuilder.masking.patterns": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "regex": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "regex"
+                ]
+              }
+            ]
+          },
+          "default": [],
+          "markdownDescription": "Extra masking patterns (JavaScript regular expressions), e.g. `[{\"name\": \"PERNR\", \"regex\": \"\\\\bPERNR\\\\s*\\\\d{8}\\\\b\"}]` for personnel numbers."
+        },
+        "dewaSpecBuilder.telemetry": {
+          "type": "string",
+          "enum": [
+            "local",
+            "off"
+          ],
+          "default": "local",
+          "markdownDescription": "`local`: count AI jobs, review decisions, approvals and gate events per month on this computer (header → *Usage*; export as CSV). No spec content is kept and nothing is sent anywhere. `off`: count nothing."
+        },
+        "dewaSpecBuilder.namespaces": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "default": {},
+          "markdownDescription": "DEWA's custom name prefixes per module, used when a BRD is uploaded to search the SAP system by process (read-only, `<prefix>*<keyword>*`). Overrides the built-in list for the modules you name, e.g. `{\"HCM\": [\"ZHR\", \"ZWHR\", \"ZPY\"], \"FI/CO\": [\"ZFI\", \"ZWFI\"]}`. Module keys: FI/CO, MM, SD, IS-U, CRM, PS/PM, HCM, Cross-module."
+        },
+        "dewaSpecBuilder.maxToolResultChars": {
+          "type": "number",
+          "default": 12000,
+          "minimum": 2000,
+          "maximum": 100000,
+          "markdownDescription": "Longest SAP tool result (characters) passed to the model per call – e.g. a whole program source is shortened to this. Smaller = faster and fewer tokens; the grounding check still uses the full result."
+        },
+        "dewaSpecBuilder.toolTimeoutSeconds": {
+          "type": "number",
+          "default": 60,
+          "minimum": 10,
+          "maximum": 600,
+          "markdownDescription": "Longest wait for one SAP tool call. A call that does not answer in time is skipped and the job goes on (shown with ⏱ in the log)."
+        },
+        "dewaSpecBuilder.sapTimeBudgetSeconds": {
+          "type": "number",
+          "default": 300,
+          "minimum": 30,
+          "maximum": 3600,
+          "markdownDescription": "Time budget for reading SAP in one job (default 5 minutes). When it is used up, no more SAP calls are made and Copilot writes the answer from what was read. *Finish now* in the busy overlay does the same at any time."
+        },
+        "dewaSpecBuilder.parallelToolCalls": {
+          "type": "number",
+          "default": 1,
+          "minimum": 1,
+          "maximum": 4,
+          "markdownDescription": "How many SAP tool calls may run at the same time (1–4). Default **1**: one after another – the ABAP ADT MCP server keeps one logon session per destination and can refuse the destination when several calls start at once. Higher is faster only if your MCP server supports parallel calls. The first SAP call of a job always runs alone (logon, up to 3 minutes)."
+        },
+        "dewaSpecBuilder.installAgent": {
+          "type": "boolean",
+          "default": true,
+          "description": "Install the Spec Builder agents (dewa-fs-discovery, dewa-abap-change) into the VS Code prompts folder on start-up (an edited copy is never replaced)."
+        }
+      }
+    },
+    "languageModelTools": [
+      {
+        "name": "dewa_submitContextPack",
+        "toolReferenceName": "dewa_submitContextPack",
+        "displayName": "Send context pack to SAP Spec Builder",
+        "userDescription": "Imports the SAP system context pack into the open SAP Spec Builder.",
+        "modelDescription": "Call this once at the end of a dewa-fs-discovery run with the complete dewa-sap-context-pack JSON object. It imports the pack into the SAP Spec Builder panel. It does not change anything in SAP.",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(notebook)",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "kind",
+            "version"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "dewa-sap-context-pack"
+              ]
+            },
+            "version": {
+              "type": "number",
+              "enum": [
+                1
+              ]
+            },
+            "generatedAt": {
+              "type": "string"
+            },
+            "system": {
+              "type": "object"
+            },
+            "objects": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "transactions": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "fioriApps": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "ui5Apps": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "capServices": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "enhancements": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "customizingHints": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "notFound": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "dewa_submitFsDraft",
+        "toolReferenceName": "dewa_submitFsDraft",
+        "displayName": "Send draft to SAP Spec Builder",
+        "userDescription": "Sends an AI draft of a functional specification to the open SAP Spec Builder for review.",
+        "modelDescription": "Call this once at the end of a functional-specification draft with the complete fs-draft JSON object (kind \"fs-draft\", version 1). The SAP Spec Builder shows it to the user for review; nothing is added without the user's choice. It does not change any files or systems.",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(edit)",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "kind",
+            "version"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "fs-draft"
+              ]
+            },
+            "version": {
+              "type": "number",
+              "enum": [
+                1
+              ]
+            },
+            "title": {
+              "type": "string"
+            },
+            "objectives": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "kpis": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "inScope": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "outOfScope": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "stakeholders": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "asIs": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "toBe": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "frs": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "rules": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "uat": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "risks": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "dewa_submitDevContext",
+        "toolReferenceName": "dewa_submitDevContext",
+        "displayName": "Send SAP check to SAP Spec Builder",
+        "userDescription": "Sends the read-only SAP check of a development specification (Check & read in SAP) to the open SAP Spec Builder for review.",
+        "modelDescription": "Call this once at the end of a 'DEV-CONTEXT v1' run with the complete dewa-dev-context JSON object (kind \"dewa-dev-context\", version 1): the checked object names, the existing objects read and notFound. The SAP Spec Builder shows it to the developer for review; nothing is taken over without the developer's choice. It does not change any files or systems.",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(checklist)",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "kind",
+            "version"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "dewa-dev-context"
+              ]
+            },
+            "version": {
+              "type": "number",
+              "enum": [
+                1
+              ]
+            },
+            "system": {
+              "type": "string"
+            },
+            "checked": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "result": {
+                    "type": "string",
+                    "enum": [
+                      "verified",
+                      "missing",
+                      "clash"
+                    ]
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "objects": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "summary": {
+                    "type": "string"
+                  },
+                  "detail": {
+                    "type": "object"
+                  },
+                  "uses": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "usedBy": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "notFound": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}

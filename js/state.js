@@ -95,6 +95,7 @@
     if (s.quality.authObject && !s.quality.authChecks.length) s.quality.authChecks = [{ object: s.quality.authObject }];
     delete s.quality.authObject;
     if (!Array.isArray(s.quality.authChecks)) s.quality.authChecks = [];
+    delete s.quality.testData; // removed in 1.0.28 (test data is not part of the builder)
     if (Array.isArray(input.dod)) s.dod = input.dod.map(function (d) { return { id: str(d.id) || uid(), text: str(d.text), on: d.on !== false }; });
     if (input.meta && typeof input.meta === 'object') {
       s.meta.created = Number(input.meta.created) || s.meta.created;

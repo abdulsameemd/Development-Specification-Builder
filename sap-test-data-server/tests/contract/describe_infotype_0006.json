@@ -1,0 +1,56 @@
+{
+ "name": "describe_infotype_0006",
+ "call": [
+  "describeInfotype",
+  "0006",
+  "employee"
+ ],
+ "request": {
+  "method": "GET",
+  "path": "/infotypes/0006",
+  "query": {
+   "kind": "employee"
+  }
+ },
+ "response": {
+  "status": 200,
+  "body": {
+   "infotype": "0006",
+   "kind": "employee",
+   "name": "Addresses",
+   "timeConstraint": "2",
+   "subtypes": [
+    {
+     "subtype": "1",
+     "text": "Permanent residence"
+    }
+   ],
+   "fields": [
+    {
+     "name": "STRAS",
+     "label": "Street",
+     "type": "CHAR",
+     "length": 60,
+     "mandatory": true,
+     "masked": true
+    },
+    {
+     "name": "ORT01",
+     "label": "City",
+     "type": "CHAR",
+     "length": 40,
+     "mandatory": true,
+     "masked": false
+    }
+   ],
+   "policy": {
+    "enabled": true,
+    "writable": true,
+    "maskedFields": [
+     "STRAS",
+     "PSTLZ"
+    ]
+   }
+  }
+ }
+}

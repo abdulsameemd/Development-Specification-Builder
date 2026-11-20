@@ -1,0 +1,22 @@
+{
+ "name": "status",
+ "call": [
+  "status"
+ ],
+ "request": {
+  "method": "GET",
+  "path": "/status"
+ },
+ "response": {
+  "status": 200,
+  "body": {
+   "system": "T01",
+   "client": "300",
+   "allowListed": true,
+   "user": "ZHR_TESTDATA_FU",
+   "wrapperVersion": "1.0.0",
+   "release": "S/4HANA 2023",
+   "warnings": []
+  }
+ }
+}

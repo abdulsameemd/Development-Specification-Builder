@@ -1,0 +1,46 @@
+{
+ "id": "open_absence_record",
+ "version": 1,
+ "title": "Open absence record",
+ "goal": "Test absence-dependent logic.",
+ "kind": "employee",
+ "parameters": [
+  {
+   "name": "employee",
+   "description": "Employee number",
+   "required": true
+  },
+  {
+   "name": "absenceType",
+   "description": "Absence type (subtype of 2001), e.g. 0100",
+   "required": true
+  },
+  {
+   "name": "from",
+   "description": "First day",
+   "required": true
+  },
+  {
+   "name": "days",
+   "description": "Length in days",
+   "required": false,
+   "default": "3"
+  }
+ ],
+ "steps": [
+  {
+   "infotype": "2001",
+   "subtype": "{{absenceType}}",
+   "operation": "create",
+   "validFrom": "{{from}}",
+   "validTo": "{{from + days - 1}}",
+   "fields": {
+    "AWART": "{{absenceType}}"
+   }
+  }
+ ],
+ "checks": [
+  "One 2001 record of the absence type in the period",
+  "No collision message from SAP"
+ ]
+}

@@ -193,7 +193,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.24.vsix`](dist/dewa-sap-spec-builder-1.0.24.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.24.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.28.vsix`](dist/dewa-sap-spec-builder-1.0.28.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.28.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **If the .vsix download is blocked** (the downloaded file is only a few KB, and VS Code says *End of central directory record signature not found*): some company networks replace `.vsix` downloads with a web page. The repository also holds the extension **unpacked** in `dist/vscode-extension/dewa.dewa-sap-spec-builder-<version>/`, as plain files, so no `.vsix` is downloaded:
 
@@ -255,6 +255,22 @@ Roles, settings, what IT can and cannot lock, and the release rules: [GOVERNANCE
 - **Usage** (header): AI jobs, review decisions, masked items, approvals and gate events per month – counted on this computer only, no content, CSV export (`dewaSpecBuilder.telemetry` = `local` | `off`).
 
 Details: [GOVERNANCE.md](GOVERNANCE.md#grounding-and-guardrails).
+
+### Changing existing code: the `dewa-abap-change` agent
+
+Objects a Technical spec marks as **change** (existing custom objects) are not built by `dewa-abap`, which creates
+new artifacts. The extension installs a second agent, **`dewa-abap-change`**, and the hand-off routes by object:
+new objects → `dewa-abap`; existing objects to change → `dewa-abap-change`; when a spec has both, a small choice
+offers *1. Build new objects* and *2. Change existing objects* (new first). `dewa-abap-change` works one object at a
+time: reads the current source, shows the diff and the where-used impact, writes only after **`CONFIRM CHANGE`**,
+then activates and runs ABAP Unit and ATC, and says how to revert. It never touches SAP standard or code the spec
+does not name. Details: [docs/AGENT_WORKFLOWS.md](docs/AGENT_WORKFLOWS.md).
+
+### SAP test data server (separate tool)
+
+[`sap-test-data-server/`](sap-test-data-server/README.md) is a standalone MCP server for HR test data in the SAP
+test client (Phase 1, read-only, mock mode). It is **not part of the Spec Builder**: the builder and its specs do not
+contain test data. Setup: [docs/setup-guide.md](sap-test-data-server/docs/setup-guide.md).
 
 ## How developers use it (Technical mode)
 

@@ -1,0 +1,27 @@
+{
+  "name": "sap-test-data-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MCP server for SAP HR test data in test client 300 (Phase 1: read-only, mock mode). See docs/specification.md.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": { "sap-test-data-server": "dist/index.js" },
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/copy-assets.mjs",
+    "start": "node dist/index.js",
+    "mock": "SAP_TESTDATA_MOCK=1 node dist/index.js",
+    "test": "node --import tsx --test \"tests/**/*.test.ts\"",
+    "check-api-state": "tsx scripts/check-api-state.ts abap",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.1",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3"
+  }
+}

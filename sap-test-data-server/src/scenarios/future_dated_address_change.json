@@ -1,0 +1,50 @@
+{
+ "id": "future_dated_address_change",
+ "version": 1,
+ "title": "Future-dated address change",
+ "goal": "Test programs that read the address valid on a date.",
+ "kind": "employee",
+ "parameters": [
+  {
+   "name": "employee",
+   "description": "Employee number",
+   "required": true
+  },
+  {
+   "name": "changeDate",
+   "description": "First day of the new address (YYYY-MM-DD), e.g. first of next month",
+   "required": true
+  },
+  {
+   "name": "city",
+   "description": "New city (fake value)",
+   "required": false,
+   "default": "Testcity B"
+  }
+ ],
+ "steps": [
+  {
+   "infotype": "0006",
+   "subtype": "1",
+   "operation": "delimit",
+   "validTo": "{{changeDate - 1 day}}",
+   "note": "End the current permanent address the day before"
+  },
+  {
+   "infotype": "0006",
+   "subtype": "1",
+   "operation": "create",
+   "validFrom": "{{changeDate}}",
+   "validTo": "9999-12-31",
+   "fields": {
+    "ORT01": "{{city}}"
+   },
+   "note": "New permanent address"
+  }
+ ],
+ "checks": [
+  "Two records of 0006/1",
+  "No overlap and no gap between them",
+  "The new record starts on changeDate"
+ ]
+}

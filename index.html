@@ -111,6 +111,17 @@
     </div>
   </footer>
 
+  <dialog id="handoff-dialog" aria-labelledby="handoff-title">
+    <form method="dialog" class="dialog-head">
+      <h2 id="handoff-title">Hand over to Copilot</h2>
+      <button class="icon-btn" aria-label="Close">✕</button>
+    </form>
+    <p class="muted small">This specification has new objects and existing objects to change. They go to two agents – build the new objects first.</p>
+    <div class="handoff-choices">
+      <button type="button" class="btn btn-primary" data-action="handoff-new"><strong>1. Build new objects</strong><span class="small">dewa-abap · one artifact at a time, CONFIRM ARTEFACT</span></button>
+      <button type="button" class="btn btn-ghost" data-action="handoff-change"><strong>2. Change existing objects</strong><span class="small">dewa-abap-change · diff first, CONFIRM CHANGE</span></button>
+    </div>
+  </dialog>
   <dialog id="drafts-dialog" aria-labelledby="drafts-title">
     <form method="dialog" class="dialog-head">
       <h2 id="drafts-title">Saved drafts</h2>

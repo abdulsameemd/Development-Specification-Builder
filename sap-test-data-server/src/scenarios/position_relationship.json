@@ -1,0 +1,50 @@
+{
+ "id": "position_relationship",
+ "version": 1,
+ "title": "Position relationship",
+ "goal": "Test organization structure reads.",
+ "kind": "organization",
+ "parameters": [
+  {
+   "name": "position",
+   "description": "Position (S) ID",
+   "required": true
+  },
+  {
+   "name": "orgUnit",
+   "description": "Organizational unit (O) ID",
+   "required": true
+  },
+  {
+   "name": "operation",
+   "description": "create or delimit",
+   "required": false,
+   "default": "create"
+  },
+  {
+   "name": "date",
+   "description": "Valid from (create) or last day (delimit)",
+   "required": true
+  }
+ ],
+ "steps": [
+  {
+   "objectType": "S",
+   "target": "{{position}}",
+   "infotype": "1001",
+   "subtype": "A003",
+   "operation": "{{operation}}",
+   "validFrom": "{{date}}",
+   "validTo": "9999-12-31",
+   "fields": {
+    "SCLAS": "O",
+    "SOBID": "{{orgUnit}}"
+   },
+   "note": "Position belongs to organizational unit"
+  }
+ ],
+ "checks": [
+  "Relationship A003 S→O exists (create) or ends on the date (delimit)",
+  "Inverse B003 maintained by SAP"
+ ]
+}

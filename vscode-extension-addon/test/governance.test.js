@@ -110,3 +110,19 @@ test('an approval request stays open until the spec is approved, and a new reque
   assert.ok(G.requestOf(s));
   assert.strictEqual(G.audit.LABELS['approval-requested'], 'Approval requested');
 });
+
+test('audit trail in the documents: readable details per event and an AI usage summary', () => {
+  const { APB } = load();
+  const G = APB.gov, s = APB.state.migrate({ requirement: { text: 'x' } });
+  G.audit.add(s, 'ai-end', { job: 'docs', outcome: 'result', seconds: 94, model: 'GPT-5', tokensIn: 39000, tokensOut: 3300, modelCalls: 4, sapSearches: 6, artifactsRead: 2, artifacts: 'ZHR_A, ZHR_B' });
+  G.audit.add(s, 'ai-end', { job: 'devctx', outcome: 'error', seconds: 10, tokensIn: 1000, tokensOut: 0, modelCalls: 1, tokensEstimated: 'yes', sapBlocked: '3 refused – SBE_210' });
+  G.audit.add(s, 'masked', { job: 'read-program', items: 2, kinds: 'EMAIL, PHONE' });
+  const md = G.audit.md(s);
+  assert.match(md, /\*\*AI usage\*\*\n\n\| AI job \| Runs \| Time \| Model calls \| Tokens \(in \/ out\) \| SAP searches \| ABAP artifacts read \|/);
+  assert.match(md, /\| Read BRD \/ solution document \| 1 \(1 with result\) \| 94 s \| 4 \| 42,300 \(39,000 \/ 3,300\) \| 6 \| 2 \|/);
+  assert.match(md, /\| \*\*Total\*\* \| 2 \(1 with result\) \| 104 s \| 5 \| ≈ 43,300 \(40,000 \/ 3,300\) \| 6 \| 2 \|/);
+  assert.match(md, /\| AI job finished \| Read BRD \/ solution document: result received · 94 s · model GPT-5 · 4 model calls · 42,300 tokens \(39,000 in \/ 3,300 out\) · 6 SAP searches · 2 ABAP artifacts read: ZHR_A, ZHR_B \|/);
+  assert.match(md, /Check & read in SAP: failed · 10 s · 1 model call · ≈ 1,000 tokens \(1,000 in \/ 0 out\) · SAP refused: 3 refused – SBE_210/);
+  assert.match(md, /2 personal data items masked \(EMAIL, PHONE\) · Copilot job reading SAP/);
+  assert.ok(!/tokensIn|artifactsRead/.test(md), 'no raw field names');
+});

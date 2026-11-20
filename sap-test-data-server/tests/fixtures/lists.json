@@ -1,0 +1,12 @@
+{
+ "formatVersion": "2",
+ "objectClassifications": [
+  { "objectType": "CLAS", "objectKey": "CL_HRPA_READ_INFOTYPE", "state": "classicAPI" },
+  { "objectType": "INTF", "objectKey": "IF_HTTP_EXTENSION", "state": "classicAPI" },
+  { "objectType": "INTF", "objectKey": "IF_HTTP_SERVER", "state": "classicAPI" },
+  { "objectType": "FUNC", "objectKey": "BAPI_EMPLOYEE_GETLIST", "state": "classicAPI" },
+  { "objectType": "FUNC", "objectKey": "BAPI_ABSENCE_CREATE", "state": "noAPI" },
+  { "objectType": "CLAS", "objectKey": "CL_OLD_THING", "state": "deprecated", "successors": [{ "objectType": "CLAS", "objectKey": "CL_NEW_THING" }] },
+  { "objectType": "CLAS", "objectKey": "/UI2/CL_JSON", "state": "classicAPI" }
+ ]
+}
