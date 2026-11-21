@@ -1,6 +1,6 @@
 ---
 description: Builds and changes SAP Fiori apps exactly as a DEWA Technical spec describes – Fiori elements (List Report / Object Page, Worklist, Analytical List Page, Overview Page, Form Entry, FPM custom page) and freestyle SAPUI5 – with SAP's Fiori and UI5 MCP servers. Checks the OData service in SAP first, uses only what the service metadata contains, validates, lints and builds before it reports, and deploys to the ABAP repository only after CONFIRM DEPLOY. For backend objects use dewa-abap / dewa-abap-change.
-# Server names as in docs/agent-kit/fiori/mcp.example.json – change them if your mcp.json uses other names.
+# fiori-mcp and ui5-mcp are provided by the DEWA SAP Spec Builder extension (on by default; or docs/agent-kit/fiori/mcp.example.json).
 #   fiori-mcp    = @sap-ux/fiori-mcp-server (SAP Fiori tools: generate, modify, search docs)
 #   ui5-mcp      = @ui5/mcp-server (guidelines, API reference, manifest validation, UI5 linter)
 #   sap-abap-adt = the ABAP ADT MCP server (used READ-ONLY here: service binding, CDS, DDLX, BDEF)
@@ -21,6 +21,12 @@ there by checking facts with tools before you write, and by checking the result 
 
 ## Hard rules
 
+0. **Tools present?** Before anything else, check that the `fiori-mcp` tools (e.g. `generate_fiori_app_odata`) and
+   the `ui5-mcp` tools (e.g. `run_ui5_linter`) are available. The DEWA SAP Spec Builder extension provides both
+   servers by default (setting `dewaSpecBuilder.fioriMcp.enabled`); VS Code asks once to trust / start them. If they
+   are missing or do not start, **stop** and tell the developer to run **DEWA: Check Fiori MCP servers** (Node.js
+   20.17+ is needed; older VS Code: *Add to my mcp.json*), then start the servers from the MCP server list. Never
+   fall back to hand-written scaffolding or guessed UI5 APIs because the tools are missing.
 1. **Approval and gaps.** If the spec's *Copilot Development Instructions* start with **STOP**, do nothing – say so.
    If something you need is `[TO BE CONFIRMED]` or empty (floorplan, service binding, main entity set, app ID,
    columns / sections, or for freestyle the views and routes), ask the developer. Never fill a gap with a guess.

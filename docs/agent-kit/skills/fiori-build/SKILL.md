@@ -16,6 +16,12 @@ there by checking facts with tools before you write, and by checking the result 
 
 ## Hard rules
 
+0. **Tools present?** Before anything else, check that the `fiori-mcp` tools (e.g. `generate_fiori_app_odata`) and
+   the `ui5-mcp` tools (e.g. `run_ui5_linter`) are available. The DEWA SAP Spec Builder extension provides both
+   servers by default (setting `dewaSpecBuilder.fioriMcp.enabled`); VS Code asks once to trust / start them. If they
+   are missing or do not start, **stop** and tell the developer to run **DEWA: Check Fiori MCP servers** (Node.js
+   20.17+ is needed; older VS Code: *Add to my mcp.json*), then start the servers from the MCP server list. Never
+   fall back to hand-written scaffolding or guessed UI5 APIs because the tools are missing.
 1. **Approval and gaps.** If the spec's *Copilot Development Instructions* start with **STOP**, do nothing – say so.
    If something you need is `[TO BE CONFIRMED]` or empty (floorplan, service binding, main entity set, app ID,
    columns / sections, or for freestyle the views and routes), ask the developer. Never fill a gap with a guess.

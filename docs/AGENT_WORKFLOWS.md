@@ -114,9 +114,14 @@ puts the Fiori app last because it needs the published service. Its prompt start
 | `ui5-mcp` | `@ui5/mcp-server` | `get_guidelines`, `get_api_reference`, `get_version_info`, `run_manifest_validation`, `run_ui5_linter`, `create_ui5_app` |
 | `sap-abap-adt` | the ABAP ADT MCP server | read-only: service binding, service definition, CDS, BDEF, metadata extension |
 
-Setup: copy [`docs/agent-kit/fiori/mcp.example.json`](agent-kit/fiori/mcp.example.json) into `.vscode/mcp.json` of the
-Fiori project and fill in the SAP host and DEWA's root CA. Telemetry of SAP Fiori tools is off
-(`SAP_UX_FIORI_TOOLS_DISABLE_TELEMETRY=true`). Node.js 22 LTS. Optional: SAP's own skills for Fiori development come
+Setup: **nothing to copy** – the DEWA SAP Spec Builder extension provides `fiori-mcp` and `ui5-mcp` by default
+(VS Code 1.101+ registers them through its MCP provider API; VS Code asks once to trust / start them). On older
+VS Code the extension offers **Add to my mcp.json** once. Settings `dewaSpecBuilder.fioriMcp.*`: `enabled` (default
+on), `fioriServerVersion` / `ui5ServerVersion` (pinned), `allowedDomains` (add the SAP host), `caCertFile` (DEWA's
+root CA). A server you define yourself in an `mcp.json` under the same name is left to you. **DEWA: Check Fiori MCP
+servers** shows the status (Node.js 20.17+ needed). Telemetry of SAP Fiori tools is off
+(`SAP_UX_FIORI_TOOLS_DISABLE_TELEMETRY=true`). Manual setup without the extension:
+[`docs/agent-kit/fiori/mcp.example.json`](agent-kit/fiori/mcp.example.json). Optional: SAP's own skills for Fiori development come
 with the `sap-ux-fiori-tools` plugin (Copilot Chat → `@agentPlugins`, or `copilot plugin install
 sap-ux-fiori-tools@awesome-copilot`); `dewa-fiori`'s rules still apply on top.
 

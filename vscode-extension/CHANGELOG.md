@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.30
+
+- **SAP Fiori and UI5 MCP servers provided by the extension, on by default.** `dewa-fiori` no longer depends on a hand-edited `mcp.json`: on VS Code 1.101+ the extension registers `fiori-mcp` (`@sap-ux/fiori-mcp-server`, pinned 1.17.0, telemetry off) and `ui5-mcp` (`@ui5/mcp-server`, pinned 0.3.3) through VS Code's MCP provider API – VS Code asks once to trust / start them. Older VS Code gets a one-time **Add to my mcp.json** (merges, never overwrites). A server you already define under the same name is left to you. Settings `dewaSpecBuilder.fioriMcp.*` (enabled, versions, allowed domains, CA certificate); **DEWA: Check Fiori MCP servers** shows the status and warns when Node.js 20.17+ is missing.
+- `dewa-fiori` checks first that its tools are there and stops with the fix instead of falling back to hand-written code.
+- Read-only discovery never uses Fiori tools that save files (download) or open editors.
+
 ## 1.0.29
 
 - **New Copilot agent `dewa-fiori` for Fiori apps.** Built on SAP's own tooling: the SAP Fiori MCP server (`@sap-ux/fiori-mcp-server`, pinned) to generate and change apps, the UI5 MCP server (`@ui5/mcp-server`) for guidelines, API reference, manifest validation and the UI5 linter, and the ABAP ADT MCP server read-only to verify the service. It checks the OData service in SAP first and uses only entity sets, fields, navigations and actions that exist in the metadata (missing ones are reported as backend gaps, never invented), generates with the floorplan templates instead of hand-written scaffolding, keeps UI annotations in the backend, never edits `metadata.xml`, validates / lints / builds before reporting, asks for `CONFIRM CHANGE` before changing an existing app and deploys to the ABAP repository only after `CONFIRM DEPLOY`. Fiori elements, FPM extensions and freestyle SAPUI5. Also as a skill (`docs/agent-kit/skills/fiori-build`) with an MCP example (`docs/agent-kit/fiori/mcp.example.json`).

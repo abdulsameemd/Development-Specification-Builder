@@ -3,20 +3,48 @@
   "name": "dewa-sap-spec-builder",
   "displayName": "DEWA SAP Spec Builder",
   "description": "Functional and development specifications for SAP, inside VS Code – with read-only SAP system discovery through GitHub Copilot and the SAP MCP servers.",
-  "version": "1.0.29",
+  "version": "1.0.30",
   "publisher": "dewa",
   "license": "UNLICENSED",
   "private": true,
   "icon": "icon.png",
-  "repository": { "type": "git", "url": "https://github.com/abdulsameemd/Development-Specification-Builder.git" },
-  "engines": { "vscode": "^1.95.0" },
-  "categories": ["AI", "Other"],
-  "keywords": ["SAP", "ABAP", "functional specification", "Copilot", "MCP", "Fiori", "CAP", "DEWA"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abdulsameemd/Development-Specification-Builder.git"
+  },
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "AI",
+    "Other"
+  ],
+  "keywords": [
+    "SAP",
+    "ABAP",
+    "functional specification",
+    "Copilot",
+    "MCP",
+    "Fiori",
+    "CAP",
+    "DEWA"
+  ],
   "main": "./extension.js",
-  "activationEvents": ["onStartupFinished"],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "contributes": {
     "commands": [
-      { "command": "dewa.specBuilder.installAgent", "title": "Reinstall Spec Builder agents (dewa-fs-discovery, dewa-abap-change, dewa-fiori)", "category": "DEWA" }
+      {
+        "command": "dewa.specBuilder.installAgent",
+        "title": "Reinstall Spec Builder agents (dewa-fs-discovery, dewa-abap-change, dewa-fiori)",
+        "category": "DEWA"
+      },
+      {
+        "command": "dewa.specBuilder.checkFioriMcp",
+        "title": "Check Fiori MCP servers (SAP Fiori + UI5 for dewa-fiori)",
+        "category": "DEWA"
+      }
     ],
     "configuration": {
       "title": "DEWA SAP Spec Builder",
@@ -25,8 +53,41 @@
           "type": "boolean",
           "default": true,
           "description": "Install the Spec Builder agents (dewa-fs-discovery, dewa-abap-change, dewa-fiori) into the VS Code prompts folder on start-up (an edited copy is never replaced)."
+        },
+        "dewaSpecBuilder.fioriMcp.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Provide the **SAP Fiori MCP server** (`fiori-mcp`) and the **UI5 MCP server** (`ui5-mcp`) for the `dewa-fiori` agent. VS Code 1.101+ gets them automatically (it asks once to trust / start them); older versions get an *Add to my mcp.json* button. A server you define yourself in an `mcp.json` under the same name is left to you. Needs Node.js 20.17+."
+        },
+        "dewaSpecBuilder.fioriMcp.fioriServerVersion": {
+          "type": "string",
+          "default": "1.17.0",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "markdownDescription": "Pinned version of `@sap-ux/fiori-mcp-server`. Change it only after testing a newer version."
+        },
+        "dewaSpecBuilder.fioriMcp.ui5ServerVersion": {
+          "type": "string",
+          "default": "0.3.3",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "markdownDescription": "Pinned version of `@ui5/mcp-server`. Change it only after testing a newer version."
+        },
+        "dewaSpecBuilder.fioriMcp.allowedDomains": {
+          "type": "string",
+          "default": "localhost",
+          "markdownDescription": "Hosts the UI5 MCP server may contact (`UI5_MCP_SERVER_ALLOWED_DOMAINS`), comma-separated – add your SAP front-end server, e.g. `localhost, s4dev.example.internal`."
+        },
+        "dewaSpecBuilder.fioriMcp.caCertFile": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Path to DEWA's root CA certificate (PEM) for the SAP host, passed as `NODE_EXTRA_CA_CERTS` – e.g. `C:\\\\certs\\\\dewa-root-ca.pem`. Leave empty if not needed."
         }
       }
-    }
+    },
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "dewa.fioriMcp",
+        "label": "DEWA – SAP Fiori and UI5 MCP servers"
+      }
+    ]
   }
 }

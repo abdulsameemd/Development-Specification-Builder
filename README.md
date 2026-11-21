@@ -193,7 +193,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.29.vsix`](dist/dewa-sap-spec-builder-1.0.29.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.29.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.30.vsix`](dist/dewa-sap-spec-builder-1.0.30.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.30.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **If the .vsix download is blocked** (the downloaded file is only a few KB, and VS Code says *End of central directory record signature not found*): some company networks replace `.vsix` downloads with a web page. The repository also holds the extension **unpacked** in `dist/vscode-extension/dewa.dewa-sap-spec-builder-<version>/`, as plain files, so no `.vsix` is downloaded:
 
@@ -275,7 +275,9 @@ value helps and texts, annotations, FPM extensions, freestyle views / routes / m
 launchpad, deploy and tests – the fields shown depend on the floorplan. The hand-off sends the app to the third
 agent, **`dewa-fiori`**, after the backend: it verifies the OData service in SAP, uses only what the metadata
 contains, generates the app with SAP's Fiori MCP server and checks it with the UI5 MCP server (manifest validation,
-linter) and the build, and deploys to the ABAP repository only after **`CONFIRM DEPLOY`**. Setup and the full
+linter) and the build, and deploys to the ABAP repository only after **`CONFIRM DEPLOY`**. The extension provides
+both SAP MCP servers by default – no `mcp.json` to edit (settings `dewaSpecBuilder.fioriMcp.*`, command **DEWA:
+Check Fiori MCP servers**). Setup and the full
 TS checklist: [docs/AGENT_WORKFLOWS.md](docs/AGENT_WORKFLOWS.md#dewa-fiori-build-the-fiori-app-of-a-technical-spec).
 
 ### SAP test data server (separate tool)
