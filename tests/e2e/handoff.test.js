@@ -61,3 +61,40 @@ test('new only → dewa-abap; change only → dewa-abap-change; both → choice 
     await browser.close();
   }
 });
+
+const RAP = { type: 'RAP', name: 'ZR_BILLBLOCK', status: 'new' };
+const FIORI = { type: 'Fiori/UI5', name: 'ZSD_BILLBLOCK', status: 'new', detail: { appType: 'Fiori elements – List Report & Object Page', service: 'ZUI_SD_BILLBLOCK_O4 / BillBlock' } };
+
+test('Fiori only → dewa-fiori; RAP + Fiori → choice (backend first, Fiori last); the Fiori form switches by floorplan', async () => {
+  const browser = await chromium.launch();
+  try {
+    const p = await page(browser);
+    await handOver(p, [FIORI]);
+    assert.deepStrictEqual(await chats(p), ['dewa-fiori|DEWA-FIORI v1\nBuild th']);
+
+    await handOver(p, [RAP, FIORI]);
+    assert.ok(await p.locator('#handoff-dialog[open]').isVisible(), 'choice shown');
+    assert.ok(await p.locator('[data-action="handoff-change"]').isHidden(), 'no change agent needed');
+    assert.strictEqual(await p.locator('[data-action="handoff-fiori"] .handoff-n').textContent(), '2.');
+    await p.click('[data-action="handoff-fiori"]');
+    assert.deepStrictEqual(await chats(p), ['dewa-fiori|DEWA-FIORI v1\nBuild th']);
+    const audit = await p.evaluate(() => APB.state.get().audit.filter((e) => e.type === 'export').map((e) => e.data.to));
+    assert.ok(audit.includes('Copilot Chat (dewa-fiori)'));
+
+    // the Fiori object form in step 4: list report fields for Fiori elements, view / route grids for freestyle
+    await p.evaluate(() => { const s = APB.state.get(); s.types = ['FIORI']; APB.state.replace(s); APB.ui.goto ? APB.ui.goto(4) : null; APB.ui.renderMain(); });
+    const labels = () => p.evaluate(() => document.querySelector('#main').textContent);
+    const step4 = async () => { await p.evaluate(() => { const b = document.querySelector('[data-action="goto"][data-step="4"]'); if (b) b.click(); }); await p.waitForTimeout(100); return labels(); };
+    let l = await step4();
+    assert.match(l, /Table columns \(list report\)/);
+    assert.doesNotMatch(l, /Views \(freestyle\)/);
+    await p.evaluate(() => { const s = APB.state.get(); s.objects.find((o) => o.type === 'Fiori/UI5').detail.appType = 'Freestyle SAPUI5'; APB.state.replace(s); APB.ui.renderMain(); });
+    l = await labels();
+    assert.match(l, /Views \(freestyle\)/);
+    assert.match(l, /Routes \(freestyle\)/);
+    assert.doesNotMatch(l, /Table columns \(list report\)/);
+    assert.deepStrictEqual(p.errors, []);
+  } finally {
+    await browser.close();
+  }
+});

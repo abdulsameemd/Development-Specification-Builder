@@ -480,10 +480,10 @@
       nav(true, 'Continue');
   }
 
-  /* Hand the Technical spec to a Copilot agent. mode: all | new (dewa-abap) | change (dewa-abap-change) */
+  /* Hand the Technical spec to a Copilot agent. mode: all | new (dewa-abap) | change (dewa-abap-change) | fiori (dewa-fiori) */
   function handOver(mode) {
     const s = S.get();
-    const agent = mode === 'change' ? 'dewa-abap-change' : 'dewa-abap';
+    const agent = mode === 'change' ? 'dewa-abap-change' : mode === 'fiori' ? 'dewa-fiori' : 'dewa-abap';
     const prompt = M.chatPrompt(s, mode === 'all' ? undefined : mode);
     auditAdd('export', { to: H.isVscode ? 'Copilot Chat (' + agent + ')' : 'clipboard + VS Code (' + agent + ')', approval: APB.gov.status(s).state });
     if (H.isVscode) {
@@ -1159,16 +1159,29 @@
       if (isFs()) { FA.actions['fs-discover'](); return; }
       gateGuard('G2', actions['vscode-go']);
     },
-    /* gate G2 passed: new objects → dewa-abap, existing objects to change → dewa-abap-change; both → choose (new first) */
+    /* gate G2 passed: new objects → dewa-abap, existing objects to change → dewa-abap-change, Fiori/UI5 apps → dewa-fiori;
+       more than one → choose (backend first, Fiori last) */
     'vscode-go': function () {
       const s = S.get();
       if (V.checkMandatory(s).length) { toast('Add a requirement and a development object first'); return; }
       const h = M.handoff(s);
-      if (h.hasNew && h.hasChange) { openDialog('#handoff-dialog'); return; }
-      handOver(h.hasChange ? 'change' : 'all');
+      if (h.agents.length > 1) {
+        let n = 0;
+        [['new', h.hasNew], ['change', h.hasChange], ['fiori', h.hasFiori]].forEach(function (c) {
+          const b = $('#handoff-dialog [data-action="handoff-' + c[0] + '"]');
+          b.hidden = !c[1];
+          if (c[1]) b.querySelector('.handoff-n').textContent = (++n) + '.';
+          b.classList.toggle('btn-primary', c[1] && n === 1);
+          b.classList.toggle('btn-ghost', !(c[1] && n === 1));
+        });
+        openDialog('#handoff-dialog');
+        return;
+      }
+      handOver(h.hasFiori ? 'fiori' : h.hasChange ? 'change' : 'all');
     },
     'handoff-new': function () { closeDialogs(); handOver('new'); },
     'handoff-change': function () { closeDialogs(); handOver('change'); },
+    'handoff-fiori': function () { closeDialogs(); handOver('fiori'); },
     'gov-approve': function () {
       const s = S.get(), kind = APB.gov.kindOf(s);
       if (!APB.gov.canApprove(kind)) { toast('Only the configured approvers can approve'); return; }

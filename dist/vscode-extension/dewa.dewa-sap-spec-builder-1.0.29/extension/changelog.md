@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.29
+
+- **New Copilot agent `dewa-fiori` for Fiori apps.** Built on SAP's own tooling: the SAP Fiori MCP server (`@sap-ux/fiori-mcp-server`, pinned) to generate and change apps, the UI5 MCP server (`@ui5/mcp-server`) for guidelines, API reference, manifest validation and the UI5 linter, and the ABAP ADT MCP server read-only to verify the service. It checks the OData service in SAP first and uses only entity sets, fields, navigations and actions that exist in the metadata (missing ones are reported as backend gaps, never invented), generates with the floorplan templates instead of hand-written scaffolding, keeps UI annotations in the backend, never edits `metadata.xml`, validates / lints / builds before reporting, asks for `CONFIRM CHANGE` before changing an existing app and deploys to the ABAP repository only after `CONFIRM DEPLOY`. Fiori elements, FPM extensions and freestyle SAPUI5. Also as a skill (`docs/agent-kit/skills/fiori-build`) with an MCP example (`docs/agent-kit/fiori/mcp.example.json`).
+- **Fiori/UI5 designer in the Technical spec:** floorplan, app ID, UI5 version, devices, service binding / URL / system, OData version, draft, list report filters and columns, table type, initial load, object page header and sections, actions, value helps and texts, annotations, FPM extensions, freestyle layout / views / routes / models / controller logic, navigation, launchpad, catalog and role, deploy (BSP name, package, transport), OPA5 journeys and UI acceptance checks. The fields shown depend on the floorplan; the completeness check asks for the essentials.
+- **Hand-off by object, three agents:** new backend objects → `dewa-abap`, changed backend objects → `dewa-abap-change`, Fiori apps → `dewa-fiori` (last; it needs the published service). The backend prompts leave the apps alone. The extension installs all three agents.
+
 ## 1.0.28
 
 - **Test data (SAP HR) removed from the Technical spec.** The step 4 test data card, *Prepare test data in Copilot Chat*, the test data table in the documents and its Copilot instruction are gone; specs saved with test data rows still open (the rows are ignored). `sap-test-data-server/` stays in the repository as a separate tool and is not used by the builder.

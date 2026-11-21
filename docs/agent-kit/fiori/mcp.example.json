@@ -1,0 +1,24 @@
+{
+  "//": "Copy into .vscode/mcp.json of the Fiori project (or the user mcp.json). Server names must match the dewa-fiori agent: fiori-mcp, ui5-mcp, sap-abap-adt (the ABAP ADT MCP server you already use). Versions are pinned on purpose – update them after testing.",
+  "servers": {
+    "fiori-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["--yes", "--ignore-scripts", "@sap-ux/fiori-mcp-server@1.17.0", "fiori-mcp"],
+      "env": {
+        "SAP_UX_FIORI_TOOLS_DISABLE_TELEMETRY": "true",
+        "LOG_LEVEL": "error",
+        "NODE_EXTRA_CA_CERTS": "C:\\certs\\dewa-root-ca.pem"
+      }
+    },
+    "ui5-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["--yes", "@ui5/mcp-server@0.3.3"],
+      "env": {
+        "UI5_MCP_SERVER_ALLOWED_DOMAINS": "localhost, your-sap-host.dewa.gov.ae",
+        "NODE_EXTRA_CA_CERTS": "C:\\certs\\dewa-root-ca.pem"
+      }
+    }
+  }
+}

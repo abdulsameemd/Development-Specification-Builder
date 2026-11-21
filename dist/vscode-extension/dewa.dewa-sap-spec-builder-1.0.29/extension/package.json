@@ -2,7 +2,7 @@
   "name": "dewa-sap-spec-builder",
   "displayName": "DEWA SAP Spec Builder",
   "description": "Functional and development specifications for SAP, inside VS Code – with read-only SAP system discovery through GitHub Copilot and the SAP MCP servers.",
-  "version": "1.0.28",
+  "version": "1.0.29",
   "publisher": "dewa",
   "license": "UNLICENSED",
   "private": true,
@@ -44,7 +44,7 @@
       },
       {
         "command": "dewa.specBuilder.installAgent",
-        "title": "Reinstall Spec Builder agents (dewa-fs-discovery, dewa-abap-change)",
+        "title": "Reinstall Spec Builder agents (dewa-fs-discovery, dewa-abap-change, dewa-fiori)",
         "category": "DEWA"
       }
     ],
@@ -202,7 +202,7 @@
         "dewaSpecBuilder.installAgent": {
           "type": "boolean",
           "default": true,
-          "description": "Install the Spec Builder agents (dewa-fs-discovery, dewa-abap-change) into the VS Code prompts folder on start-up (an edited copy is never replaced)."
+          "description": "Install the Spec Builder agents (dewa-fs-discovery, dewa-abap-change, dewa-fiori) into the VS Code prompts folder on start-up (an edited copy is never replaced)."
         }
       }
     },

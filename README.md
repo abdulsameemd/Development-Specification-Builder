@@ -193,7 +193,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.28.vsix`](dist/dewa-sap-spec-builder-1.0.28.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.28.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.29.vsix`](dist/dewa-sap-spec-builder-1.0.29.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.29.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **If the .vsix download is blocked** (the downloaded file is only a few KB, and VS Code says *End of central directory record signature not found*): some company networks replace `.vsix` downloads with a web page. The repository also holds the extension **unpacked** in `dist/vscode-extension/dewa.dewa-sap-spec-builder-<version>/`, as plain files, so no `.vsix` is downloaded:
 
@@ -265,6 +265,18 @@ offers *1. Build new objects* and *2. Change existing objects* (new first). `dew
 time: reads the current source, shows the diff and the where-used impact, writes only after **`CONFIRM CHANGE`**,
 then activates and runs ABAP Unit and ATC, and says how to revert. It never touches SAP standard or code the spec
 does not name. Details: [docs/AGENT_WORKFLOWS.md](docs/AGENT_WORKFLOWS.md).
+
+### Fiori apps: the `dewa-fiori` agent
+
+A Fiori/UI5 object in a Technical spec now has a full designer (step 4): floorplan (Fiori elements List Report &
+Object Page, Worklist, Analytical List Page, Overview Page, Form Entry Object Page, FPM custom page, or freestyle
+SAPUI5), app ID, service binding and URL, list report filters and columns, object page header and sections, actions,
+value helps and texts, annotations, FPM extensions, freestyle views / routes / models / controller logic, navigation,
+launchpad, deploy and tests – the fields shown depend on the floorplan. The hand-off sends the app to the third
+agent, **`dewa-fiori`**, after the backend: it verifies the OData service in SAP, uses only what the metadata
+contains, generates the app with SAP's Fiori MCP server and checks it with the UI5 MCP server (manifest validation,
+linter) and the build, and deploys to the ABAP repository only after **`CONFIRM DEPLOY`**. Setup and the full
+TS checklist: [docs/AGENT_WORKFLOWS.md](docs/AGENT_WORKFLOWS.md#dewa-fiori-build-the-fiori-app-of-a-technical-spec).
 
 ### SAP test data server (separate tool)
 

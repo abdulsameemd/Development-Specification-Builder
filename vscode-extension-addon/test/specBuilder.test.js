@@ -309,18 +309,20 @@ test('an agent file the user edited is not replaced without asking', async () =>
   assert.strictEqual(await installer.install(fakeVscode(), t.ctx, { force: true }), 'updated');
 });
 
-test('both agents are installed; each keeps its own edited-copy protection; the first keeps its old key', async () => {
+test('all agents are installed; each keeps its own edited-copy protection; the first keeps its old key', async () => {
   const t = installCtx();
   fs.writeFileSync(path.join(t.ext, 'agents', 'dewa-abap-change.agent.md'), 'c1');
-  assert.deepStrictEqual(installer.FILES, ['dewa-fs-discovery.agent.md', 'dewa-abap-change.agent.md']);
-  assert.deepStrictEqual(await installer.installAll(fakeVscode(), t.ctx), { 'dewa-fs-discovery.agent.md': 'installed', 'dewa-abap-change.agent.md': 'installed' });
+  fs.writeFileSync(path.join(t.ext, 'agents', 'dewa-fiori.agent.md'), 'f1');
+  assert.deepStrictEqual(installer.FILES, ['dewa-fs-discovery.agent.md', 'dewa-abap-change.agent.md', 'dewa-fiori.agent.md']);
+  assert.deepStrictEqual(await installer.installAll(fakeVscode(), t.ctx), { 'dewa-fs-discovery.agent.md': 'installed', 'dewa-abap-change.agent.md': 'installed', 'dewa-fiori.agent.md': 'installed' });
+  assert.strictEqual(fs.readFileSync(path.join(path.dirname(t.dest), 'dewa-fiori.agent.md'), 'utf8'), 'f1');
   const changeDest = path.join(path.dirname(t.dest), 'dewa-abap-change.agent.md');
   assert.strictEqual(fs.readFileSync(changeDest, 'utf8'), 'c1');
   assert.ok(t.ctx.globalState.get('dewaSpecBuilder.agentHash'), 'old key for dewa-fs-discovery');
   fs.writeFileSync(changeDest, 'my change-agent edits');
   fs.writeFileSync(path.join(t.ext, 'agents', 'dewa-abap-change.agent.md'), 'c2');
   fs.writeFileSync(path.join(t.ext, 'agents', installer.FILE), 'v2');
-  assert.deepStrictEqual(await installer.installAll(fakeVscode(), t.ctx), { 'dewa-fs-discovery.agent.md': 'updated', 'dewa-abap-change.agent.md': 'modified' });
+  assert.deepStrictEqual(await installer.installAll(fakeVscode(), t.ctx), { 'dewa-fs-discovery.agent.md': 'updated', 'dewa-abap-change.agent.md': 'modified', 'dewa-fiori.agent.md': 'current' });
   assert.strictEqual(fs.readFileSync(changeDest, 'utf8'), 'my change-agent edits');
 });
 
@@ -636,4 +638,32 @@ test('audit entries are appended as JSON lines to .dewa/audit/<spec-id>.jsonl; b
   assert.strictEqual(await r.handle({ type: 'audit', specId: 'xabc123' }), false);
   await r.handle({ type: 'open-settings' });
   assert.ok(vs.calls.commands.some((c) => c.id === 'workbench.action.openSettings'));
+});
+
+test('the dewa-fiori agent file: front matter, SAP Fiori / UI5 / ADT tools, the grounding, check and deploy rules', () => {
+  const md = fs.readFileSync(path.join(__dirname, '../agents/dewa-fiori.agent.md'), 'utf8');
+  const fm = /^---\n([\s\S]*?)\n---\n/.exec(md);
+  assert.ok(fm, 'front matter');
+  assert.match(fm[1], /^description: .*SAP Fiori apps/m);
+  assert.match(fm[1], /^tools: \['fiori-mcp\/\*', 'ui5-mcp\/\*', 'sap-abap-adt\/\*'/m);
+  for (const rule of [/DEWA-FIORI v1/, /starts? with \*\*STOP\*\*/, /download_odata_service_metadata/, /generate_fiori_app_odata/,
+    /list_functionality` → `get_functionality_details` → `execute_functionality/, /Never edit `webapp\/localService\/\*\*\/metadata\.xml`/,
+    /Never write or change backend objects/, /FF_SIMPLE/, /get_api_reference/, /run_manifest_validation/, /run_ui5_linter/, /npm run build/,
+    /\*\*`CONFIRM CHANGE`\*\*/, /\*\*`CONFIRM DEPLOY`\*\*/, /Never deploy to production/, /SAP_UX_FIORI_TOOLS_DISABLE_TELEMETRY=true/]) assert.match(md, rule);
+  const skill = fs.readFileSync(path.join(__dirname, '../../docs/agent-kit/skills/fiori-build/SKILL.md'), 'utf8');
+  assert.match(skill, /^---\nname: fiori-build\n/);
+  assert.ok(skill.includes(md.split('\n---\n')[1].slice(0, 400)), 'skill body = agent body');
+  const mcp = JSON.parse(fs.readFileSync(path.join(__dirname, '../../docs/agent-kit/fiori/mcp.example.json'), 'utf8'));
+  assert.match(mcp.servers['fiori-mcp'].args.join(' '), /@sap-ux\/fiori-mcp-server@\d+\.\d+\.\d+/, 'pinned');
+  assert.match(mcp.servers['ui5-mcp'].args.join(' '), /@ui5\/mcp-server@\d+\.\d+\.\d+/, 'pinned');
+  assert.strictEqual(mcp.servers['fiori-mcp'].env.SAP_UX_FIORI_TOOLS_DISABLE_TELEMETRY, 'true');
+});
+
+test('the panel accepts the dewa-fiori agent for Copilot Chat', async () => {
+  const vs = fakeVscode();
+  const { r } = router(vs);
+  await r.handle({ type: 'open-chat', agent: 'dewa-fiori', prompt: 'DEWA-FIORI v1 …' });
+  const open = vs.calls.commands.filter((c) => c.id === 'workbench.action.chat.open').pop();
+  assert.strictEqual(open.args.mode, 'dewa-fiori');
+  assert.match(open.args.query, /^DEWA-FIORI v1/);
 });
