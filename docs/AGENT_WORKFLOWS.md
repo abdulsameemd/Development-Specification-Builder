@@ -8,10 +8,12 @@ A practical guide to choosing and working with the DEWA backend agents. The sour
 | --- | --- | --- | --- |
 | `dewa-abap` | Building new ABAP, CDS, RAP, or CAP backend artifacts | One new/changed artifact at a time, with tests and validation status | Type `CONFIRM ARTEFACT` before the next artifact |
 | `dewa-abap-change` | Changing existing custom ABAP objects exactly as a Technical spec describes (objects with status *change*) | One changed object at a time: diff, impact, activation / ABAP Unit / ATC evidence, how to revert | Type `CONFIRM CHANGE` before every write |
+| `dewa-fiori` | Building or changing the SAP Fiori app of a Technical spec (Fiori elements, FPM extensions or freestyle SAPUI5) on a published OData service | One app at a time: service verified, app generated with SAP Fiori tools, manifest validation / UI5 linter / build results, acceptance checks | `CONFIRM CHANGE` before changing an existing app, `CONFIRM DEPLOY` before deploying |
+| `dewa-fiori-review` | Reviewing Fiori / UI5 front ends: security (XSS, injection, CSRF, secrets, CSP, dependencies, backend authorization), SAP standards, accessibility, i18n, performance, tests, and the Technical spec | Verdict, tool results, findings with severity, `file:line` and evidence; fixes for accepted findings | Y/N per finding, `CONFIRM FIX` before any change |
 | `dewa-codereview` | Reviewing or safely improving existing ABAP, CDS, RAP, or CAP code | Full review report, findings, safe fixes, and optionally an as-built technical specification | Answer Y/N for flagged changes; type `CONFIRM REVIEW` before handoff |
 | `dewa-adobeagent` | Building or maintaining SAP Adobe Forms and their ABAP integration | Form interface, form object/context, data provider or driver, and validation evidence | One artifact at a time; no named confirmation keyword is specified in this agent |
 
-All three agents are backend-focused and use the ADT MCP server for SAP repository operations where available. They do not replace target-system authorization, SAP activation, ATC, ABAP Unit, Basis/ADS checks, or required technical approvals.
+The backend agents are backend-focused; `dewa-fiori` builds the front end on top of the published service. The backend agents and use the ADT MCP server for SAP repository operations where available. They do not replace target-system authorization, SAP activation, ATC, ABAP Unit, Basis/ADS checks, or required technical approvals.
 
 ## How to Choose
 
@@ -22,6 +24,9 @@ flowchart TD
     B -->|No| D{Is the code already present?}
     D -->|No - create new backend artifacts| E[Use dewa-abap]
     D -->|Yes - change it as a Technical spec describes| X[Use dewa-abap-change]
+    A --> FI{Fiori app on a published OData service?}
+    FI -->|Yes - build or change the app| Y[Use dewa-fiori]
+    FI -->|Yes - review the app| YR[Use dewa-fiori-review]
     D -->|Yes - inspect, fix, modernize, or optimize| F[Use dewa-codereview]
     C --> G[Graphical layout work is done in Adobe LiveCycle Designer]
     E --> H[One artifact at a time]
@@ -95,6 +100,92 @@ both → *Build new objects* first, then *Change existing objects*. Its prompt s
 - Only objects listed as *change*, only the customer namespace; never SAP standard (enhancement points / BAdIs only when the spec names them); never unrelated code.
 - Keep signatures and structures backward compatible unless the spec says otherwise.
 - No business data changes, no transport release / import, no production.
+
+## `dewa-fiori`: Build the Fiori App of a Technical Spec
+
+Shipped with the DEWA SAP Spec Builder extension (agent file `vscode-extension-addon/agents/dewa-fiori.agent.md`,
+also as the skill `docs/agent-kit/skills/fiori-build/SKILL.md`). The Spec Builder hands every Fiori/UI5 object
+(new or change) to `dewa-fiori`; backend objects stay with `dewa-abap` / `dewa-abap-change`, and the choice dialog
+puts the Fiori app last because it needs the published service. Its prompt starts with `DEWA-FIORI v1`.
+
+### Tools (MCP servers by SAP, versions pinned)
+
+| Server name | Package | Used for |
+| --- | --- | --- |
+| `fiori-mcp` | `@sap-ux/fiori-mcp-server` (SAP Fiori tools) | `list_sap_systems`, `download_odata_service_metadata`, `generate_fiori_app_odata`, `list_fiori_apps`, `list_functionality` → `get_functionality_details` → `execute_functionality` (pages, building blocks, extensions, manifest settings), `search_docs` |
+| `ui5-mcp` | `@ui5/mcp-server` | `get_guidelines`, `get_api_reference`, `get_version_info`, `run_manifest_validation`, `run_ui5_linter`, `create_ui5_app` |
+| `sap-abap-adt` | the ABAP ADT MCP server | read-only: service binding, service definition, CDS, BDEF, metadata extension |
+
+Setup: **nothing to copy** – the DEWA SAP Spec Builder extension provides `fiori-mcp` and `ui5-mcp` by default
+(VS Code 1.101+ registers them through its MCP provider API; VS Code asks once to trust / start them). On older
+VS Code the extension offers **Add to my mcp.json** once. Settings `dewaSpecBuilder.fioriMcp.*`: `enabled` (default
+on), `fioriServerVersion` / `ui5ServerVersion` (pinned), `allowedDomains` (add the SAP host), `caCertFile` (DEWA's
+root CA). A server you define yourself in an `mcp.json` under the same name is left to you. **DEWA: Check Fiori MCP
+servers** shows the status (Node.js 20.17+ needed). Telemetry of SAP Fiori tools is off
+(`SAP_UX_FIORI_TOOLS_DISABLE_TELEMETRY=true`). Manual setup without the extension:
+[`docs/agent-kit/fiori/mcp.example.json`](agent-kit/fiori/mcp.example.json). Optional: SAP's own skills for Fiori development come
+with the `sap-ux-fiori-tools` plugin (Copilot Chat → `@agentPlugins`, or `copilot plugin install
+sap-ux-fiori-tools@awesome-copilot`); `dewa-fiori`'s rules still apply on top.
+
+### Build Flow (per app)
+
+1. Stop if the spec is not approved or the floorplan, service binding, main entity set, app ID or layout
+   (columns / sections, or views / routes for freestyle) is missing or `[TO BE CONFIRMED]`.
+2. Verify the service in SAP (read-only) and download its metadata. Anything the spec names that the metadata does not
+   have is a **backend gap** for `dewa-abap` / `dewa-abap-change` – never invented in the UI.
+3. Generate the app with SAP Fiori tools (floorplan template `FE_LROP`, `FE_WORKLIST`, `FE_ALP`, `FE_OVP`, `FE_FEOP`,
+   `FE_FPM`, or `FF_SIMPLE` / `create_ui5_app` for freestyle); further changes through the MCP functionalities.
+4. UI annotations stay in the backend metadata extension; local `annotation.xml` only for app-specific items;
+   `metadata.xml` is never edited.
+5. Freestyle: `get_guidelines` first, `get_api_reference` before any control or method, i18n for every text, no
+   deprecated APIs.
+6. Manifest validation, UI5 linter, Fiori ESLint plugin, `npm run build`, preview; acceptance checks pass / fail.
+7. Deploy to the ABAP repository (BSP name, package, transport from the spec) only after `CONFIRM DEPLOY`; never
+   production.
+
+### What the Technical spec needs for a Fiori app
+
+| Area | Content |
+| --- | --- |
+| App | Floorplan, app ID / namespace, title, minimum SAPUI5 version, devices |
+| Service | Service binding / main entity set, OData version, service URL, SAP system for the metadata, draft |
+| List report | Filter fields (mandatory, default, value help), table columns (label, importance, position), table type, initial load |
+| Object page | Header (title, description, header facets), sections (field group / child table / chart / custom) |
+| Actions | Action as in the BDEF, button text, placement, confirmation, side effects |
+| Value helps & texts | Field, value help entity, text field, "show as" (text arrangement) |
+| Annotations | Backend DDLX only, or the app-specific local list |
+| Extensions (FPM) | Building blocks, custom columns / sections / actions / pages, controller extensions |
+| Freestyle | Layout, views (controls, binding, user actions), routes, models, controller logic |
+| Navigation & launchpad | Inbound semantic object – action, outbound targets, tile, catalog / space / page, business role |
+| Deploy | Target, BSP application name, package, transport |
+| Tests | OPA5 journeys and UI acceptance checks |
+
+## `dewa-fiori-review`: Review a Fiori / UI5 Front End
+
+Shipped with the DEWA SAP Spec Builder extension (agent file `vscode-extension-addon/agents/dewa-fiori-review.agent.md`,
+also as the skill `docs/agent-kit/skills/fiori-review/SKILL.md`). Start it from the Copilot Chat agent picker for any
+app, or from the builder's hand-off (*Review the Fiori app*, prompt `DEWA-FIORI-REVIEW v1`), which also checks the
+app against the Technical spec. `dewa-fiori` recommends it before deploying.
+
+1. **Tool checks, real output:** `run_ui5_linter`, `run_manifest_validation`, the Fiori ESLint plugin
+   (`@sap-ux/eslint-plugin-fiori-tools`), `npm audit --omit=dev`, `npm run build`, `npm test`.
+2. **Source scan with fixed patterns:** OData `$filter` / key concatenation, HTML / code injection, open redirects,
+   requests bypassing the model, secrets, insecure / hard-coded URLs, browser storage, debug output, TLS switched off,
+   hard-coded texts, icon-only buttons, synchronous loading, reads in loops. The linter and ESLint do not report most
+   of these. A sample app with planted issues: the linter found the legacy / global / manifest issues and ESLint
+   found `innerHTML`, `eval`, `alert`; the `$filter` injection, API key, `http://` URL, `jQuery.ajax` POST, hard-coded
+   texts and the icon-only button were found only by the scan.
+3. **Catalogue:**
+   - SEC: XSS / injection, OData / URL injection, backend authorization (DCL, BDEF) read-only, CSRF, secrets / data
+     protection, CSP / framing / transport, dependencies / deploy configuration;
+   - STD: UI5 modern APIs, Fiori elements rules, manifest, i18n / RTL, accessibility (WCAG 2.1 AA), theming,
+     messages, clean code;
+   - PERF: loading, OData (`$select`, paging, N+1, batch), rendering, memory, assets;
+   - TEST; SPEC.
+4. **Report:** verdict (Approve / Approve with fixes / Reject), tool results, findings (ID, severity, `file:line`,
+   evidence, reference, fix), backend findings.
+5. **Fix:** Y/N per finding → diff → `CONFIRM FIX` → apply → re-run the checks. Never backend objects,
+   `metadata.xml` or deploy.
 
 ## `dewa-codereview`: Review Existing Code
 

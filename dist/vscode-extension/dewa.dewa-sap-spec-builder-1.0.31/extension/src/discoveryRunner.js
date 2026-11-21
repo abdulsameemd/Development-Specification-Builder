@@ -13,8 +13,8 @@ const guardrails = require('./guardrails');
 const WRITE_VERBS = ['create', 'update', 'delete', 'remove', 'change', 'modify', 'edit', 'write', 'save', 'activate',
   'deactivate', 'lock', 'unlock', 'release', 'import', 'deploy', 'publish', 'execute', 'exec', 'insert', 'set',
   'patch', 'put', 'rename', 'move', 'refactor', 'generate', 'generator', 'commit', 'submit', 'assign', 'install',
-  'upload', 'start'];
-const AMBIGUOUS = ['run', 'transport', 'copy', 'post', 'format', 'action', 'functionality'];
+  'upload', 'start', 'download']; // download: e.g. download_odata_service_metadata saves a file in the workspace
+const AMBIGUOUS = ['run', 'transport', 'copy', 'post', 'format', 'action', 'functionality', 'open']; // open: Fiori MCP tools that open editors
 const READ_VERBS = ['get', 'list', 'search', 'read', 'find', 'query', 'describe', 'info', 'show', 'fetch', 'lookup', 'where', 'used', 'outline', 'source', 'metadata'];
 /* Stronger models first; small/fast models (Haiku, mini, flash) only when nothing else is available. */
 const MODEL_PREFERENCE = [/opus/i, /sonnet/i, /gpt-?5(?!.*mini)/i, /gpt-?4\.1/i, /gemini.*pro/i, /o3|o4/i];

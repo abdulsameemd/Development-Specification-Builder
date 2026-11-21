@@ -116,10 +116,12 @@
       <h2 id="handoff-title">Hand over to Copilot</h2>
       <button class="icon-btn" aria-label="Close">✕</button>
     </form>
-    <p class="muted small">This specification has new objects and existing objects to change. They go to two agents – build the new objects first.</p>
+    <p class="muted small">This specification goes to more than one agent. Work in this order: backend objects first, the Fiori app last (it needs the published service), then review the app.</p>
     <div class="handoff-choices">
-      <button type="button" class="btn btn-primary" data-action="handoff-new"><strong>1. Build new objects</strong><span class="small">dewa-abap · one artifact at a time, CONFIRM ARTEFACT</span></button>
-      <button type="button" class="btn btn-ghost" data-action="handoff-change"><strong>2. Change existing objects</strong><span class="small">dewa-abap-change · diff first, CONFIRM CHANGE</span></button>
+      <button type="button" class="btn btn-primary" data-action="handoff-new"><strong><span class="handoff-n">1.</span> Build new objects</strong><span class="small">dewa-abap · one artifact at a time, CONFIRM ARTEFACT</span></button>
+      <button type="button" class="btn btn-ghost" data-action="handoff-change"><strong><span class="handoff-n">2.</span> Change existing objects</strong><span class="small">dewa-abap-change · diff first, CONFIRM CHANGE</span></button>
+      <button type="button" class="btn btn-ghost" data-action="handoff-fiori"><strong><span class="handoff-n">3.</span> Build the Fiori app</strong><span class="small">dewa-fiori · after the service is published, CONFIRM DEPLOY</span></button>
+      <button type="button" class="btn btn-ghost" data-action="handoff-fiori-review"><strong><span class="handoff-n">4.</span> Review the Fiori app</strong><span class="small">dewa-fiori-review · security, SAP standards, performance, against this spec; fixes after CONFIRM FIX</span></button>
     </div>
   </dialog>
   <dialog id="drafts-dialog" aria-labelledby="drafts-title">

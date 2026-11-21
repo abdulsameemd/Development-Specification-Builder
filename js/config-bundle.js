@@ -5297,8 +5297,9 @@ window.APB_CONFIG = {
     "fields": [
      {
       "id": "appType",
-      "label": "App type",
+      "label": "Floorplan / app type",
       "kind": "select",
+      "ask": "Floorplan",
       "options": [
        {
         "value": "",
@@ -5321,12 +5322,77 @@ window.APB_CONFIG = {
         "label": "Fiori elements – Overview Page"
        },
        {
+        "value": "Fiori elements – Form Entry Object Page",
+        "label": "Fiori elements – Form Entry Object Page"
+       },
+       {
+        "value": "Fiori elements – Custom page (FPM)",
+        "label": "Fiori elements – Custom page (FPM)"
+       },
+       {
         "value": "Freestyle SAPUI5",
         "label": "Freestyle SAPUI5"
        },
        {
         "value": "Adapt existing app (extension)",
-        "label": "Adapt existing app (extension)"
+        "label": "Adaptation project / adapt an SAP app (not built by dewa-fiori)"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "appId",
+      "label": "App ID / namespace",
+      "kind": "text",
+      "placeholder": "e.g. dewa.sd.billblock (module zsdbillblock)",
+      "ask": "App ID"
+     },
+     {
+      "id": "title",
+      "label": "App title (launchpad / shell)",
+      "kind": "text",
+      "placeholder": "e.g. Manage Billing Block Rules"
+     },
+     {
+      "id": "ui5Version",
+      "label": "Minimum SAPUI5 version",
+      "kind": "text",
+      "placeholder": "e.g. 1.120 – the UI5 version of the ABAP front-end server"
+     },
+     {
+      "id": "devices",
+      "label": "Devices",
+      "kind": "multicheck",
+      "options": [
+       {
+        "value": "Desktop",
+        "label": "Desktop"
+       },
+       {
+        "value": "Tablet",
+        "label": "Tablet"
+       },
+       {
+        "value": "Phone",
+        "label": "Phone"
+       }
+      ]
+     },
+     {
+      "id": "odataVersion",
+      "label": "OData version",
+      "kind": "radio",
+      "options": [
+       {
+        "value": "V4",
+        "label": "V4"
+       },
+       {
+        "value": "V2",
+        "label": "V2"
        },
        {
         "value": "tbc",
@@ -5336,15 +5402,711 @@ window.APB_CONFIG = {
      },
      {
       "id": "service",
-      "label": "OData service / main entity",
+      "label": "Service binding / main entity set",
       "kind": "text",
-      "placeholder": "e.g. ZUI_SALESBLOCK_O4 / SalesBlock",
+      "placeholder": "e.g. ZUI_SD_BILLBLOCK_O4 / BillBlock",
       "ask": "OData service"
      },
      {
-      "id": "pages",
-      "label": "Pages / views",
+      "id": "servicePath",
+      "label": "Service URL (path)",
+      "kind": "text",
+      "placeholder": "e.g. /sap/opu/odata4/sap/zui_sd_billblock_o4/srvd/sap/zui_sd_billblock/0001/"
+     },
+     {
+      "id": "system",
+      "label": "SAP system for the metadata",
+      "kind": "text",
+      "placeholder": "e.g. 210 – the system name in SAP Fiori tools / the ADT destination"
+     },
+     {
+      "id": "draft",
+      "label": "Draft-enabled",
+      "kind": "radio",
+      "options": [
+       {
+        "value": "yes",
+        "label": "Yes"
+       },
+       {
+        "value": "no",
+        "label": "No"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "filters",
+      "label": "Filter fields (list report)",
       "kind": "grid",
+      "columns": [
+       {
+        "id": "field",
+        "label": "Field (as in the service)",
+        "kind": "text",
+        "w": 150,
+        "placeholder": "e.g. SalesOrganization"
+       },
+       {
+        "id": "label",
+        "label": "Label",
+        "kind": "text",
+        "w": 140
+       },
+       {
+        "id": "mandatory",
+        "label": "Mandatory",
+        "kind": "check",
+        "w": 70
+       },
+       {
+        "id": "default",
+        "label": "Default",
+        "kind": "text",
+        "w": 110
+       },
+       {
+        "id": "valueHelp",
+        "label": "Value help",
+        "kind": "text",
+        "w": 160,
+        "placeholder": "e.g. I_SalesOrganizationVH"
+       }
+      ],
+      "addLabel": "+ Filter",
+      "showIf": {
+       "field": "appType",
+       "in": [
+        "Fiori elements – List Report & Object Page",
+        "Fiori elements – Worklist",
+        "Fiori elements – Analytical List Page"
+       ]
+      }
+     },
+     {
+      "id": "columns",
+      "label": "Table columns (list report)",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "field",
+        "label": "Field (as in the service)",
+        "kind": "text",
+        "w": 160,
+        "placeholder": "e.g. CustomerGroup"
+       },
+       {
+        "id": "label",
+        "label": "Label",
+        "kind": "text",
+        "w": 150
+       },
+       {
+        "id": "importance",
+        "label": "Importance",
+        "kind": "select",
+        "w": 90,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "High",
+          "label": "High"
+         },
+         {
+          "value": "Medium",
+          "label": "Medium"
+         },
+         {
+          "value": "Low",
+          "label": "Low"
+         }
+        ]
+       },
+       {
+        "id": "position",
+        "label": "Position",
+        "kind": "text",
+        "w": 60
+       },
+       {
+        "id": "note",
+        "label": "Note (criticality, link, unit …)",
+        "kind": "text",
+        "w": 200
+       }
+      ],
+      "addLabel": "+ Column",
+      "showIf": {
+       "field": "appType",
+       "in": [
+        "Fiori elements – List Report & Object Page",
+        "Fiori elements – Worklist",
+        "Fiori elements – Analytical List Page"
+       ]
+      }
+     },
+     {
+      "id": "tableType",
+      "label": "Table type",
+      "kind": "select",
+      "showIf": {
+       "field": "appType",
+       "in": [
+        "Fiori elements – List Report & Object Page",
+        "Fiori elements – Worklist",
+        "Fiori elements – Analytical List Page"
+       ]
+      },
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "Responsive table",
+        "label": "Responsive table"
+       },
+       {
+        "value": "Grid table",
+        "label": "Grid table"
+       },
+       {
+        "value": "Analytical table",
+        "label": "Analytical table"
+       },
+       {
+        "value": "Tree table",
+        "label": "Tree table"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "initialLoad",
+      "label": "Initial load",
+      "kind": "radio",
+      "showIf": {
+       "field": "appType",
+       "in": [
+        "Fiori elements – List Report & Object Page",
+        "Fiori elements – Worklist",
+        "Fiori elements – Analytical List Page"
+       ]
+      },
+      "options": [
+       {
+        "value": "Auto",
+        "label": "Auto"
+       },
+       {
+        "value": "Enabled",
+        "label": "Load on start"
+       },
+       {
+        "value": "Disabled",
+        "label": "Only after Go"
+       }
+      ]
+     },
+     {
+      "id": "opHeader",
+      "label": "Object page header",
+      "kind": "text",
+      "placeholder": "Title field, description field, header facets (e.g. Status with criticality)",
+      "showIf": {
+       "field": "appType",
+       "in": [
+        "Fiori elements – List Report & Object Page",
+        "Fiori elements – Form Entry Object Page",
+        "Fiori elements – Custom page (FPM)"
+       ]
+      }
+     },
+     {
+      "id": "sections",
+      "label": "Object page sections",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "label",
+        "label": "Section",
+        "kind": "text",
+        "w": 150
+       },
+       {
+        "id": "type",
+        "label": "Type",
+        "kind": "select",
+        "w": 130,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "Field group (form)",
+          "label": "Field group (form)"
+         },
+         {
+          "value": "Child entity table",
+          "label": "Child entity table"
+         },
+         {
+          "value": "Chart",
+          "label": "Chart"
+         },
+         {
+          "value": "Custom section (FPM)",
+          "label": "Custom section (FPM)"
+         }
+        ]
+       },
+       {
+        "id": "content",
+        "label": "Fields / child entity (as in the service)",
+        "kind": "text",
+        "w": 340
+       }
+      ],
+      "addLabel": "+ Section",
+      "showIf": {
+       "field": "appType",
+       "in": [
+        "Fiori elements – List Report & Object Page",
+        "Fiori elements – Form Entry Object Page",
+        "Fiori elements – Custom page (FPM)"
+       ]
+      }
+     },
+     {
+      "id": "layout",
+      "label": "Layout (freestyle)",
+      "kind": "select",
+      "showIf": {
+       "field": "appType",
+       "in": [
+        "Freestyle SAPUI5"
+       ]
+      },
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "Single page",
+        "label": "Single page"
+       },
+       {
+        "value": "Flexible column layout (list – detail)",
+        "label": "Flexible column layout (list – detail)"
+       },
+       {
+        "value": "Split app",
+        "label": "Split app"
+       },
+       {
+        "value": "Wizard",
+        "label": "Wizard"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "views",
+      "label": "Views (freestyle)",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "name",
+        "label": "View",
+        "kind": "text",
+        "w": 120,
+        "placeholder": "e.g. Main"
+       },
+       {
+        "id": "purpose",
+        "label": "Purpose",
+        "kind": "text",
+        "w": 170
+       },
+       {
+        "id": "controls",
+        "label": "Main controls (sap.m / sap.f)",
+        "kind": "text",
+        "w": 190,
+        "placeholder": "e.g. sap.m.Table, sap.m.SearchField"
+       },
+       {
+        "id": "binding",
+        "label": "Binding (entity set / path)",
+        "kind": "text",
+        "w": 170,
+        "placeholder": "e.g. /BillBlock"
+       },
+       {
+        "id": "actions",
+        "label": "User actions",
+        "kind": "text",
+        "w": 170
+       }
+      ],
+      "addLabel": "+ View",
+      "showIf": {
+       "field": "appType",
+       "in": [
+        "Freestyle SAPUI5"
+       ]
+      }
+     },
+     {
+      "id": "routes",
+      "label": "Routes (freestyle)",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "name",
+        "label": "Route",
+        "kind": "text",
+        "w": 110
+       },
+       {
+        "id": "pattern",
+        "label": "Pattern",
+        "kind": "text",
+        "w": 160,
+        "placeholder": "e.g. detail/{id}"
+       },
+       {
+        "id": "target",
+        "label": "Target view",
+        "kind": "text",
+        "w": 120
+       },
+       {
+        "id": "params",
+        "label": "Parameters",
+        "kind": "text",
+        "w": 150
+       }
+      ],
+      "addLabel": "+ Route",
+      "showIf": {
+       "field": "appType",
+       "in": [
+        "Freestyle SAPUI5"
+       ]
+      }
+     },
+     {
+      "id": "models",
+      "label": "Models (freestyle)",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "name",
+        "label": "Model",
+        "kind": "text",
+        "w": 110,
+        "placeholder": "\"\" = default"
+       },
+       {
+        "id": "type",
+        "label": "Type",
+        "kind": "select",
+        "w": 120,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "OData V4",
+          "label": "OData V4"
+         },
+         {
+          "value": "OData V2",
+          "label": "OData V2"
+         },
+         {
+          "value": "JSON",
+          "label": "JSON"
+         },
+         {
+          "value": "Resource (i18n)",
+          "label": "Resource (i18n)"
+         }
+        ]
+       },
+       {
+        "id": "source",
+        "label": "Source / purpose",
+        "kind": "text",
+        "w": 260
+       }
+      ],
+      "addLabel": "+ Model",
+      "showIf": {
+       "field": "appType",
+       "in": [
+        "Freestyle SAPUI5"
+       ]
+      }
+     },
+     {
+      "id": "controllerLogic",
+      "label": "Controller logic (freestyle)",
+      "kind": "textarea",
+      "showIf": {
+       "field": "appType",
+       "in": [
+        "Freestyle SAPUI5"
+       ]
+      },
+      "placeholder": "Per view: event → what happens, validations, messages (i18n keys), e.g.\nMain.onSearch: filter /BillBlock by SalesOrganization\nDetail.onSave: submitBatch, show message MSG_SAVED"
+     },
+     {
+      "id": "actions",
+      "label": "Actions",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "action",
+        "label": "Action (as in the BDEF / service)",
+        "kind": "text",
+        "w": 170,
+        "placeholder": "e.g. deactivate"
+       },
+       {
+        "id": "label",
+        "label": "Button text",
+        "kind": "text",
+        "w": 130
+       },
+       {
+        "id": "placement",
+        "label": "Placement",
+        "kind": "select",
+        "w": 120,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "Table toolbar",
+          "label": "Table toolbar"
+         },
+         {
+          "value": "Object page header",
+          "label": "Object page header"
+         },
+         {
+          "value": "Section",
+          "label": "Section"
+         },
+         {
+          "value": "Footer",
+          "label": "Footer"
+         }
+        ]
+       },
+       {
+        "id": "confirm",
+        "label": "Confirm first",
+        "kind": "check",
+        "w": 70
+       },
+       {
+        "id": "sideEffects",
+        "label": "Refresh after (side effects)",
+        "kind": "text",
+        "w": 180
+       }
+      ],
+      "addLabel": "+ Action"
+     },
+     {
+      "id": "valueHelps",
+      "label": "Value helps and texts",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "field",
+        "label": "Field",
+        "kind": "text",
+        "w": 140
+       },
+       {
+        "id": "valueHelp",
+        "label": "Value help entity",
+        "kind": "text",
+        "w": 170,
+        "placeholder": "e.g. I_CustomerGroupVH"
+       },
+       {
+        "id": "textField",
+        "label": "Text field",
+        "kind": "text",
+        "w": 130
+       },
+       {
+        "id": "arrangement",
+        "label": "Show as",
+        "kind": "select",
+        "w": 110,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "Text (ID)",
+          "label": "Text (ID)"
+         },
+         {
+          "value": "ID (Text)",
+          "label": "ID (Text)"
+         },
+         {
+          "value": "Text only",
+          "label": "Text only"
+         },
+         {
+          "value": "ID only",
+          "label": "ID only"
+         }
+        ]
+       }
+      ],
+      "addLabel": "+ Value help"
+     },
+     {
+      "id": "annotations",
+      "label": "UI annotations",
+      "kind": "radio",
+      "showIf": {
+       "field": "appType",
+       "in": [
+        "Fiori elements – List Report & Object Page",
+        "Fiori elements – Worklist",
+        "Fiori elements – Analytical List Page",
+        "Fiori elements – Overview Page",
+        "Fiori elements – Form Entry Object Page",
+        "Fiori elements – Custom page (FPM)"
+       ]
+      },
+      "options": [
+       {
+        "value": "backend",
+        "label": "Backend metadata extension (DDLX) only"
+       },
+       {
+        "value": "local",
+        "label": "Backend + app-specific local annotations"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "localAnnotations",
+      "label": "App-specific local annotations",
+      "kind": "lines",
+      "showIf": {
+       "field": "annotations",
+       "in": [
+        "local"
+       ]
+      },
+      "placeholder": "Only what must not be in the backend, e.g. UI.SelectionVariant for this app only"
+     },
+     {
+      "id": "fpm",
+      "label": "Extensions (Flexible Programming Model)",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "kind",
+        "label": "Kind",
+        "kind": "select",
+        "w": 150,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "Building block",
+          "label": "Building block"
+         },
+         {
+          "value": "Custom column",
+          "label": "Custom column"
+         },
+         {
+          "value": "Custom section",
+          "label": "Custom section"
+         },
+         {
+          "value": "Custom action",
+          "label": "Custom action"
+         },
+         {
+          "value": "Custom page",
+          "label": "Custom page"
+         },
+         {
+          "value": "Controller extension",
+          "label": "Controller extension"
+         }
+        ]
+       },
+       {
+        "id": "where",
+        "label": "Where",
+        "kind": "text",
+        "w": 160
+       },
+       {
+        "id": "purpose",
+        "label": "What it does",
+        "kind": "text",
+        "w": 300
+       }
+      ],
+      "addLabel": "+ Extension",
+      "showIf": {
+       "field": "appType",
+       "in": [
+        "Fiori elements – List Report & Object Page",
+        "Fiori elements – Worklist",
+        "Fiori elements – Analytical List Page",
+        "Fiori elements – Overview Page",
+        "Fiori elements – Form Entry Object Page",
+        "Fiori elements – Custom page (FPM)"
+       ]
+      }
+     },
+     {
+      "id": "pages",
+      "label": "Pages / navigation overview",
+      "kind": "grid",
+      "advanced": true,
       "columns": [
        {
         "id": "name",
@@ -5368,10 +6130,28 @@ window.APB_CONFIG = {
       "addLabel": "+ Page"
      },
      {
-      "id": "launchpad",
-      "label": "Launchpad",
+      "id": "inbound",
+      "label": "Inbound navigation (semantic object – action)",
       "kind": "text",
-      "placeholder": "e.g. Semantic object SalesBlock, action manage; catalog / space / page"
+      "placeholder": "e.g. BillingBlockRule-manage, parameters SalesOrganization"
+     },
+     {
+      "id": "outbound",
+      "label": "Outbound navigation",
+      "kind": "lines",
+      "placeholder": "e.g. Customer → Customer-displayFactSheet"
+     },
+     {
+      "id": "launchpad",
+      "label": "Launchpad tile",
+      "kind": "text",
+      "placeholder": "Tile title, subtitle, icon, e.g. Billing Block Rules · per sales org · sap-icon://locked"
+     },
+     {
+      "id": "catalog",
+      "label": "Catalog / space / page and business role",
+      "kind": "text",
+      "placeholder": "e.g. ZBC_SD_BILLBLOCK, space SD Billing, role ZBR_SD_BILLING_SPECIALIST"
      },
      {
       "id": "deploy",
@@ -5401,8 +6181,56 @@ window.APB_CONFIG = {
       ]
      },
      {
+      "id": "bspName",
+      "label": "BSP application name",
+      "kind": "text",
+      "placeholder": "Z…, at most 15 characters, e.g. ZSD_BILLBLOCK",
+      "showIf": {
+       "field": "deploy",
+       "in": [
+        "ABAP repository (BSP)"
+       ]
+      }
+     },
+     {
+      "id": "package",
+      "label": "Package",
+      "kind": "text",
+      "placeholder": "e.g. ZSD_BILLING",
+      "showIf": {
+       "field": "deploy",
+       "in": [
+        "ABAP repository (BSP)"
+       ]
+      }
+     },
+     {
+      "id": "transport",
+      "label": "Transport request",
+      "kind": "text",
+      "placeholder": "Workbench request, e.g. S4DK900123",
+      "showIf": {
+       "field": "deploy",
+       "in": [
+        "ABAP repository (BSP)"
+       ]
+      }
+     },
+     {
+      "id": "opa",
+      "label": "OPA5 test journeys",
+      "kind": "lines",
+      "placeholder": "e.g. List report loads with filter Sales org = 1000\nDeactivate a rule → status Inactive"
+     },
+     {
+      "id": "uiAcceptance",
+      "label": "UI acceptance checks",
+      "kind": "lines",
+      "placeholder": "What must be true before the app is done, e.g.\nCustomer group shows text (ID)\nDeactivate asks for confirmation"
+     },
+     {
       "id": "extensions",
-      "label": "Extensions / custom code",
+      "label": "Other custom code / notes",
       "kind": "lines",
       "advanced": true
      }
@@ -5804,6 +6632,59 @@ window.APB_CONFIG = {
     "anyOf": [
      "specs:all"
     ]
+   },
+   {
+    "id": "fioriFloorplan",
+    "label": "Fiori app: floorplan, app ID and service",
+    "step": 4,
+    "important": true,
+    "types": [
+     "FIORI"
+    ],
+    "anyOf": [
+     "object:Fiori/UI5.appType"
+    ],
+    "question": "Which floorplan the Fiori app uses (Fiori elements or freestyle)."
+   },
+   {
+    "id": "fioriService",
+    "label": "Fiori app: service binding and main entity set",
+    "step": 4,
+    "important": true,
+    "types": [
+     "FIORI"
+    ],
+    "anyOf": [
+     "object:Fiori/UI5.service"
+    ],
+    "question": "The OData service binding and main entity set the app runs on."
+   },
+   {
+    "id": "fioriAppId",
+    "label": "Fiori app: app ID / namespace",
+    "step": 4,
+    "types": [
+     "FIORI"
+    ],
+    "anyOf": [
+     "object:Fiori/UI5.appId"
+    ],
+    "question": "The app ID / namespace of the Fiori app."
+   },
+   {
+    "id": "fioriLayout",
+    "label": "Fiori app: columns, sections or views",
+    "step": 4,
+    "important": true,
+    "types": [
+     "FIORI"
+    ],
+    "anyOf": [
+     "object:Fiori/UI5.columns",
+     "object:Fiori/UI5.sections",
+     "object:Fiori/UI5.views"
+    ],
+    "question": "What the app shows: list report columns and object page sections, or the views of a freestyle app."
    },
    {
     "id": "authorization",

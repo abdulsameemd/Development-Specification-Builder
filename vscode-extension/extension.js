@@ -4,6 +4,7 @@
 const vscode = require('vscode');
 const specBuilder = require('./src/index');
 const agentInstaller = require('./src/agentInstaller');
+const fioriMcp = require('./src/fioriMcp');
 
 async function installAgent(context, interactive) {
   try {
@@ -22,6 +23,8 @@ function activate(context) {
   specBuilder.activate(context, vscode);
   context.subscriptions.push(vscode.commands.registerCommand('dewa.specBuilder.installAgent', function () { return installAgent(context, true); }));
   if (vscode.workspace.getConfiguration('dewaSpecBuilder').get('installAgent', true)) installAgent(context, false);
+  // SAP Fiori + UI5 MCP servers for dewa-fiori (on by default; never let them break the extension)
+  try { fioriMcp.activate(context, vscode); } catch (e) { console.error('DEWA Spec Builder: Fiori MCP servers not registered', e); }
 }
 
 function deactivate() {}

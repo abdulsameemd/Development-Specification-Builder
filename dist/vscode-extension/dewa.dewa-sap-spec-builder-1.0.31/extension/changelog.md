@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.0.31
+
+- **New Copilot agent `dewa-fiori-review`** – code review for Fiori / UI5 front ends (Fiori elements, FPM, freestyle). Tool checks first with their real output (UI5 linter, manifest validation, the Fiori ESLint plugin, `npm audit`, build, tests), then a fixed source scan for what the tools miss (OData `$filter` / key concatenation, HTML and code injection, open redirects, requests that bypass the model's CSRF handling, secrets, insecure or hard-coded URLs, browser storage, hard-coded texts, icon-only buttons, synchronous loading, reads in loops), then the full catalogue: security layers incl. backend authorization (read-only in SAP), SAP standards and Fiori guidelines, accessibility, i18n / RTL, performance, tests and the Technical spec. Every finding has a severity, `file:line` and evidence; verdict Approve / Approve with fixes / Reject. Fixes only for accepted findings, after `CONFIRM FIX`, then the checks run again. Also as a skill (`docs/agent-kit/skills/fiori-review`).
+- The hand-off offers **Review the Fiori app** whenever a spec has a Fiori app; `dewa-fiori` recommends the review before deploying. The extension installs four agents.
+
+## 1.0.30
+
+- **SAP Fiori and UI5 MCP servers provided by the extension, on by default.** `dewa-fiori` no longer depends on a hand-edited `mcp.json`: on VS Code 1.101+ the extension registers `fiori-mcp` (`@sap-ux/fiori-mcp-server`, pinned 1.17.0, telemetry off) and `ui5-mcp` (`@ui5/mcp-server`, pinned 0.3.3) through VS Code's MCP provider API – VS Code asks once to trust / start them. Older VS Code gets a one-time **Add to my mcp.json** (merges, never overwrites). A server you already define under the same name is left to you. Settings `dewaSpecBuilder.fioriMcp.*` (enabled, versions, allowed domains, CA certificate); **DEWA: Check Fiori MCP servers** shows the status and warns when Node.js 20.17+ is missing.
+- `dewa-fiori` checks first that its tools are there and stops with the fix instead of falling back to hand-written code.
+- Read-only discovery never uses Fiori tools that save files (download) or open editors.
+
+## 1.0.29
+
+- **New Copilot agent `dewa-fiori` for Fiori apps.** Built on SAP's own tooling: the SAP Fiori MCP server (`@sap-ux/fiori-mcp-server`, pinned) to generate and change apps, the UI5 MCP server (`@ui5/mcp-server`) for guidelines, API reference, manifest validation and the UI5 linter, and the ABAP ADT MCP server read-only to verify the service. It checks the OData service in SAP first and uses only entity sets, fields, navigations and actions that exist in the metadata (missing ones are reported as backend gaps, never invented), generates with the floorplan templates instead of hand-written scaffolding, keeps UI annotations in the backend, never edits `metadata.xml`, validates / lints / builds before reporting, asks for `CONFIRM CHANGE` before changing an existing app and deploys to the ABAP repository only after `CONFIRM DEPLOY`. Fiori elements, FPM extensions and freestyle SAPUI5. Also as a skill (`docs/agent-kit/skills/fiori-build`) with an MCP example (`docs/agent-kit/fiori/mcp.example.json`).
+- **Fiori/UI5 designer in the Technical spec:** floorplan, app ID, UI5 version, devices, service binding / URL / system, OData version, draft, list report filters and columns, table type, initial load, object page header and sections, actions, value helps and texts, annotations, FPM extensions, freestyle layout / views / routes / models / controller logic, navigation, launchpad, catalog and role, deploy (BSP name, package, transport), OPA5 journeys and UI acceptance checks. The fields shown depend on the floorplan; the completeness check asks for the essentials.
+- **Hand-off by object, three agents:** new backend objects → `dewa-abap`, changed backend objects → `dewa-abap-change`, Fiori apps → `dewa-fiori` (last; it needs the published service). The backend prompts leave the apps alone. The extension installs all three agents.
+
 ## 1.0.28
 
 - **Test data (SAP HR) removed from the Technical spec.** The step 4 test data card, *Prepare test data in Copilot Chat*, the test data table in the documents and its Copilot instruction are gone; specs saved with test data rows still open (the rows are ignored). `sap-test-data-server/` stays in the repository as a separate tool and is not used by the builder.

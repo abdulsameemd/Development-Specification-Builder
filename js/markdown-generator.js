@@ -30,7 +30,8 @@
           'Inspect the existing project/repository before writing code.',
           'Reuse existing SAP objects (listed here or found in the repository/system). Do not create duplicate functionality.',
           'Do not invent SAP objects, tables, fields, APIs, CDS views, classes, function modules, workflows, authorization objects, or business rules.',
-          s.objects.some(function (o) { return o.status === 'change'; }) && 'Objects under "Existing Objects to Change" are changed with the dewa-abap-change agent, one at a time: read the current source, show the diff and the impact (where-used), and write only after the developer types CONFIRM CHANGE; keep everything else as is, keep signatures compatible, never modify SAP standard.' + (s.objects.some(function (o) { return o.status === 'new'; }) ? ' Build the new objects first (dewa-abap).' : ''),
+          s.objects.some(function (o) { return o.status === 'change' && o.type !== 'Fiori/UI5'; }) && 'Objects under "Existing Objects to Change" are changed with the dewa-abap-change agent, one at a time: read the current source, show the diff and the impact (where-used), and write only after the developer types CONFIRM CHANGE; keep everything else as is, keep signatures compatible, never modify SAP standard.' + (s.objects.some(function (o) { return o.status === 'new'; }) ? ' Build the new objects first (dewa-abap).' : ''),
+          s.objects.some(function (o) { return o.type === 'Fiori/UI5' && (o.status === 'new' || o.status === 'change'); }) && 'Fiori/UI5 apps are built with the dewa-fiori agent after the backend service is activated and published: verify the service in SAP and use only what its metadata contains (no invented entities, fields or actions), generate and change the app with the SAP Fiori MCP tools (floorplan, pages, building blocks), keep UI annotations in the backend metadata extension, never edit metadata.xml, run manifest validation, the UI5 linter and the build before reporting, and deploy to the ABAP repository only after CONFIRM DEPLOY.',
           s.sapCheck && 'Current State in SAP was read from the system (read-only): build on it, and re-read an object only when you need more than it shows.',
           'Anything unknown is marked ' + TBC + ': inspect the repository/system where possible, otherwise ask for clarification instead of inventing an implementation.',
           built.length && 'Implement names, signatures, typing, keys and exceptions exactly as given in Technical Design; report any deviation.',
@@ -311,26 +312,48 @@
   function filename() { return 'BUSINESS_REQUIREMENTS.md'; } // the name dewa-abap reads as its requirement source
 
   /* What gets pasted into Copilot Chat: a one-line instruction followed by the full specification. */
-  /* Which agents a Technical spec needs: new objects → dewa-abap, existing objects to change → dewa-abap-change. */
+  /* Which agents a Technical spec needs: new backend objects → dewa-abap, existing backend objects to change →
+     dewa-abap-change, Fiori/UI5 apps (new or change) → dewa-fiori, after the backend. */
+  function isUi(o) { return o.type === 'Fiori/UI5'; }
   function handoff(s) {
     const objs = (s.objects || []).filter(function (o) { return (o.name || '').trim() || o.type; });
-    const hasChange = objs.some(function (o) { return o.status === 'change'; });
-    const hasNew = objs.some(function (o) { return o.status === 'new'; }) || !hasChange;
-    return { hasNew: hasNew, hasChange: hasChange, agents: [hasNew && 'dewa-abap', hasChange && 'dewa-abap-change'].filter(Boolean) };
+    const backend = objs.filter(function (o) { return !isUi(o); });
+    const hasFiori = objs.some(function (o) { return isUi(o) && (o.status === 'new' || o.status === 'change'); });
+    const hasChange = backend.some(function (o) { return o.status === 'change'; });
+    const hasNew = backend.some(function (o) { return o.status === 'new'; }) || (!hasChange && !hasFiori);
+    return { hasNew: hasNew, hasChange: hasChange, hasFiori: hasFiori,
+      agents: [hasNew && 'dewa-abap', hasChange && 'dewa-abap-change', hasFiori && 'dewa-fiori'].filter(Boolean) };
   }
   const CHANGE_MARKER = 'DEWA-ABAP-CHANGE v1';
+  const FIORI_MARKER = 'DEWA-FIORI v1';
+  const FIORI_REVIEW_MARKER = 'DEWA-FIORI-REVIEW v1';
 
   /* mode: undefined (whole spec) | 'new' (dewa-abap: new objects only) | 'change' (dewa-abap-change: changed objects only) */
   function chatPrompt(s, mode) {
+    const noUi = handoff(s).hasFiori ? ' Do not build or change the Fiori/UI5 apps – they are built afterwards with dewa-fiori.' : '';
+    if (mode === 'fiori-review') {
+      return FIORI_REVIEW_MARKER + '\nReview the Fiori/UI5 apps of the development specification below – only the objects of type Fiori/UI5, one app at a time – ' +
+        'and check each app against the specification. Run the tool checks first (UI5 linter, manifest validation, Fiori ESLint, npm audit, build), then the full ' +
+        'check catalogue: security (XSS, injection, CSRF, secrets, CSP, dependencies, backend authorization), SAP standards and Fiori guidelines, accessibility, ' +
+        'i18n, performance and tests. Give evidence (file:line or tool output) for every finding. Do not change any file during the review; fix only the findings ' +
+        'I accept, after CONFIRM FIX.\n\n' + build(s);
+    }
+    if (mode === 'fiori') {
+      return FIORI_MARKER + '\nBuild the Fiori/UI5 apps of the development specification below – only the objects of type Fiori/UI5, one app at a time. ' +
+        'Follow its "Copilot Development Instructions" section. Check the OData service in SAP first (read-only) and use only entity sets, fields, ' +
+        'navigations and actions that exist in its metadata; list anything missing as a backend gap instead of inventing it. Generate and change the app ' +
+        'with the SAP Fiori MCP tools, validate, lint and build before you report, wait for CONFIRM CHANGE before changing an existing app and for ' +
+        'CONFIRM DEPLOY before deploying; ask me before guessing anything marked ' + TBC + '.\n\n' + build(s);
+    }
     if (mode === 'change') {
       return CHANGE_MARKER + '\nChange the existing SAP objects of the development specification below – only those listed under ' +
         '"Existing Objects to Change", one object at a time. Follow its "Copilot Development Instructions" section; show the diff and the impact ' +
-        'and wait for CONFIRM CHANGE before every write; ask me before guessing anything marked ' + TBC + '.\n\n' + build(s);
+        'and wait for CONFIRM CHANGE before every write; ask me before guessing anything marked ' + TBC + '.' + noUi + '\n\n' + build(s);
     }
     return 'Implement the SAP development specification below. Follow its "Copilot Development Instructions" section, ' +
       'reuse the listed existing objects, and ask me before guessing anything marked ' + TBC + '.' +
-      (mode === 'new' ? ' Build only the NEW objects; the objects under "Existing Objects to Change" are changed afterwards with dewa-abap-change – do not modify them.' : '') +
-      '\n\n' + build(s);
+      (mode === 'new' && handoff(s).hasChange ? ' Build only the NEW objects; the objects under "Existing Objects to Change" are changed afterwards with dewa-abap-change – do not modify them.' : '') +
+      noUi + '\n\n' + build(s);
   }
 
   /* ---------- lightweight Markdown → HTML for the preview ---------- */
@@ -402,7 +425,7 @@
   }
 
   APB.markdown = {
-    build: build, sapObjectMd: sapObjectMd, filename: filename, chatPrompt: chatPrompt, handoff: handoff, CHANGE_MARKER: CHANGE_MARKER, toHtml: toHtml, profiles: profiles,
+    build: build, sapObjectMd: sapObjectMd, filename: filename, chatPrompt: chatPrompt, handoff: handoff, CHANGE_MARKER: CHANGE_MARKER, FIORI_MARKER: FIORI_MARKER, FIORI_REVIEW_MARKER: FIORI_REVIEW_MARKER, toHtml: toHtml, profiles: profiles,
     // shared with the functional-spec generator (fs-generator.js)
     helpers: { table: table, gridMd: gridMd, renderFields: renderFields, clean: clean, cell: cell, splitLines: splitLines, slug: slug }
   };
