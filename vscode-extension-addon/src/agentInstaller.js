@@ -1,6 +1,7 @@
 'use strict';
 /* Installs the Spec Builder's Copilot agents – dewa-fs-discovery (read-only SAP discovery), dewa-abap-change
-   (changes existing ABAP from a Technical spec) and dewa-fiori (builds the Fiori app of a Technical spec) – into the user's VS Code prompts folder (…/User/prompts), where
+   (changes existing ABAP from a Technical spec) dewa-fiori (builds the Fiori app of a Technical spec)
+   and dewa-fiori-review (reviews Fiori / UI5 front ends) – into the user's VS Code prompts folder (…/User/prompts), where
    Copilot Chat picks up custom agents. Used by the standalone "DEWA SAP Spec Builder" extension; an extension that already
    installs the DEWA agents can ship the file its own way instead.
    A copy the user has edited is never overwritten silently. */
@@ -10,7 +11,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const FILE = 'dewa-fs-discovery.agent.md';
-const FILES = [FILE, 'dewa-abap-change.agent.md', 'dewa-fiori.agent.md'];
+const FILES = [FILE, 'dewa-abap-change.agent.md', 'dewa-fiori.agent.md', 'dewa-fiori-review.agent.md'];
 // the first agent keeps its original key, so existing installations are recognised
 function hashKey(file) { return file === FILE ? 'dewaSpecBuilder.agentHash' : 'dewaSpecBuilder.agentHash:' + file; }
 

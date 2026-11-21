@@ -97,3 +97,10 @@ test('completeness asks for the Fiori essentials', () => {
   assert.deepStrictEqual(plain(missing(mk(FIORI)).filter((i) => /^fiori/.test(i))), []);
   assert.ok(!missing(spec([RAP])).some((i) => /^fiori/.test(i)), 'not asked without a Fiori app type');
 });
+
+test('review prompt for the Fiori app: marker, tool checks, catalogue, evidence, CONFIRM FIX', () => {
+  const r = APB.markdown.chatPrompt(spec([RAP, FIORI]), 'fiori-review');
+  assert.match(r, /^DEWA-FIORI-REVIEW v1\nReview the Fiori\/UI5 apps .* check each app against the specification/);
+  for (const x of [/UI5 linter, manifest validation, Fiori ESLint, npm audit, build/, /XSS, injection, CSRF, secrets, CSP, dependencies, backend authorization/,
+    /evidence \(file:line or tool output\)/, /Do not change any file during the review/, /after CONFIRM FIX/, /## \d+\. Technical Design/]) assert.match(r, x);
+});

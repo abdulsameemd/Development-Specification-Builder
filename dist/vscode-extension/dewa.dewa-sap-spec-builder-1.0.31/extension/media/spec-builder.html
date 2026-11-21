@@ -847,11 +847,12 @@ div.link-banner p { margin: 0 0 6px; }
       <h2 id="handoff-title">Hand over to Copilot</h2>
       <button class="icon-btn" aria-label="Close">✕</button>
     </form>
-    <p class="muted small">This specification goes to more than one agent. Work in this order: backend objects first, the Fiori app last (it needs the published service).</p>
+    <p class="muted small">This specification goes to more than one agent. Work in this order: backend objects first, the Fiori app last (it needs the published service), then review the app.</p>
     <div class="handoff-choices">
       <button type="button" class="btn btn-primary" data-action="handoff-new"><strong><span class="handoff-n">1.</span> Build new objects</strong><span class="small">dewa-abap · one artifact at a time, CONFIRM ARTEFACT</span></button>
       <button type="button" class="btn btn-ghost" data-action="handoff-change"><strong><span class="handoff-n">2.</span> Change existing objects</strong><span class="small">dewa-abap-change · diff first, CONFIRM CHANGE</span></button>
       <button type="button" class="btn btn-ghost" data-action="handoff-fiori"><strong><span class="handoff-n">3.</span> Build the Fiori app</strong><span class="small">dewa-fiori · after the service is published, CONFIRM DEPLOY</span></button>
+      <button type="button" class="btn btn-ghost" data-action="handoff-fiori-review"><strong><span class="handoff-n">4.</span> Review the Fiori app</strong><span class="small">dewa-fiori-review · security, SAP standards, performance, against this spec; fixes after CONFIRM FIX</span></button>
     </div>
   </dialog>
   <dialog id="drafts-dialog" aria-labelledby="drafts-title">
@@ -14662,10 +14663,18 @@ window.APB_CONFIG = {
   }
   const CHANGE_MARKER = 'DEWA-ABAP-CHANGE v1';
   const FIORI_MARKER = 'DEWA-FIORI v1';
+  const FIORI_REVIEW_MARKER = 'DEWA-FIORI-REVIEW v1';
 
   /* mode: undefined (whole spec) | 'new' (dewa-abap: new objects only) | 'change' (dewa-abap-change: changed objects only) */
   function chatPrompt(s, mode) {
     const noUi = handoff(s).hasFiori ? ' Do not build or change the Fiori/UI5 apps – they are built afterwards with dewa-fiori.' : '';
+    if (mode === 'fiori-review') {
+      return FIORI_REVIEW_MARKER + '\nReview the Fiori/UI5 apps of the development specification below – only the objects of type Fiori/UI5, one app at a time – ' +
+        'and check each app against the specification. Run the tool checks first (UI5 linter, manifest validation, Fiori ESLint, npm audit, build), then the full ' +
+        'check catalogue: security (XSS, injection, CSRF, secrets, CSP, dependencies, backend authorization), SAP standards and Fiori guidelines, accessibility, ' +
+        'i18n, performance and tests. Give evidence (file:line or tool output) for every finding. Do not change any file during the review; fix only the findings ' +
+        'I accept, after CONFIRM FIX.\n\n' + build(s);
+    }
     if (mode === 'fiori') {
       return FIORI_MARKER + '\nBuild the Fiori/UI5 apps of the development specification below – only the objects of type Fiori/UI5, one app at a time. ' +
         'Follow its "Copilot Development Instructions" section. Check the OData service in SAP first (read-only) and use only entity sets, fields, ' +
@@ -14753,7 +14762,7 @@ window.APB_CONFIG = {
   }
 
   APB.markdown = {
-    build: build, sapObjectMd: sapObjectMd, filename: filename, chatPrompt: chatPrompt, handoff: handoff, CHANGE_MARKER: CHANGE_MARKER, FIORI_MARKER: FIORI_MARKER, toHtml: toHtml, profiles: profiles,
+    build: build, sapObjectMd: sapObjectMd, filename: filename, chatPrompt: chatPrompt, handoff: handoff, CHANGE_MARKER: CHANGE_MARKER, FIORI_MARKER: FIORI_MARKER, FIORI_REVIEW_MARKER: FIORI_REVIEW_MARKER, toHtml: toHtml, profiles: profiles,
     // shared with the functional-spec generator (fs-generator.js)
     helpers: { table: table, gridMd: gridMd, renderFields: renderFields, clean: clean, cell: cell, splitLines: splitLines, slug: slug }
   };
@@ -19506,10 +19515,10 @@ window.APB_CONFIG = {
       nav(true, 'Continue');
   }
 
-  /* Hand the Technical spec to a Copilot agent. mode: all | new (dewa-abap) | change (dewa-abap-change) | fiori (dewa-fiori) */
+  /* Hand the Technical spec to a Copilot agent. mode: all | new (dewa-abap) | change (dewa-abap-change) | fiori (dewa-fiori) | fiori-review (dewa-fiori-review) */
   function handOver(mode) {
     const s = S.get();
-    const agent = mode === 'change' ? 'dewa-abap-change' : mode === 'fiori' ? 'dewa-fiori' : 'dewa-abap';
+    const agent = { change: 'dewa-abap-change', fiori: 'dewa-fiori', 'fiori-review': 'dewa-fiori-review' }[mode] || 'dewa-abap';
     const prompt = M.chatPrompt(s, mode === 'all' ? undefined : mode);
     auditAdd('export', { to: H.isVscode ? 'Copilot Chat (' + agent + ')' : 'clipboard + VS Code (' + agent + ')', approval: APB.gov.status(s).state });
     if (H.isVscode) {
@@ -20191,9 +20200,10 @@ window.APB_CONFIG = {
       const s = S.get();
       if (V.checkMandatory(s).length) { toast('Add a requirement and a development object first'); return; }
       const h = M.handoff(s);
-      if (h.agents.length > 1) {
+      // a Fiori app always gets the choice: build it (dewa-fiori) or review it (dewa-fiori-review)
+      if (h.agents.length > 1 || h.hasFiori) {
         let n = 0;
-        [['new', h.hasNew], ['change', h.hasChange], ['fiori', h.hasFiori]].forEach(function (c) {
+        [['new', h.hasNew], ['change', h.hasChange], ['fiori', h.hasFiori], ['fiori-review', h.hasFiori]].forEach(function (c) {
           const b = $('#handoff-dialog [data-action="handoff-' + c[0] + '"]');
           b.hidden = !c[1];
           if (c[1]) b.querySelector('.handoff-n').textContent = (++n) + '.';
@@ -20203,11 +20213,12 @@ window.APB_CONFIG = {
         openDialog('#handoff-dialog');
         return;
       }
-      handOver(h.hasFiori ? 'fiori' : h.hasChange ? 'change' : 'all');
+      handOver(h.hasChange ? 'change' : 'all');
     },
     'handoff-new': function () { closeDialogs(); handOver('new'); },
     'handoff-change': function () { closeDialogs(); handOver('change'); },
     'handoff-fiori': function () { closeDialogs(); handOver('fiori'); },
+    'handoff-fiori-review': function () { closeDialogs(); handOver('fiori-review'); },
     'gov-approve': function () {
       const s = S.get(), kind = APB.gov.kindOf(s);
       if (!APB.gov.canApprove(kind)) { toast('Only the configured approvers can approve'); return; }

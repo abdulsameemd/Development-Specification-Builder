@@ -9,6 +9,7 @@ A practical guide to choosing and working with the DEWA backend agents. The sour
 | `dewa-abap` | Building new ABAP, CDS, RAP, or CAP backend artifacts | One new/changed artifact at a time, with tests and validation status | Type `CONFIRM ARTEFACT` before the next artifact |
 | `dewa-abap-change` | Changing existing custom ABAP objects exactly as a Technical spec describes (objects with status *change*) | One changed object at a time: diff, impact, activation / ABAP Unit / ATC evidence, how to revert | Type `CONFIRM CHANGE` before every write |
 | `dewa-fiori` | Building or changing the SAP Fiori app of a Technical spec (Fiori elements, FPM extensions or freestyle SAPUI5) on a published OData service | One app at a time: service verified, app generated with SAP Fiori tools, manifest validation / UI5 linter / build results, acceptance checks | `CONFIRM CHANGE` before changing an existing app, `CONFIRM DEPLOY` before deploying |
+| `dewa-fiori-review` | Reviewing Fiori / UI5 front ends: security (XSS, injection, CSRF, secrets, CSP, dependencies, backend authorization), SAP standards, accessibility, i18n, performance, tests, and the Technical spec | Verdict, tool results, findings with severity, `file:line` and evidence; fixes for accepted findings | Y/N per finding, `CONFIRM FIX` before any change |
 | `dewa-codereview` | Reviewing or safely improving existing ABAP, CDS, RAP, or CAP code | Full review report, findings, safe fixes, and optionally an as-built technical specification | Answer Y/N for flagged changes; type `CONFIRM REVIEW` before handoff |
 | `dewa-adobeagent` | Building or maintaining SAP Adobe Forms and their ABAP integration | Form interface, form object/context, data provider or driver, and validation evidence | One artifact at a time; no named confirmation keyword is specified in this agent |
 
@@ -25,6 +26,7 @@ flowchart TD
     D -->|Yes - change it as a Technical spec describes| X[Use dewa-abap-change]
     A --> FI{Fiori app on a published OData service?}
     FI -->|Yes - build or change the app| Y[Use dewa-fiori]
+    FI -->|Yes - review the app| YR[Use dewa-fiori-review]
     D -->|Yes - inspect, fix, modernize, or optimize| F[Use dewa-codereview]
     C --> G[Graphical layout work is done in Adobe LiveCycle Designer]
     E --> H[One artifact at a time]
@@ -157,6 +159,33 @@ sap-ux-fiori-tools@awesome-copilot`); `dewa-fiori`'s rules still apply on top.
 | Navigation & launchpad | Inbound semantic object – action, outbound targets, tile, catalog / space / page, business role |
 | Deploy | Target, BSP application name, package, transport |
 | Tests | OPA5 journeys and UI acceptance checks |
+
+## `dewa-fiori-review`: Review a Fiori / UI5 Front End
+
+Shipped with the DEWA SAP Spec Builder extension (agent file `vscode-extension-addon/agents/dewa-fiori-review.agent.md`,
+also as the skill `docs/agent-kit/skills/fiori-review/SKILL.md`). Start it from the Copilot Chat agent picker for any
+app, or from the builder's hand-off (*Review the Fiori app*, prompt `DEWA-FIORI-REVIEW v1`), which also checks the
+app against the Technical spec. `dewa-fiori` recommends it before deploying.
+
+1. **Tool checks, real output:** `run_ui5_linter`, `run_manifest_validation`, the Fiori ESLint plugin
+   (`@sap-ux/eslint-plugin-fiori-tools`), `npm audit --omit=dev`, `npm run build`, `npm test`.
+2. **Source scan with fixed patterns:** OData `$filter` / key concatenation, HTML / code injection, open redirects,
+   requests bypassing the model, secrets, insecure / hard-coded URLs, browser storage, debug output, TLS switched off,
+   hard-coded texts, icon-only buttons, synchronous loading, reads in loops. The linter and ESLint do not report most
+   of these. A sample app with planted issues: the linter found the legacy / global / manifest issues and ESLint
+   found `innerHTML`, `eval`, `alert`; the `$filter` injection, API key, `http://` URL, `jQuery.ajax` POST, hard-coded
+   texts and the icon-only button were found only by the scan.
+3. **Catalogue:**
+   - SEC: XSS / injection, OData / URL injection, backend authorization (DCL, BDEF) read-only, CSRF, secrets / data
+     protection, CSP / framing / transport, dependencies / deploy configuration;
+   - STD: UI5 modern APIs, Fiori elements rules, manifest, i18n / RTL, accessibility (WCAG 2.1 AA), theming,
+     messages, clean code;
+   - PERF: loading, OData (`$select`, paging, N+1, batch), rendering, memory, assets;
+   - TEST; SPEC.
+4. **Report:** verdict (Approve / Approve with fixes / Reject), tool results, findings (ID, severity, `file:line`,
+   evidence, reference, fix), backend findings.
+5. **Fix:** Y/N per finding → diff → `CONFIRM FIX` → apply → re-run the checks. Never backend objects,
+   `metadata.xml` or deploy.
 
 ## `dewa-codereview`: Review Existing Code
 

@@ -95,7 +95,8 @@ there by checking facts with tools before you write, and by checking the result 
 7. **Deploy** (rule 8) – only after `CONFIRM DEPLOY`; otherwise give the exact deploy command for the developer.
 8. **Report:** files created / changed, checks with their results, acceptance checks pass / fail, backend gaps for
    dewa-abap / dewa-abap-change, open points, and how to undo (delete the generated folder / revert the files;
-   for a deployed app the BSP application and transport).
+   for a deployed app the BSP application and transport). Recommend a review with `dewa-fiori-review`
+   before the app is deployed or handed over.
 
 ## When you are unsure
 

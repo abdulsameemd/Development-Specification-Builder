@@ -326,10 +326,18 @@
   }
   const CHANGE_MARKER = 'DEWA-ABAP-CHANGE v1';
   const FIORI_MARKER = 'DEWA-FIORI v1';
+  const FIORI_REVIEW_MARKER = 'DEWA-FIORI-REVIEW v1';
 
   /* mode: undefined (whole spec) | 'new' (dewa-abap: new objects only) | 'change' (dewa-abap-change: changed objects only) */
   function chatPrompt(s, mode) {
     const noUi = handoff(s).hasFiori ? ' Do not build or change the Fiori/UI5 apps – they are built afterwards with dewa-fiori.' : '';
+    if (mode === 'fiori-review') {
+      return FIORI_REVIEW_MARKER + '\nReview the Fiori/UI5 apps of the development specification below – only the objects of type Fiori/UI5, one app at a time – ' +
+        'and check each app against the specification. Run the tool checks first (UI5 linter, manifest validation, Fiori ESLint, npm audit, build), then the full ' +
+        'check catalogue: security (XSS, injection, CSRF, secrets, CSP, dependencies, backend authorization), SAP standards and Fiori guidelines, accessibility, ' +
+        'i18n, performance and tests. Give evidence (file:line or tool output) for every finding. Do not change any file during the review; fix only the findings ' +
+        'I accept, after CONFIRM FIX.\n\n' + build(s);
+    }
     if (mode === 'fiori') {
       return FIORI_MARKER + '\nBuild the Fiori/UI5 apps of the development specification below – only the objects of type Fiori/UI5, one app at a time. ' +
         'Follow its "Copilot Development Instructions" section. Check the OData service in SAP first (read-only) and use only entity sets, fields, ' +
@@ -417,7 +425,7 @@
   }
 
   APB.markdown = {
-    build: build, sapObjectMd: sapObjectMd, filename: filename, chatPrompt: chatPrompt, handoff: handoff, CHANGE_MARKER: CHANGE_MARKER, FIORI_MARKER: FIORI_MARKER, toHtml: toHtml, profiles: profiles,
+    build: build, sapObjectMd: sapObjectMd, filename: filename, chatPrompt: chatPrompt, handoff: handoff, CHANGE_MARKER: CHANGE_MARKER, FIORI_MARKER: FIORI_MARKER, FIORI_REVIEW_MARKER: FIORI_REVIEW_MARKER, toHtml: toHtml, profiles: profiles,
     // shared with the functional-spec generator (fs-generator.js)
     helpers: { table: table, gridMd: gridMd, renderFields: renderFields, clean: clean, cell: cell, splitLines: splitLines, slug: slug }
   };

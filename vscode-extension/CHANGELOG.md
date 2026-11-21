@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.31
+
+- **New Copilot agent `dewa-fiori-review`** – code review for Fiori / UI5 front ends (Fiori elements, FPM, freestyle). Tool checks first with their real output (UI5 linter, manifest validation, the Fiori ESLint plugin, `npm audit`, build, tests), then a fixed source scan for what the tools miss (OData `$filter` / key concatenation, HTML and code injection, open redirects, requests that bypass the model's CSRF handling, secrets, insecure or hard-coded URLs, browser storage, hard-coded texts, icon-only buttons, synchronous loading, reads in loops), then the full catalogue: security layers incl. backend authorization (read-only in SAP), SAP standards and Fiori guidelines, accessibility, i18n / RTL, performance, tests and the Technical spec. Every finding has a severity, `file:line` and evidence; verdict Approve / Approve with fixes / Reject. Fixes only for accepted findings, after `CONFIRM FIX`, then the checks run again. Also as a skill (`docs/agent-kit/skills/fiori-review`).
+- The hand-off offers **Review the Fiori app** whenever a spec has a Fiori app; `dewa-fiori` recommends the review before deploying. The extension installs four agents.
+
 ## 1.0.30
 
 - **SAP Fiori and UI5 MCP servers provided by the extension, on by default.** `dewa-fiori` no longer depends on a hand-edited `mcp.json`: on VS Code 1.101+ the extension registers `fiori-mcp` (`@sap-ux/fiori-mcp-server`, pinned 1.17.0, telemetry off) and `ui5-mcp` (`@ui5/mcp-server`, pinned 0.3.3) through VS Code's MCP provider API – VS Code asks once to trust / start them. Older VS Code gets a one-time **Add to my mcp.json** (merges, never overwrites). A server you already define under the same name is left to you. Settings `dewaSpecBuilder.fioriMcp.*` (enabled, versions, allowed domains, CA certificate); **DEWA: Check Fiori MCP servers** shows the status and warns when Node.js 20.17+ is missing.

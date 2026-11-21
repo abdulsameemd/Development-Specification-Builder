@@ -47,6 +47,7 @@ test('new only → dewa-abap; change only → dewa-abap-change; both → choice 
 
     await handOver(p, [NEW, CHANGE]);
     assert.ok(await p.locator('#handoff-dialog[open]').isVisible(), 'choice shown');
+    assert.ok(await p.locator('[data-action="handoff-fiori-review"]').isHidden(), 'no Fiori choices without a Fiori app');
     assert.deepStrictEqual(await chats(p), [], 'nothing sent before choosing');
     await p.click('[data-action="handoff-new"]');
     await p.evaluate(() => document.querySelector('[data-action="vscode"]').click());
@@ -65,17 +66,28 @@ test('new only → dewa-abap; change only → dewa-abap-change; both → choice 
 const RAP = { type: 'RAP', name: 'ZR_BILLBLOCK', status: 'new' };
 const FIORI = { type: 'Fiori/UI5', name: 'ZSD_BILLBLOCK', status: 'new', detail: { appType: 'Fiori elements – List Report & Object Page', service: 'ZUI_SD_BILLBLOCK_O4 / BillBlock' } };
 
-test('Fiori only → dewa-fiori; RAP + Fiori → choice (backend first, Fiori last); the Fiori form switches by floorplan', async () => {
+test('Fiori only → build or review; RAP + Fiori → choice (backend first, Fiori last, review); the Fiori form switches by floorplan', async () => {
   const browser = await chromium.launch();
   try {
     const p = await page(browser);
     await handOver(p, [FIORI]);
+    assert.ok(await p.locator('#handoff-dialog[open]').isVisible(), 'build / review choice for a Fiori app');
+    assert.ok(await p.locator('[data-action="handoff-new"]').isHidden());
+    assert.strictEqual(await p.locator('[data-action="handoff-fiori"] .handoff-n').textContent(), '1.');
+    assert.strictEqual(await p.locator('[data-action="handoff-fiori-review"] .handoff-n').textContent(), '2.');
+    await p.click('[data-action="handoff-fiori"]');
     assert.deepStrictEqual(await chats(p), ['dewa-fiori|DEWA-FIORI v1\nBuild th']);
+    await p.evaluate(() => { window.__posted.length = 0; document.querySelector('[data-action="vscode"]').click(); });
+    await p.locator('#toast .toast-btn').click();
+    await p.click('[data-action="handoff-fiori-review"]');
+    assert.deepStrictEqual(await chats(p), ['dewa-fiori-review|DEWA-FIORI-REVIEW v1\nR']);
+    assert.ok((await p.evaluate(() => APB.state.get().audit.filter((e) => e.type === 'export').map((e) => e.data.to))).includes('Copilot Chat (dewa-fiori-review)'), 'review hand-off audited');
 
     await handOver(p, [RAP, FIORI]);
     assert.ok(await p.locator('#handoff-dialog[open]').isVisible(), 'choice shown');
     assert.ok(await p.locator('[data-action="handoff-change"]').isHidden(), 'no change agent needed');
     assert.strictEqual(await p.locator('[data-action="handoff-fiori"] .handoff-n').textContent(), '2.');
+    assert.strictEqual(await p.locator('[data-action="handoff-fiori-review"] .handoff-n').textContent(), '3.');
     await p.click('[data-action="handoff-fiori"]');
     assert.deepStrictEqual(await chats(p), ['dewa-fiori|DEWA-FIORI v1\nBuild th']);
     const audit = await p.evaluate(() => APB.state.get().audit.filter((e) => e.type === 'export').map((e) => e.data.to));
