@@ -6,6 +6,11 @@
 
   /* kind → title and what the agent does, shown in turn */
   const JOBS = {
+    tsdraft: { title: 'AI is completing the Technical spec', sap: false, lines: [
+      'Reading the functional spec extract, the requirement and the SAP facts…',
+      'Filling the empty designer fields: logic, selection screen, output, parameters…',
+      'Writing error handling, messages and test scenarios…',
+      'Marking every SAP name it cannot find in the sources as [TO BE CONFIRMED]…'] },
     docs: { title: 'AI is reading your BRD and solution document', sap: true, lines: [
       'Extracting requirements, business rules and process steps…',
       'Reading the DEWA SAP system: checking the ABAP artifacts named in the documents (read-only)…',

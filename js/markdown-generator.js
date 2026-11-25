@@ -33,6 +33,7 @@
           s.objects.some(function (o) { return o.status === 'change' && o.type !== 'Fiori/UI5'; }) && 'Objects under "Existing Objects to Change" are changed with the dewa-abap-change agent, one at a time: read the current source, show the diff and the impact (where-used), and write only after the developer types CONFIRM CHANGE; keep everything else as is, keep signatures compatible, never modify SAP standard.' + (s.objects.some(function (o) { return o.status === 'new'; }) ? ' Build the new objects first (dewa-abap).' : ''),
           s.objects.some(function (o) { return o.type === 'Fiori/UI5' && (o.status === 'new' || o.status === 'change'); }) && 'Fiori/UI5 apps are built with the dewa-fiori agent after the backend service is activated and published: verify the service in SAP and use only what its metadata contains (no invented entities, fields or actions), generate and change the app with the SAP Fiori MCP tools (floorplan, pages, building blocks), keep UI annotations in the backend metadata extension, never edit metadata.xml, run manifest validation, the UI5 linter and the build before reporting, and deploy to the ABAP repository only after CONFIRM DEPLOY.',
           s.sapCheck && 'Current State in SAP was read from the system (read-only): build on it, and re-read an object only when you need more than it shows.',
+          (s.origin && s.origin.copilot && s.origin.copilot.length) && 'Some design values were proposed by Copilot and accepted by the developer (see Design Sources). Values marked ' + TBC + ' are NOT confirmed: check them in the system (read-only) or ask – never replace them with an invented table, field or object.',
           'Anything unknown is marked ' + TBC + ': inspect the repository/system where possible, otherwise ask for clarification instead of inventing an implementation.',
           built.length && 'Implement names, signatures, typing, keys and exceptions exactly as given in Technical Design; report any deviation.',
           has(DDIC) && 'Create dictionary objects in dependency order (domain → data element → structure / table type → table) and activate them before use.',
@@ -176,6 +177,18 @@
     }).join('\n\n');
   }
 
+  /* Where the design comes from: the FS (fixed mapping), the SAP check (read-only facts), Copilot (reviewed proposals). */
+  function designSources(s) {
+    const rows = [];
+    if (s.origin && s.origin.fsText) rows.push(['Functional specification', 'Requirement, rules, acceptance criteria, tests and the object list; selection screen / output / parameters from the FS data requirements ("Used for"); authorization ' + (s.quality.authorization === 'no' ? 'No (no roles or authorization objects in the FS)' : 'from the FS roles')]);
+    if (s.sapCheck) rows.push(['SAP system (read-only)', 'Reference check of ' + s.sapCheck.results.length + ' name' + (s.sapCheck.results.length === 1 ? '' : 's') + (s.sapCheck.at ? ' on ' + new Date(s.sapCheck.at).toISOString().slice(0, 10) : '') + (s.objects.some(function (o) { return o.sap; }) ? '; current state of the existing objects' : '')]);
+    const cp = (s.origin && s.origin.copilot) || [];
+    if (cp.length) rows.push(['Copilot proposal (reviewed by the developer)', cp.slice(0, 40).join(', ') + (cp.length > 40 ? ' …' : '')]);
+    if (!rows.length) return '';
+    return table(['Source', 'What'], rows.map(function (r) { return [cell(r[0]), cell(r[1])]; })) +
+      '\n\nAnything marked ' + TBC + ' was not found in these sources: confirm it before implementing it.';
+  }
+
   /* One object as it is today in SAP (o.sap); head = with its ### heading. */
   function sapObjectMd(o, head) {
     const def = D.objectDef(o.sap.type || o.type);
@@ -290,6 +303,7 @@
     add('Clean Core', cc);
 
     add('Assumptions', splitLines(s.assumptions).map(function (a) { return '- ' + a; }).join('\n'));
+    add('Design Sources', designSources(s));
     add('Open Questions', C.openQuestions(s).map(function (x, i) { return (i + 1) + '. ' + TBC + ' ' + x; }).join('\n'));
 
     const dod = s.dod.filter(function (d) { return d.on && d.text.trim(); });

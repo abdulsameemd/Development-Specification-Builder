@@ -44,6 +44,7 @@
       assumptions: '',
       processToBe: [],
       source: null,
+      origin: null, // { fsText, names } – the FS extract a TS made from an FS keeps for "Complete the TS with Copilot"
       sapCheck: null,
       approval: null,
       audit: [],
@@ -83,6 +84,9 @@
     });
     // link to the functional spec it was created from (spec-link.js); null for specs written directly
     s.source = APB.specLink ? APB.specLink.normalizeSource(input.source) : null;
+    s.origin = input.origin && typeof input.origin === 'object' && typeof input.origin.fsText === 'string'
+      ? { fsText: input.origin.fsText.slice(0, 14000), names: (Array.isArray(input.origin.names) ? input.origin.names : []).map(function (n) { return str(n).toUpperCase(); }).filter(Boolean).slice(0, 400),
+        copilot: (Array.isArray(input.origin.copilot) ? input.origin.copilot : []).map(function (n) { return str(n); }).filter(Boolean).slice(0, 200) } : null;
     // approval (gate G2) and audit trail (governance.js)
     s.approval = APB.gov ? APB.gov.normalizeApproval(input.approval) : null;
     s.audit = APB.gov ? APB.gov.audit.normalize(input.audit) : [];

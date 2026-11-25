@@ -153,6 +153,15 @@
   </dialog>
   <input type="file" id="md-upload" accept=".md,.markdown,text/markdown,text/plain" hidden>
 
+  <dialog id="tsd-dialog" aria-labelledby="tsd-title">
+    <form method="dialog" class="dialog-head">
+      <h2 id="tsd-title">Review the TS completion</h2>
+      <button class="icon-btn" aria-label="Close">✕</button>
+    </form>
+    <p class="muted small">Copilot's proposals for the <strong>empty</strong> fields only – what you filled is never changed. SAP names that are not in the FS, the TS or the SAP check are marked <mark>[TO BE CONFIRMED]</mark>. Untick what you do not want. Check every item – AI can be wrong.</p>
+    <ul id="tsd-list" class="draft-review"></ul>
+    <div class="nav-row"><span class="spacer"></span><button type="button" class="btn btn-primary" data-action="tsd-apply">Take over</button></div>
+  </dialog>
   <dialog id="devctx-dialog" aria-labelledby="devctx-title">
     <form method="dialog" class="dialog-head">
       <h2 id="devctx-title">Review the SAP check</h2>
@@ -205,6 +214,8 @@
   <script src="js/fs-generator.js"></script>
   <script src="js/doc-reader.js"></script>
   <script src="js/fs-draft.js"></script>
+  <script src="js/fs-to-ts.js"></script>
+  <script src="js/ts-draft.js"></script>
   <script src="js/docx.js"></script>
   <script src="js/md-import.js"></script>
   <script src="js/agents-guide.js"></script>

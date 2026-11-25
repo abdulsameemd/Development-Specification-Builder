@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.33
+
+- **The FS design reaches the Technical spec.** FS *Data requirements* get a **Used for** column (selection, output, both, input file, stored, display – Copilot fills it when it writes the FS). Create Technical spec fills the main object's designer from it without AI: report selection screen and ALV columns (with `TABLE-FIELD` and mandatory), output type from the FS outputs, Fiori filters / columns, CDS elements, RFC parameters, table fields; a proposed name from the module prefix when the RICEFW item has none.
+- **Authorization defaults to No** in the TS when the FS has no roles or authorization objects.
+- **Complete the TS with Copilot** – automatically after the read-only SAP check at hand-off, and as a button in step 4: Copilot fills only the empty parts (processing logic, output, background job, error handling, data volume, test scenarios, expected output, open questions) from the FS extract the TS keeps, the requirement and the SAP facts, without tools. Only designer field ids and allowed values are kept; filled fields and the authorization are never changed; every SAP name not in the FS, the TS or SAP is marked **[TO BE CONFIRMED]**; you review and tick what to take over.
+- **More grounding:** Check & read in SAP also verifies every `TABLE-FIELD` used in the design and marks missing ones [TO BE CONFIRMED]; radio answers are checked against their allowed values; the TS document has a **Design Sources** section; the Copilot Development Instructions forbid replacing [TO BE CONFIRMED] values with invented names; a hint before the hand-off names the key designer fields still empty or unconfirmed.
+
 ## 1.0.32
 
 - **Faster "Generate FS from the documents" for small requirements.** The SAP search before writing the FS is now sized: *Auto* (default) runs the full process search when the documents name SAP objects or are long, and a **quick** search for short documents that name no SAP object – at most 3 keyword searches, no program reading, 90 seconds at most (before: up to 12 searches and 3 program reads, 8 rounds, 5 minutes). *Quick*, *Full* and *Skip* (no SAP access, one Copilot call) override it on the card; the choice and the reason are in the audit trail.

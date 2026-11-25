@@ -7,8 +7,10 @@ const { pickModel, withTimeout, readStream, IDLE_MS } = require('./discoveryRunn
 const guardrails = require('./guardrails');
 
 const MARKER = 'FS-DRAFT v1';
+const TS_MARKER = 'TS-DRAFT v1'; // "Complete the TS with Copilot" – same runner, other answer kind
 const JUSTIFICATION = 'Drafts the missing parts of a functional specification from its business requirement.';
 
+function hasTsDraft(text) { return /\{[\s\S]*\}/.test(text || '') && /"kind"\s*:\s*"dewa-ts-draft"/.test(text || ''); }
 function hasDraft(text) { return /\{[\s\S]*\}/.test(text || '') && /"(frs|toBe|objectives|currentLogic|asIs|programs)"/.test(text || ''); }
 
 function cancelled(token) {
@@ -46,13 +48,15 @@ async function run(vscode, opts) {
   cancelled(opts.token);
   const idleMs = opts.idleMs !== undefined ? Number(opts.idleMs) : IDLE_MS;
   const text = await ask(vscode, meter, messages, opts.token, idleMs);
-  if (hasDraft(text)) return text;
+  const ts = String(opts.prompt || '').indexOf(TS_MARKER) === 0;
+  const done = ts ? hasTsDraft : hasDraft;
+  if (done(text)) return text;
   // One repair turn when the JSON is missing (small models sometimes answer in prose only).
   progress({ text: 'Asking for the JSON block…' });
   messages.push(M.Assistant([new vscode.LanguageModelTextPart(text || '(no answer)')]));
-  messages.push(M.User('Return the draft now as exactly one ```json block (kind "fs-draft", version 1) with the structure from the first message.'));
+  messages.push(M.User('Return the ' + (ts ? 'completion' : 'draft') + ' now as exactly one ```json block (kind "' + (ts ? 'dewa-ts-draft' : 'fs-draft') + '", version 1) with the structure from the first message.'));
   const again = await ask(vscode, meter, messages, opts.token, idleMs);
-  return hasDraft(again) ? again : [text, again].filter(Boolean).join('\n\n');
+  return done(again) ? again : [text, again].filter(Boolean).join('\n\n');
 }
 
-module.exports = { run: run, hasDraft: hasDraft, MARKER: MARKER };
+module.exports = { run: run, hasDraft: hasDraft, hasTsDraft: hasTsDraft, MARKER: MARKER, TS_MARKER: TS_MARKER };

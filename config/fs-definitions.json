@@ -148,7 +148,7 @@
         { "id": "sapField", "label": "SAP field", "w": 110, "placeholder": "e.g. LIFNR", "sapOnly": true },
         { "id": "mandatory", "label": "Mand.", "kind": "check", "w": 55 },
         { "id": "validation", "label": "Validation / format", "w": 180, "placeholder": "e.g. Must exist in company code" },
-        { "id": "source", "label": "Source", "kind": "select", "w": 130, "options": [
+        { "id": "usage", "label": "Used for", "kind": "select", "w": 140, "options": [{ "value": "", "label": "" }, { "value": "selection", "label": "Selection (input)" }, { "value": "output", "label": "Output (shown)" }, { "value": "both", "label": "Selection + output" }, { "value": "input", "label": "Input file / upload" }, { "value": "stored", "label": "Stored (saved)" }, { "value": "display", "label": "Display only" }] }, { "id": "source", "label": "Source", "kind": "select", "w": 130, "options": [
           { "value": "", "label": "" }, { "value": "standard", "label": "SAP standard", "generic": { "label": "Existing system data" } }, { "value": "custom", "label": "Custom (Z)", "generic": { "label": "New field" } }, { "value": "external", "label": "External system" }, { "value": "user", "label": "User input" }
         ] }
       ], "generic": { "hint": "The information the solution needs. Where it is stored is optional – the solution team confirms it." } }

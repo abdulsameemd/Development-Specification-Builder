@@ -589,7 +589,13 @@
     if (pack) pack.enhancements.forEach(function (e) { known[e.name] = 'BAdI / Enhancement'; });
     const ct = s.context.changeType;
     const mainStatus = { enhancement: 'change', asbuilt: 'existing' }[ct] || 'new';
-    const objects = [{ type: APB.defs.types[devType].mainObject[0], name: (r.name || '').trim(), status: mainStatus, purpose: 'Main object (' + id + ')' + ({ enhancement: ' – existing, to be changed', asbuilt: ' – existing (as-built)' }[ct] || '') }];
+    const mainType = APB.defs.types[devType].mainObject[0];
+    // no name in the FS for a new object: a proposal from the module prefix (the developer confirms it)
+    const proposed = !(r.name || '').trim() && mainStatus === 'new' ? APB.fsToTs.proposeName(s, r, mainType) : '';
+    const objects = [{ type: mainType, name: (r.name || '').trim() || proposed, status: mainStatus,
+      purpose: 'Main object (' + id + ')' + ({ enhancement: ' – existing, to be changed', asbuilt: ' – existing (as-built)' }[ct] || '') + (proposed ? ' – proposed name, confirm' : ''),
+      // the FS data rows (selection / output …) and outputs become the designer of the main object – no AI
+      detail: APB.fsToTs.designer(s, mainType, r) }];
     // objects the FS lists as existing (step 1, or read from the documents) keep their type
     const listed = {};
     (s.context.objects || []).forEach(function (o) { const n = String((o && o.name) || '').trim().toUpperCase(); if (n) listed[n] = devObjectType(o.type); });
@@ -612,12 +618,13 @@
     const users = roles.map(function (x) { return (x.role || '').trim(); }).filter(Boolean).join(', ');
     const docRef = 'Source: functional specification ' + ([s.control.docId, s.control.version && 'v' + s.control.version].filter(Boolean).join(' ') || '"' + F.model.name(s) + '"') + ', RICEFW item ' + id + (frRefs.length ? ' (' + frRefs.join(', ') + ')' : '') + '.';
     const ctLabel = ct ? ' Type of change: ' + F.field('context', 'changeType').options.filter(function (o) { return o.value === ct; })[0].label + '.' : '';
-    const quality = { authorization: auth.length ? 'yes' : '', authChecks: auth.map(function (x) { return { object: x.authObj.trim(), fields: (x.scope || '').trim(), where: (x.role || '').trim() }; }), dataVolume: '', performanceReq: (s.quality.performance || '').trim(), testTypes: ['Unit', 'Functional', 'Integration'], testScenarios: tests.join('\n'), cleanCore: '', cleanCoreNote: '' };
+    const quality = { authorization: auth.length ? 'yes' : 'no', authChecks: auth.map(function (x) { return { object: x.authObj.trim(), fields: (x.scope || '').trim(), where: (x.role || '').trim() }; }), dataVolume: '', performanceReq: (s.quality.performance || '').trim(), testTypes: ['Unit', 'Functional', 'Integration'], testScenarios: tests.join('\n'), cleanCore: '', cleanCoreNote: '' };
     return APB.state.migrate({
       project: { name: [s.control.docId, id, (r.name || '').trim()].filter(Boolean).join(' · ') },
       types: [devType],
       requirement: { text: reqText, objective: APB.markdown.helpers.splitLines(s.context.objectives).join('; '), users: users, expectedOutput: '' },
-      objects: objects.map(function (o) { o.id = S.uid(); o.detail = {}; return o; }),
+      objects: objects.map(function (o) { o.id = S.uid(); o.detail = o.detail || {}; return o; }),
+      origin: { fsText: APB.fsToTs.fsText(s, frRefs), names: APB.fsToTs.fsNames(s) },
       rules: rules.map(function (b) { b.id = S.uid(); return b; }),
       acceptance: acceptance.map(function (a) { a.id = S.uid(); return a; }),
       assumptions: docRef + ctLabel,
@@ -638,10 +645,18 @@
     APB.gov.audit.add(dev, 'created-from', { fs: F.model.name(fs), item: item || '', fsApproval: APB.gov.status(fs).state });
     U().loadState(dev, msg);
     const named = (dev.objects || []).some(function (o) { return (o.name || '').trim(); });
-    if (H.isVscode && named && copilotReady() && U().startSapCheck) {
-      U().ui.step = 3;
-      U().renderMain();
-      U().startSapCheck();
+    if (H.isVscode && copilotReady() && U().startSapCheck) {
+      // read-only SAP check first (facts), then Copilot completes the empty parts of the TS from the FS extract
+      if (named) {
+        U().ui.step = 3;
+        U().renderMain();
+        if (U().startTsComplete) U().startTsComplete(true);
+        U().startSapCheck();
+      } else if (U().startTsComplete) {
+        U().ui.step = 4;
+        U().renderMain();
+        U().startTsComplete(false);
+      }
     }
   }
 

@@ -155,7 +155,7 @@
   };
   /* Readable details per event (the raw data stays in the spec and in .dewa/audit/*.jsonl). */
   const JOBS = { docs: 'Read BRD / solution document', program: 'Read existing objects', asis: 'AS-IS process', tobe: 'TO-BE process',
-    draft: 'Generate FS', discovery: 'System discovery', devctx: 'Check & read in SAP', clipboard: 'Prompt copied',
+    draft: 'Generate FS', discovery: 'System discovery', devctx: 'Check & read in SAP', tsdraft: 'Complete TS with Copilot', clipboard: 'Prompt copied',
     // message types of the prompts (masking happens when a prompt is sent)
     'read-program': 'Copilot job reading SAP', 'read-dev': 'Check & read in SAP', discover: 'System discovery', 'open-chat': 'Copilot Chat' };
   const OUTCOMES = { result: 'result received', error: 'failed', stopped: 'stopped by the user', reset: 'cancelled (new spec opened)', replaced: 'replaced by another job', closed: 'closed' };

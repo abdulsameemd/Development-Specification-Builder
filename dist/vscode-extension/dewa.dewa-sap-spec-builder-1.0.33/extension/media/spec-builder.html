@@ -885,6 +885,15 @@ div.link-banner p { margin: 0 0 6px; }
   </dialog>
   <input type="file" id="md-upload" accept=".md,.markdown,text/markdown,text/plain" hidden>
 
+  <dialog id="tsd-dialog" aria-labelledby="tsd-title">
+    <form method="dialog" class="dialog-head">
+      <h2 id="tsd-title">Review the TS completion</h2>
+      <button class="icon-btn" aria-label="Close">✕</button>
+    </form>
+    <p class="muted small">Copilot's proposals for the <strong>empty</strong> fields only – what you filled is never changed. SAP names that are not in the FS, the TS or the SAP check are marked <mark>[TO BE CONFIRMED]</mark>. Untick what you do not want. Check every item – AI can be wrong.</p>
+    <ul id="tsd-list" class="draft-review"></ul>
+    <div class="nav-row"><span class="spacer"></span><button type="button" class="btn btn-primary" data-action="tsd-apply">Take over</button></div>
+  </dialog>
   <dialog id="devctx-dialog" aria-labelledby="devctx-title">
     <form method="dialog" class="dialog-head">
       <h2 id="devctx-title">Review the SAP check</h2>
@@ -9837,6 +9846,42 @@ window.APB_CONFIG = {
         "placeholder": "e.g. Must exist in company code"
        },
        {
+        "id": "usage",
+        "label": "Used for",
+        "kind": "select",
+        "w": 140,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "selection",
+          "label": "Selection (input)"
+         },
+         {
+          "value": "output",
+          "label": "Output (shown)"
+         },
+         {
+          "value": "both",
+          "label": "Selection + output"
+         },
+         {
+          "value": "input",
+          "label": "Input file / upload"
+         },
+         {
+          "value": "stored",
+          "label": "Stored (saved)"
+         },
+         {
+          "value": "display",
+          "label": "Display only"
+         }
+        ]
+       },
+       {
         "id": "source",
         "label": "Source",
         "kind": "select",
@@ -12700,7 +12745,7 @@ window.APB_CONFIG = {
   };
   /* Readable details per event (the raw data stays in the spec and in .dewa/audit/*.jsonl). */
   const JOBS = { docs: 'Read BRD / solution document', program: 'Read existing objects', asis: 'AS-IS process', tobe: 'TO-BE process',
-    draft: 'Generate FS', discovery: 'System discovery', devctx: 'Check & read in SAP', clipboard: 'Prompt copied',
+    draft: 'Generate FS', discovery: 'System discovery', devctx: 'Check & read in SAP', tsdraft: 'Complete TS with Copilot', clipboard: 'Prompt copied',
     // message types of the prompts (masking happens when a prompt is sent)
     'read-program': 'Copilot job reading SAP', 'read-dev': 'Check & read in SAP', discover: 'System discovery', 'open-chat': 'Copilot Chat' };
   const OUTCOMES = { result: 'result received', error: 'failed', stopped: 'stopped by the user', reset: 'cancelled (new spec opened)', replaced: 'replaced by another job', closed: 'closed' };
@@ -13359,6 +13404,7 @@ window.APB_CONFIG = {
       assumptions: '',
       processToBe: [],
       source: null,
+      origin: null, // { fsText, names } – the FS extract a TS made from an FS keeps for "Complete the TS with Copilot"
       sapCheck: null,
       approval: null,
       audit: [],
@@ -13398,6 +13444,9 @@ window.APB_CONFIG = {
     });
     // link to the functional spec it was created from (spec-link.js); null for specs written directly
     s.source = APB.specLink ? APB.specLink.normalizeSource(input.source) : null;
+    s.origin = input.origin && typeof input.origin === 'object' && typeof input.origin.fsText === 'string'
+      ? { fsText: input.origin.fsText.slice(0, 14000), names: (Array.isArray(input.origin.names) ? input.origin.names : []).map(function (n) { return str(n).toUpperCase(); }).filter(Boolean).slice(0, 400),
+        copilot: (Array.isArray(input.origin.copilot) ? input.origin.copilot : []).map(function (n) { return str(n); }).filter(Boolean).slice(0, 200) } : null;
     // approval (gate G2) and audit trail (governance.js)
     s.approval = APB.gov ? APB.gov.normalizeApproval(input.approval) : null;
     s.audit = APB.gov ? APB.gov.audit.normalize(input.audit) : [];
@@ -14096,6 +14145,19 @@ window.APB_CONFIG = {
     return s.objects.filter(function (o) { return o.name.trim() && o.status !== 'new' && !(APB.rap && APB.rap.isDraftTable(s, o)); }).slice(0, MAX_READ);
   }
   function checkTargets(s) { return s.objects.filter(function (o) { return o.name.trim(); }); }
+  /* TABLE-FIELD references in the design (selection screen, columns, parameters, filters …) – verified in the DDIC */
+  const FIELD_RE = /\b([A-Z][A-Z0-9_\/]{1,29})-([A-Z][A-Z0-9_]{0,29})\b/g;
+  const NOT_FIELD = /^(SY|SELECT|SELECTION|END|START|AT|TOP|LOAD|NON|READ|E)$/;
+  function fieldRefs(s) {
+    const out = [];
+    const walk = function (v) {
+      if (typeof v === 'string') { let m; FIELD_RE.lastIndex = 0; while ((m = FIELD_RE.exec(v.toUpperCase()))) { if (!NOT_FIELD.test(m[1]) && v.indexOf('[TO BE CONFIRMED] ' + m[0]) < 0 && out.indexOf(m[0]) < 0) out.push(m[0]); } }
+      else if (Array.isArray(v)) v.forEach(walk);
+      else if (v && typeof v === 'object') Object.keys(v).forEach(function (k) { walk(v[k]); });
+    };
+    s.objects.forEach(function (o) { if (o.status === 'new' || o.status === 'change') walk(o.detail); });
+    return out.slice(0, 60);
+  }
 
   /* Designer field ids (and grid columns / record fields) the answer may use for a type. */
   function schemaLine(type) {
@@ -14123,6 +14185,7 @@ window.APB_CONFIG = {
       all.map(function (o, i) { return (i + 1) + '. ' + o.type + ' ' + o.name.trim().toUpperCase() + ' – ' + st[o.status]; }).join('\n') || '(none)',
       '',
       read.length ? 'Objects to read (current state): ' + read.map(function (o) { return o.name.trim().toUpperCase(); }).join(', ') : 'Nothing to read – only check the names.',
+      fieldRefs(s).length ? '\nFields used in the design (TABLE-FIELD) – check in the DDIC that each field exists in that table, structure or CDS view: ' + fieldRefs(s).join(', ') + '. Put every one that does not exist into notFound as TABLE-FIELD.' : '',
       types.length ? '\nDetail fields per type (use only these ids; grids and records are arrays of objects with the ids in [ ]):\n' + types.map(function (t) { return '- ' + t + ': ' + schemaLine(t); }).join('\n') : '',
       '',
       'Rules:',
@@ -14147,7 +14210,7 @@ window.APB_CONFIG = {
   /* ------------------------------------------------------------ validation */
   function cellValue(col, v) {
     if (col.kind === 'check') return v === true || /^(x|yes|true|1|✓)$/i.test(str(v, 5));
-    if (col.kind === 'select') {
+    if (col.kind === 'select' || col.kind === 'radio') { // only the designer's option values
       const t = str(v, 200);
       const opt = (col.options || []).filter(function (o) { return o.value === t || o.label === t; })[0];
       return opt ? opt.value : '';
@@ -14200,7 +14263,9 @@ window.APB_CONFIG = {
       const type = known.indexOf(str(o.type, 40)) >= 0 ? str(o.type, 40) : '';
       objects.push({ name: n, type: type, summary: str(o.summary, 3000), detail: type ? sanitize(D().objectDef(type).fields, o.detail) : {}, uses: names(o.uses), usedBy: names(o.usedBy, 10) });
     });
-    return { kind: KIND, version: 1, system: str(raw.system, 40), checked: checked, objects: objects, notFound: names(raw.notFound, 50) };
+    const nf = [];
+    arr(raw.notFound, 80).forEach(function (x) { const n = upper(typeof x === 'object' && x ? x.name : x); if (/^[A-Z0-9_\/]{1,40}(-[A-Z0-9_]{1,30})?$/.test(n) && nf.indexOf(n) < 0) nf.push(n); });
+    return { kind: KIND, version: 1, system: str(raw.system, 40), checked: checked, objects: objects, notFound: nf };
   }
 
   /* text: the whole answer or only its JSON → { ctx, error } */
@@ -14255,6 +14320,8 @@ window.APB_CONFIG = {
     if (read.length) parts.push({ id: 'current', label: 'Current state read from SAP (shown read-only, your design is not changed)', items: read, checked: true });
     const used = usedToAdd(s, ctx);
     if (used.length) parts.push({ id: 'used', label: 'Add the objects they use as Existing – reuse', items: used.map(function (u) { return u.name + ' (used by ' + u.by + ')'; }), checked: false });
+    const missingFields = ctx.notFound.filter(function (n) { return fieldRefs(s).indexOf(n) >= 0; });
+    if (missingFields.length) parts.push({ id: 'tbcfields', label: 'Fields of the design not found in SAP – mark them [TO BE CONFIRMED]', items: missingFields, checked: true });
     if (ctx.notFound.length) parts.push({ id: 'notfound', label: 'Could not be read', items: ctx.notFound, checked: true, info: true });
     return parts;
   }
@@ -14296,6 +14363,18 @@ window.APB_CONFIG = {
       });
       if (n) applied.push('current state of ' + n + ' object' + (n > 1 ? 's' : ''));
     }
+    if (on('tbcfields')) {
+      const miss = ctx.notFound.filter(function (n) { return /-/.test(n); });
+      let n = 0;
+      const mark = function (v) {
+        if (typeof v === 'string') return v.replace(FIELD_RE, function (m, a, b, off, all) { const u = m.toUpperCase(); if (miss.indexOf(u) < 0 || all.slice(Math.max(0, off - 18), off).indexOf('[TO BE CONFIRMED]') >= 0) return m; n++; return '[TO BE CONFIRMED] ' + m; });
+        if (Array.isArray(v)) return v.map(mark);
+        if (v && typeof v === 'object') { const o = {}; Object.keys(v).forEach(function (k) { o[k] = mark(v[k]); }); return o; }
+        return v;
+      };
+      next.objects.forEach(function (o) { if (o.status === 'new' || o.status === 'change') o.detail = mark(o.detail || {}); });
+      if (n) applied.push(n + ' field' + (n > 1 ? 's' : '') + ' marked [TO BE CONFIRMED]');
+    }
     if (on('used')) {
       const add = usedToAdd(next, ctx);
       add.forEach(function (u) {
@@ -14334,7 +14413,7 @@ window.APB_CONFIG = {
     return q;
   }
 
-  APB.devSap = { MARK: MARK, KIND: KIND, MAX_READ: MAX_READ, prompt: prompt, parse: parse, sanitize: sanitize, preview: preview, apply: apply, badge: badge, questions: questions, readTargets: readTargets, checkTargets: checkTargets };
+  APB.devSap = { MARK: MARK, KIND: KIND, MAX_READ: MAX_READ, prompt: prompt, parse: parse, sanitize: sanitize, fieldRefs: fieldRefs, preview: preview, apply: apply, badge: badge, questions: questions, readTargets: readTargets, checkTargets: checkTargets };
 })(window.APB = window.APB || {});
 
 </script>
@@ -14374,6 +14453,7 @@ window.APB_CONFIG = {
           s.objects.some(function (o) { return o.status === 'change' && o.type !== 'Fiori/UI5'; }) && 'Objects under "Existing Objects to Change" are changed with the dewa-abap-change agent, one at a time: read the current source, show the diff and the impact (where-used), and write only after the developer types CONFIRM CHANGE; keep everything else as is, keep signatures compatible, never modify SAP standard.' + (s.objects.some(function (o) { return o.status === 'new'; }) ? ' Build the new objects first (dewa-abap).' : ''),
           s.objects.some(function (o) { return o.type === 'Fiori/UI5' && (o.status === 'new' || o.status === 'change'); }) && 'Fiori/UI5 apps are built with the dewa-fiori agent after the backend service is activated and published: verify the service in SAP and use only what its metadata contains (no invented entities, fields or actions), generate and change the app with the SAP Fiori MCP tools (floorplan, pages, building blocks), keep UI annotations in the backend metadata extension, never edit metadata.xml, run manifest validation, the UI5 linter and the build before reporting, and deploy to the ABAP repository only after CONFIRM DEPLOY.',
           s.sapCheck && 'Current State in SAP was read from the system (read-only): build on it, and re-read an object only when you need more than it shows.',
+          (s.origin && s.origin.copilot && s.origin.copilot.length) && 'Some design values were proposed by Copilot and accepted by the developer (see Design Sources). Values marked ' + TBC + ' are NOT confirmed: check them in the system (read-only) or ask – never replace them with an invented table, field or object.',
           'Anything unknown is marked ' + TBC + ': inspect the repository/system where possible, otherwise ask for clarification instead of inventing an implementation.',
           built.length && 'Implement names, signatures, typing, keys and exceptions exactly as given in Technical Design; report any deviation.',
           has(DDIC) && 'Create dictionary objects in dependency order (domain → data element → structure / table type → table) and activate them before use.',
@@ -14517,6 +14597,18 @@ window.APB_CONFIG = {
     }).join('\n\n');
   }
 
+  /* Where the design comes from: the FS (fixed mapping), the SAP check (read-only facts), Copilot (reviewed proposals). */
+  function designSources(s) {
+    const rows = [];
+    if (s.origin && s.origin.fsText) rows.push(['Functional specification', 'Requirement, rules, acceptance criteria, tests and the object list; selection screen / output / parameters from the FS data requirements ("Used for"); authorization ' + (s.quality.authorization === 'no' ? 'No (no roles or authorization objects in the FS)' : 'from the FS roles')]);
+    if (s.sapCheck) rows.push(['SAP system (read-only)', 'Reference check of ' + s.sapCheck.results.length + ' name' + (s.sapCheck.results.length === 1 ? '' : 's') + (s.sapCheck.at ? ' on ' + new Date(s.sapCheck.at).toISOString().slice(0, 10) : '') + (s.objects.some(function (o) { return o.sap; }) ? '; current state of the existing objects' : '')]);
+    const cp = (s.origin && s.origin.copilot) || [];
+    if (cp.length) rows.push(['Copilot proposal (reviewed by the developer)', cp.slice(0, 40).join(', ') + (cp.length > 40 ? ' …' : '')]);
+    if (!rows.length) return '';
+    return table(['Source', 'What'], rows.map(function (r) { return [cell(r[0]), cell(r[1])]; })) +
+      '\n\nAnything marked ' + TBC + ' was not found in these sources: confirm it before implementing it.';
+  }
+
   /* One object as it is today in SAP (o.sap); head = with its ### heading. */
   function sapObjectMd(o, head) {
     const def = D.objectDef(o.sap.type || o.type);
@@ -14631,6 +14723,7 @@ window.APB_CONFIG = {
     add('Clean Core', cc);
 
     add('Assumptions', splitLines(s.assumptions).map(function (a) { return '- ' + a; }).join('\n'));
+    add('Design Sources', designSources(s));
     add('Open Questions', C.openQuestions(s).map(function (x, i) { return (i + 1) + '. ' + TBC + ' ' + x; }).join('\n'));
 
     const dod = s.dod.filter(function (d) { return d.on && d.text.trim(); });
@@ -15683,12 +15776,12 @@ window.APB_CONFIG = {
     const m = checkMap(s);
     const withCheck = !!s.discovery;
     if (!sap()) {
-      return table(['Business field', 'Stored in', 'Mandatory', 'Validation / format', 'Source'], l.map(function (r) {
-        return [cell(r.field), dash(r.table), r.mandatory ? 'Yes' : 'No', dash(r.validation), dash(opt('reqs', 'data', r.source, 'source'))];
+      return table(['Business field', 'Stored in', 'Mandatory', 'Validation / format', 'Used for', 'Source'], l.map(function (r) {
+        return [cell(r.field), dash(r.table), r.mandatory ? 'Yes' : 'No', dash(r.validation), dash(opt('reqs', 'data', r.usage, 'usage')), dash(opt('reqs', 'data', r.source, 'source'))];
       }));
     }
-    return table(['Business field', 'SAP table / CDS', 'SAP field', 'Mandatory', 'Validation / format', 'Source'].concat(withCheck ? ['System check'] : []), l.map(function (r) {
-      const row = [cell(r.field), cell(r.table), cell(r.sapField), r.mandatory ? 'Yes' : 'No', dash(r.validation), dash(opt('reqs', 'data', r.source, 'source'))];
+    return table(['Business field', 'SAP table / CDS', 'SAP field', 'Mandatory', 'Validation / format', 'Used for', 'Source'].concat(withCheck ? ['System check'] : []), l.map(function (r) {
+      const row = [cell(r.field), cell(r.table), cell(r.sapField), r.mandatory ? 'Yes' : 'No', dash(r.validation), dash(opt('reqs', 'data', r.usage, 'usage')), dash(opt('reqs', 'data', r.source, 'source'))];
       if (withCheck) {
         const n = APB.discovery.names(r.table)[0];
         row.push(n ? (CHECK_LABEL[m[n]] || '–') : '–');
@@ -16281,7 +16374,7 @@ window.APB_CONFIG = {
     { id: 'programs', label: 'Programs and objects read', path: 'process.programs', kind: 'rows', keys: ['type', 'name', 'description', 'role'], enums: { role: ['process', 'programs', 'role'] }, show: 'name' },
     { id: 'frs', label: 'Functional requirements', path: 'reqs.frs', kind: 'rows', keys: ['title', 'priority', 'fit', 'description', 'acceptance'], enums: { priority: ['reqs', 'frs', 'priority'], fit: ['reqs', 'frs', 'fit'] }, show: 'title' },
     { id: 'rules', label: 'Business rules', path: 'reqs.rules', kind: 'rows', keys: ['rule', 'type', 'outcome', 'fr'], enums: { type: ['reqs', 'rules', 'type'] }, show: 'rule', frRefs: 'fr' },
-    { id: 'data', label: 'Data requirements', path: 'reqs.data', kind: 'rows', keys: ['field', 'table', 'sapField', 'validation'], show: 'field' },
+    { id: 'data', label: 'Data requirements', path: 'reqs.data', kind: 'rows', keys: ['field', 'table', 'sapField', 'validation', 'usage'], enums: { usage: ['reqs', 'data', 'usage'] }, show: 'field' },
     { id: 'ricefw', label: 'RICEFW items', path: 'solution.ricefw', kind: 'rows', keys: ['type', 'name', 'description', 'frs', 'existing', 'complexity'], enums: { type: ['solution', 'ricefw', 'type'], complexity: ['solution', 'ricefw', 'complexity'] }, show: 'name', frRefs: 'frs' },
     { id: 'roles', label: 'Roles', path: 'solution.roles', kind: 'rows', keys: ['role', 'tx', 'scope'], show: 'role' },
     { id: 'interfaces', label: 'Interfaces', path: 'solution.interfaces', kind: 'rows', keys: ['name', 'direction', 'partner'], enums: { direction: ['solution', 'interfaces', 'direction'] }, show: 'name' },
@@ -16367,7 +16460,7 @@ window.APB_CONFIG = {
       '- Do not invent technical names (transactions, tables, programs, apps, APIs), people or numbers that are not in the requirement.',
       '- No personal data.',
       '- 3 to 8 functional requirements, each one testable, with 1 to 3 acceptance criteria ("When …, then …"). Reference them as FR-01, FR-02 … in the order you list them.',
-      '- Allowed values: priority must|should|could|wont' + (F.isSap(s) ? ' · fit standard|config|custom|tbc (SAP standard, configuration, custom development)' : '') + ' · change unchanged|changed|new|automated · rule type validation|derivation|calculation|authorization|approval · direction inbound|outbound|both · output type form|email|report|file|notification · test type positive|negative · risk type risk|assumption|open|dependency.',
+      '- Allowed values: priority must|should|could|wont' + (F.isSap(s) ? ' · fit standard|config|custom|tbc (SAP standard, configuration, custom development)' : '') + ' · change unchanged|changed|new|automated · rule type validation|derivation|calculation|authorization|approval · direction inbound|outbound|both · output type form|email|report|file|notification · test type positive|negative · risk type risk|assumption|open|dependency · data usage selection|output|both|input|stored|display (selection = the user enters or filters by it, output = shown in the result, both, input = comes from a file / upload, stored = saved in a table, display = shown only for information).',
       '- Fill every part that applies; leave a list empty when the requirement gives no basis for it.',
       '',
       'Answer with a one-line summary and then exactly one ```json block:',
@@ -16378,7 +16471,7 @@ window.APB_CONFIG = {
         asIs: [{ step: '', role: '', pain: '' }], toBe: [{ step: '', role: '', change: 'new' }],
         frs: [F.isSap(s) ? { title: '', priority: 'must', fit: 'tbc', description: '', acceptance: [''] } : { title: '', priority: 'must', description: '', acceptance: [''] }],
         rules: [{ rule: '', type: 'validation', outcome: '', fr: 'FR-01' }],
-        data: [{ field: '', validation: '' }],
+        data: [{ field: '', validation: '', usage: 'output' }],
         roles: [{ role: '', scope: '' }],
         interfaces: [{ name: '', direction: 'inbound', partner: '' }],
         outputs: [{ name: '', type: 'email', trigger: '' }],
@@ -16422,7 +16515,7 @@ window.APB_CONFIG = {
         programs: [{ type: 'PROG', name: '', description: '', role: 'main' }],
         asIs: [{ step: '', role: '', pain: '' }],
         rules: [{ rule: '', type: 'validation', outcome: '', fr: 'FR-01' }],
-        data: [{ field: '', table: 'TABLE', sapField: 'FIELD', validation: '' }],
+        data: [{ field: '', table: 'TABLE', sapField: 'FIELD', validation: '', usage: 'output' }],
         frs: [{ title: '', priority: 'must', fit: 'custom', description: '', acceptance: [''] }]
       }, null, 2),
       '```'].filter(function (l, i, a) { return l !== '' || a[i - 1] !== ''; }).join('\n');
@@ -16686,7 +16779,7 @@ window.APB_CONFIG = {
       '   - asIs / toBe: the current and proposed process tables, one step per row (role, transaction / app / system in tx, pain point for AS-IS, change mark for TO-BE: unchanged | changed | new | automated);',
       '   - frs: every requirement (e.g. BR-01) – keep its ID at the start of the title ("BR-01 …"), priority must | should | could from High / Medium / Low, fit standard | config | custom | tbc, description, acceptance criteria;',
       '   - rules: every business rule / validation (e.g. VAL-01) with type, outcome and the FR it belongs to;',
-      '   - data: the main fields (business name, table or infotype, field, validation);',
+      '   - data: the main fields (business name, table or infotype, field, validation) and what each is used for – usage selection | output | both | input | stored | display (selection = the user filters by it, output = shown in the result);',
       '   - objects: the SAP objects of step 2 (named or implied by the documents) with type (PROG, TRAN, CLAS, FUNC, RFC, DDLS, BDEF, SRVB, PROXY, TABL, BADI, IDOC, WAPA, JOB, OTHER) and a note ("exists in SAP", "not found", "to be built");',
       '   - currentLogic and programs: what the existing objects do today, from what you read in SAP;',
       '   - ricefw: one item per development object – type (' + ricefwCodes + '), name (the existing object for "enhancement" and "asbuilt", otherwise a proposed name or a short description), description, frs (e.g. "FR-01, FR-03"), existing (the existing SAP objects it changes or uses), complexity low | medium | high;',
@@ -16706,7 +16799,7 @@ window.APB_CONFIG = {
         toBe: [{ step: '', role: '', tx: '', change: 'automated' }],
         frs: [{ title: 'BR-01 …', priority: 'must', fit: 'custom', description: '', acceptance: [''] }],
         rules: [{ rule: '', type: 'validation', outcome: '', fr: 'FR-01' }],
-        data: [{ field: '', table: '', sapField: '', validation: '' }],
+        data: [{ field: '', table: '', sapField: '', validation: '', usage: 'output' }],
         objects: [{ type: 'PROG', name: '', note: '' }],
         candidates: [{ type: 'PROG', name: '', description: '', why: '', origin: 'custom' }],
         currentLogic: '', programs: [{ type: 'PROG', name: '', description: '', role: 'main' }],
@@ -16773,6 +16866,383 @@ window.APB_CONFIG = {
   }
 
   APB.fsDraft = { MARK: MARK, PROGRAM_MARK: PROGRAM_MARK, KIND: KIND, PARTS: PARTS, prompt: prompt, programPrompt: programPrompt, asIsPrompt: asIsPrompt, toBePrompt: toBePrompt, docsPrompt: docsPrompt, docsSearchPrompt: docsSearchPrompt, searchDepth: searchDepth, findingsText: findingsText, withFindings: withFindings, sapNames: sapNames, DOCS_MAX: DOCS_MAX, setNamespaces: setNamespaces, namespaces: namespaces, parse: parse, preview: preview, merge: merge };
+})(window.APB = window.APB || {});
+
+</script>
+  <script>
+/* Functional spec → Technical spec: the fixed part of the hand-off (no AI). The FS data rows ("Used for": selection,
+   output, both, input, stored, display), outputs and requirement become the designer of the main object – selection
+   screen and ALV columns of a report, filters / columns of a Fiori app, elements of a CDS view, parameters of an RFC,
+   fields of a table. What the FS does not say stays empty for "Complete the TS with Copilot" (ts-draft.js).
+   Also: a proposed name for a RICEFW item without one (module prefix), and a compact FS extract that the TS keeps
+   (origin.fsText) so Copilot can complete it later without the FS open. */
+(function (APB) {
+  'use strict';
+
+  function str(v) { return typeof v === 'string' ? v.trim() : v == null ? '' : String(v).trim(); }
+  function up(v) { return str(v).toUpperCase(); }
+  function filled(r) { return r && (str(r.field) || str(r.sapField)); }
+  const IN = { selection: 1, both: 1 };
+  const OUT = { output: 1, both: 1, display: 1 };
+
+  /* TABLE-FIELD when both are known, else whatever is known */
+  function ref(r) { const t = up(r.table), f = up(r.sapField); return t && f ? t + '-' + f : f || t; }
+  function ident(r, max) {
+    const f = up(r.sapField) || up(r.field).replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    return f.slice(0, max || 30);
+  }
+  function single(r) { return /\b(single|one value|exact(ly)? one|key date|date as of|as of date|checkbox|flag|yes\/no)\b/i.test(str(r.validation)); }
+
+  function rows(fs, set) { return ((fs.reqs && fs.reqs.data) || []).filter(function (r) { return filled(r) && set[r.usage]; }); }
+
+  /* the output channel of a report from the FS outputs, the RICEFW description and the requirement */
+  function reportOutput(fs, item) {
+    const text = [str(item && item.description), str(fs.context && fs.context.requirement), str(fs.context && fs.context.title)].join(' ');
+    const outs = ((fs.solution && fs.solution.outputs) || []).filter(function (o) { return o && (str(o.name) || o.type); });
+    const set = [];
+    const add = function (v) { if (set.indexOf(v) < 0) set.push(v); };
+    if (/\bALV\b/i.test(text) || outs.some(function (o) { return o.type === 'report'; }) || /\b(report|list)\b/i.test(text)) add('ALV (CL_SALV_TABLE)');
+    if (outs.some(function (o) { return o.type === 'email'; }) || /\be-?mail\b/i.test(text)) add('E-mail');
+    if (outs.some(function (o) { return o.type === 'file'; }) || /\b(download|excel|csv|file)\b/i.test(text)) add('File – presentation server');
+    if (outs.some(function (o) { return o.type === 'form'; })) add('Form / spool');
+    return set;
+  }
+
+  /* designer detail of the main object, per object type; only what the FS says */
+  function designer(fs, objType, item) {
+    const sel = rows(fs, IN), out = rows(fs, OUT);
+    const d = {};
+    if (objType === 'Report') {
+      d.programType = 'Executable program (type 1)';
+      d.selection = sel.map(function (r) {
+        const p = single(r);
+        return { name: ((p ? 'P_' : 'S_') + ident(r, 6)).slice(0, 8), kind: p ? 'PARAMETERS' : 'SELECT-OPTIONS', type: ref(r), label: str(r.field), obligatory: !!r.mandatory, noIntervals: false, default: '', notes: str(r.validation) };
+      });
+      d.columns = out.map(function (r) { return { field: ident(r), header: str(r.field), source: ref(r), props: str(r.validation) }; });
+      const o = reportOutput(fs, item);
+      if (o.length) d.outputType = o;
+    } else if (objType === 'Fiori/UI5') {
+      d.filters = sel.map(function (r) { return { field: str(r.sapField) || str(r.field), label: str(r.field), mandatory: !!r.mandatory, default: '', valueHelp: '' }; });
+      d.columns = out.map(function (r, i) { return { field: str(r.sapField) || str(r.field), label: str(r.field), importance: i < 3 ? 'High' : '', position: String(i + 1), note: str(r.validation) }; });
+    } else if (objType === 'CDS') {
+      d.elements = out.concat(sel.filter(function (r) { return out.indexOf(r) < 0; })).map(function (r) {
+        return { expression: str(r.sapField) ? (str(r.table) ? str(r.table).toLowerCase() + '.' : '') + str(r.sapField).toLowerCase() : str(r.field), alias: str(r.field).replace(/[^A-Za-z0-9]+/g, ''), key: false, annotations: '', notes: str(r.validation) };
+      });
+    } else if (objType === 'RFC' || objType === 'Function Module') {
+      const imp = rows(fs, { selection: 1, both: 1, input: 1 });
+      d.importing = imp.map(function (r) { return { name: ('IV_' + ident(r, 27)), typing: 'TYPE', type: ref(r), optional: !r.mandatory, default: '', byValue: true, description: str(r.field) }; });
+      d.exporting = out.map(function (r) { return { name: ('EV_' + ident(r, 27)), typing: 'TYPE', type: ref(r), byValue: true, description: str(r.field) }; });
+    } else if (objType === 'Table') {
+      d.fields = rows(fs, { stored: 1 }).map(function (r) { return { name: ident(r, 16), key: false, dataElement: '', dtype: '', length: '', decimals: '', domain: '', description: str(r.field) + (str(r.validation) ? ' – ' + str(r.validation) : ''), refField: '', checkTable: '' }; });
+    }
+    Object.keys(d).forEach(function (k) { if (Array.isArray(d[k]) && !d[k].length) delete d[k]; });
+    return d;
+  }
+
+  /* Z<module prefix>_<KEYWORDS>; RICEFW id kept out of the name (it changes when items are re-ordered) */
+  const STOP = /^(A|AN|THE|OF|FOR|TO|AND|OR|IN|ON|BY|WITH|PER|FROM|NEW|SIMPLE|REPORT|PROGRAM|LIST|ALL|SHOW|DISPLAY|CREATE|BUILD)$/;
+  function proposeName(fs, item, objType) {
+    const ns = APB.fsDraft && APB.fsDraft.namespaces ? APB.fsDraft.namespaces() : {};
+    const mod = (fs.context && fs.context.module) || '';
+    const prefix = ((ns[mod] || ns[''] || ['Z'])[0] || 'Z').toUpperCase();
+    const words = up([str(item && item.description), str(fs.context && fs.context.title)].join(' ')).split(/[^A-Z0-9]+/).filter(function (w) { return w.length > 2 && !STOP.test(w); });
+    const max = { Report: 30, Class: 30, CDS: 30, 'Fiori/UI5': 15, Table: 16 }[objType] || 30;
+    let name = prefix + (prefix.length > 1 ? '_' : '');
+    words.slice(0, 4).forEach(function (w) { if ((name + w).length <= max) name += (name.slice(-1) === '_' ? '' : '_') + w; });
+    if (name.length <= prefix.length + 1) return '';
+    if (objType === 'CDS') name = name.replace(/^Z/, 'ZI');
+    return name.slice(0, max);
+  }
+
+  /* compact FS extract for "Complete the TS with Copilot" (plain text; the guard masks it on the way out) */
+  const FS_TEXT_MAX = 12000;
+  function fsText(fs, frIds) {
+    const F = APB.fs;
+    const out = [];
+    const c = fs.context || {};
+    const add = function (h, v) { if (str(v)) out.push(h + ':\n' + str(v)); };
+    add('Title', c.title);
+    add('Module', c.module);
+    add('Business requirement', c.requirement);
+    add('Type of change', c.changeType);
+    const frs = ((fs.reqs && fs.reqs.frs) || []).map(function (f, i) { return { f: f, id: F.frId(i) }; })
+      .filter(function (x) { return x.f && str(x.f.title) && (!frIds || !frIds.length || frIds.indexOf(x.id) >= 0); });
+    if (frs.length) out.push('Functional requirements:\n' + frs.map(function (x) { return '- ' + x.id + ' ' + str(x.f.title) + (str(x.f.description) ? ': ' + str(x.f.description) : '') + (str(x.f.acceptance) ? ' | acceptance: ' + str(x.f.acceptance).replace(/\s*\n\s*/g, '; ') : ''); }).join('\n'));
+    const list = function (h, l, f) { l = (l || []).filter(function (r) { return r && typeof r === 'object'; }).map(f).filter(Boolean); if (l.length) out.push(h + ':\n' + l.map(function (x) { return '- ' + x; }).join('\n')); };
+    list('Business rules', fs.reqs && fs.reqs.rules, function (r) { return str(r.rule) && str(r.rule) + (str(r.outcome) ? ' → ' + str(r.outcome) : '') + (r.type ? ' (' + r.type + ')' : ''); });
+    list('Data (business field | table-field | used for | mandatory | validation)', fs.reqs && fs.reqs.data, function (r) { return filled(r) && [str(r.field), ref(r) || '–', r.usage || '–', r.mandatory ? 'mandatory' : 'optional', str(r.validation)].join(' | '); });
+    list('TO-BE process', fs.process && fs.process.toBe, function (r) { return str(r.step) && str(r.step) + (str(r.role) ? ' (' + str(r.role) + ')' : '') + (str(r.tx) ? ' [' + str(r.tx) + ']' : ''); });
+    list('Outputs', fs.solution && fs.solution.outputs, function (r) { return str(r.name) && str(r.name) + (r.type ? ' (' + r.type + ')' : '') + (str(r.trigger) ? ' – ' + str(r.trigger) : ''); });
+    list('Interfaces', fs.solution && fs.solution.interfaces, function (r) { return str(r.name) && str(r.name) + (r.direction ? ' (' + r.direction + ')' : '') + (str(r.partner) ? ' with ' + str(r.partner) : ''); });
+    list('Roles and authorizations', fs.solution && fs.solution.roles, function (r) { return str(r.role) && str(r.role) + (str(r.authObj) ? ' – ' + str(r.authObj) : '') + (str(r.scope) ? ' (' + str(r.scope) + ')' : ''); });
+    const q = fs.quality || {};
+    add('Performance', q.performance); add('Data volumes', q.volume); add('Data privacy', q.privacy);
+    add('Current logic (existing objects)', fs.process && fs.process.currentLogic);
+    const text = out.join('\n\n');
+    return text.length > FS_TEXT_MAX ? text.slice(0, FS_TEXT_MAX) + '\n…' : text;
+  }
+
+  /* SAP names the FS itself uses (tables, fields as TABLE-FIELD, objects) – the grounding list for ts-draft */
+  function fsNames(fs) {
+    const names = {};
+    ((fs.reqs && fs.reqs.data) || []).forEach(function (r) {
+      if (!r) return;
+      if (up(r.table)) names[up(r.table)] = 1;
+      if (up(r.sapField)) names[up(r.sapField)] = 1;
+      if (ref(r)) names[ref(r)] = 1;
+    });
+    ((fs.context && fs.context.objects) || []).forEach(function (o) { if (o && up(o.name)) names[up(o.name)] = 1; });
+    ((fs.solution && fs.solution.roles) || []).forEach(function (o) { if (o && up(o.authObj)) names[up(o.authObj)] = 1; });
+    return Object.keys(names);
+  }
+
+  APB.fsToTs = { designer: designer, proposeName: proposeName, fsText: fsText, fsNames: fsNames, reportOutput: reportOutput, FS_TEXT_MAX: FS_TEXT_MAX };
+})(window.APB = window.APB || {});
+
+</script>
+  <script>
+/* "Complete the TS with Copilot": Copilot fills the EMPTY parts of a Technical spec from the FS extract the TS keeps
+   (origin.fsText), the business requirement and the facts read from SAP (Check & read in SAP). No tools in this step.
+   The answer (kind dewa-ts-draft) is untrusted: only designer field ids and allowed option values are kept, filled
+   values are never overwritten, and every TABLE-FIELD / custom object name that is not in the FS, the TS or the SAP
+   facts is marked [TO BE CONFIRMED] before the developer reviews it. Authorization is never changed here. */
+(function (APB) {
+  'use strict';
+
+  const MARK = 'TS-DRAFT v1';
+  const KIND = 'dewa-ts-draft';
+  const TBC = '[TO BE CONFIRMED]';
+  const MAX_TEXT = 400000;
+
+  function D() { return APB.defs; }
+  function V() { return APB.validation; }
+  function str(v, max) { return (typeof v === 'string' ? v : v == null ? '' : typeof v === 'number' || typeof v === 'boolean' ? String(v) : '').trim().slice(0, max || 4000); }
+  function clone(v) { return JSON.parse(JSON.stringify(v)); }
+  function filled(v) { return V().isFilled(v); }
+
+  /* ------------------------------------------------------------ grounding */
+  /* SAP names the TS may use without confirmation: FS names, TS objects, SAP check results and what SAP returned */
+  function knownNames(s) {
+    const k = {};
+    const add = function (n) { n = str(n, 80).toUpperCase(); if (n) k[n] = 1; };
+    ((s.origin && s.origin.names) || []).forEach(add);
+    s.objects.forEach(function (o) {
+      add(o.name);
+      if (o.sap) { add(o.sap.type); (o.sap.uses || []).forEach(add); (o.sap.usedBy || []).forEach(add); walk(o.sap.detail, function (t) { refs(t).forEach(add); }); }
+      walk(o.detail, function (t) { refs(t).forEach(add); });
+    });
+    ((s.sapCheck && s.sapCheck.results) || []).forEach(function (r) { add(r.name); });
+    ((s.quality && s.quality.authChecks) || []).forEach(function (a) { add(a && a.object); });
+    return k;
+  }
+  /* strings inside a value (grids, records, lines) */
+  function walk(v, fn) {
+    if (typeof v === 'string') fn(v);
+    else if (Array.isArray(v)) v.forEach(function (x) { walk(x, fn); });
+    else if (v && typeof v === 'object') Object.keys(v).forEach(function (k) { walk(v[k], fn); });
+  }
+  // TABLE-FIELD (VBAK-VKORG), and custom object names (Z…/Y…/ /NS/…) – the names a model is most likely to invent
+  const REF_RE = /(?:\/[A-Z0-9]{1,10}\/[A-Z0-9_]+|\b[A-Z][A-Z0-9_]{1,29}-[A-Z][A-Z0-9_]{0,29}\b|\b[ZY][A-Z0-9]*_[A-Z0-9_]{2,40}\b)/g;
+  const ALWAYS = /^(SY-[A-Z0-9_]+|SELECT-OPTIONS|SELECTION-SCREEN|END-OF-SELECTION|START-OF-SELECTION|AT-SELECTION-SCREEN|TOP-OF-PAGE|LOAD-OF-PROGRAM|INITIALIZATION-.*|NON-UNIQUE|READ-ONLY|E-MAIL|CL_[A-Z0-9_]+|IF_[A-Z0-9_]+|BAPI_[A-Z0-9_]+|BAPIRET2.*)$/;
+  function refs(text) { return (String(text || '').toUpperCase().match(REF_RE) || []).filter(function (n) { return !ALWAYS.test(n); }); }
+  /* mark unknown names in a string → [text, count] */
+  function ground(text, known) {
+    let n = 0;
+    const out = String(text).replace(REF_RE, function (m, off, all) {
+      const u = m.toUpperCase();
+      if (ALWAYS.test(u) || known[u] || known[u.split('-')[0]] && known[u.split('-')[1]]) return m;
+      if (all.slice(Math.max(0, off - TBC.length - 1), off).indexOf(TBC) >= 0) return m;
+      n++;
+      return TBC + ' ' + m;
+    });
+    return [out, n];
+  }
+  function groundValue(v, known, count) {
+    if (typeof v === 'string') { const g = ground(v, known); count.n += g[1]; return g[0]; }
+    if (Array.isArray(v)) return v.map(function (x) { return groundValue(x, known, count); });
+    if (v && typeof v === 'object') { const o = {}; Object.keys(v).forEach(function (k) { o[k] = groundValue(v[k], known, count); }); return o; }
+    return v;
+  }
+
+  /* --------------------------------------------------------------- prompt */
+  function optionText(f) { return (f.options || []).filter(function (o) { return o.value; }).map(function (o) { return o.value; }).join(' | '); }
+  function schemaLine(type) {
+    const fields = (D().objectDef(type).fields || []).filter(function (f) { return f.id !== 'used'; });
+    return fields.map(function (f) {
+      const sub = f.kind === 'grid' ? f.columns : f.kind === 'records' ? f.fields : null;
+      const kind = { select: 'one of', radio: 'one of', multicheck: 'list of' }[f.kind];
+      return '  - ' + f.id + ' (' + f.label + ')' + (kind ? ': ' + kind + ' ' + optionText(f) : f.kind === 'check' ? ': true/false' : f.kind === 'lines' ? ': text, one item per line' : '') +
+        (sub ? ': array of { ' + sub.map(function (c) { const o = c.options && optionText(c); return c.id + (o ? ' (' + o + ')' : c.kind === 'check' ? ' (true/false)' : ''); }).join(', ') + ' }' : '');
+    }).join('\n');
+  }
+  function quality() { return D().quality.filter(function (f) { return ['dataVolume', 'performanceReq', 'testScenarios', 'cleanCore', 'cleanCoreNote'].indexOf(f.id) >= 0; }); }
+
+  function tsView(s) {
+    return {
+      development: s.types.map(function (t) { return (D().types[t] && D().types[t].label) || t; }),
+      requirement: s.requirement,
+      objects: s.objects.map(function (o) {
+        return { type: o.type, name: o.name, status: o.status, purpose: o.purpose, detail: o.detail || {},
+          currentStateInSap: o.sap ? { summary: o.sap.summary, detail: o.sap.detail, uses: o.sap.uses } : undefined };
+      }),
+      rules: s.rules.filter(filled).map(function (r) { return { condition: r.condition, behavior: r.behavior }; }),
+      acceptance: s.acceptance.filter(filled).map(function (a) { return a.text; }),
+      quality: { authorization: s.quality.authorization, dataVolume: s.quality.dataVolume, performanceReq: s.quality.performanceReq, testScenarios: s.quality.testScenarios, cleanCore: s.quality.cleanCore },
+      sapCheck: s.sapCheck ? s.sapCheck.results.map(function (r) { return r.name + ': ' + r.result; }) : []
+    };
+  }
+
+  function prompt(s) {
+    const targets = s.objects.filter(function (o) { return o.status === 'new' || o.status === 'change'; });
+    const types = [];
+    targets.forEach(function (o) { if (types.indexOf(o.type) < 0 && (D().objectDef(o.type).fields || []).length) types.push(o.type); });
+    const q = quality();
+    const fsText = (s.origin && s.origin.fsText) || '';
+    return [MARK,
+      'Complete the technical (development) specification below for GitHub Copilot (dewa-abap), which will implement it in SAP. Fill ONLY the parts that are still EMPTY. You have no tools in this step.',
+      '',
+      'Sources you may use – nothing else:',
+      '1. the functional specification extract (FS) below' + (fsText ? '' : ' (none – use the business requirement)') + ';',
+      '2. the technical specification as it is now (TS JSON) – its requirement, rules, acceptance criteria and objects;',
+      '3. the facts read from the SAP system (currentStateInSap, sapCheck in the TS JSON).',
+      '',
+      'Rules:',
+      '- Fill every EMPTY designer field of the objects with status new or change that these sources support: processing logic step by step, output, selection screen, columns, parameters, error handling, background execution, messages – in the shape given below. Never change a field that already has a value.',
+      '- Use only SAP tables, fields, CDS views, BAPIs, classes and objects that appear in the sources. A name you need but cannot find in them: write "' + TBC + '" in front of it (e.g. "' + TBC + ' VBAP-ABGRU"). Never invent table or field names.',
+      '- No new business rules: derive the logic from the FS requirements, rules, data and TO-BE steps. Anything the sources do not answer goes to openQuestions.',
+      '- Authorization: do not change it (it stays "' + (s.quality.authorization || 'no') + '").',
+      '- Use the option values exactly as listed. Selection-screen names at most 8 characters (S_ / P_ prefix). Field references as TABLE-FIELD.',
+      '- testScenarios: one per line, "scenario => expected result", covering every acceptance criterion; dataVolume one of ' + optionText(q.filter(function (f) { return f.id === 'dataVolume'; })[0] || {}) + '; cleanCore one of ' + optionText(q.filter(function (f) { return f.id === 'cleanCore'; })[0] || {}) + '.',
+      '',
+      'Designer fields per object type (use only these ids):',
+      types.map(function (t) { return t + ':\n' + schemaLine(t); }).join('\n') || '(no object to complete)',
+      '',
+      fsText ? (APB.guard ? APB.guard.fence('FS EXTRACT', fsText) : '=== FS EXTRACT ===\n' + fsText + '\n=== END FS EXTRACT ===') : '',
+      '',
+      'TS JSON (as it is now):',
+      '```json',
+      JSON.stringify(tsView(s), null, 1),
+      '```',
+      '',
+      'Answer with a short summary and then exactly one ```json block:',
+      '```json',
+      JSON.stringify({
+        kind: KIND, version: 1,
+        objects: targets.map(function (o) { return { name: o.name, type: o.type, detail: {} }; }),
+        expectedOutput: '',
+        quality: { dataVolume: '', performanceReq: '', testScenarios: '', cleanCore: '', cleanCoreNote: '' },
+        openQuestions: ['']
+      }, null, 1),
+      '```'
+    ].filter(function (l) { return l !== null; }).join('\n').replace(/\n{3,}/g, '\n\n');
+  }
+
+  /* ------------------------------------------------------ parse & ground */
+  function normalize(raw, s) {
+    const known = knownNames(s);
+    const count = { n: 0 };
+    const objects = [];
+    (Array.isArray(raw.objects) ? raw.objects : []).slice(0, 30).forEach(function (r) {
+      if (!r || typeof r !== 'object') return;
+      const name = str(r.name, 60).toUpperCase();
+      const o = s.objects.filter(function (x) { return x.name.trim().toUpperCase() === name && name; })[0] ||
+        s.objects.filter(function (x) { return !x.name.trim() && x.type === r.type; })[0];
+      if (!o || (o.status !== 'new' && o.status !== 'change')) return;
+      const detail = APB.devSap.sanitize(D().objectDef(o.type).fields, r.detail);
+      objects.push({ id: o.id, name: o.name || o.type, type: o.type, detail: groundValue(detail, known, count) });
+    });
+    const q = {};
+    const qraw = raw.quality && typeof raw.quality === 'object' ? raw.quality : {};
+    const qs = APB.devSap.sanitize(quality(), qraw);
+    Object.keys(qs).forEach(function (k) { q[k] = groundValue(qs[k], known, count); });
+    return {
+      kind: KIND, version: 1, objects: objects, quality: q,
+      expectedOutput: groundValue(str(raw.expectedOutput, 2000), known, count),
+      openQuestions: (Array.isArray(raw.openQuestions) ? raw.openQuestions : []).map(function (x) { return str(x, 400); }).filter(Boolean).slice(0, 20),
+      unconfirmed: count.n
+    };
+  }
+
+  function parse(text, s) {
+    text = String(text || '');
+    if (text.length > MAX_TEXT) return { draft: null, error: 'The answer is too long.' };
+    const cands = [];
+    text.replace(/```(?:json)?\s*([\s\S]*?)```/gi, function (_, b) { cands.push(b); return _; });
+    const a = text.indexOf('{'), b = text.lastIndexOf('}');
+    if (a >= 0 && b > a) cands.push(text.slice(a, b + 1));
+    for (let i = cands.length - 1; i >= 0; i--) {
+      let raw;
+      try { raw = JSON.parse(cands[i]); } catch (e) { continue; }
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw) || raw.kind !== KIND) continue;
+      return { draft: normalize(raw, s), error: '' };
+    }
+    return { draft: null, error: 'No TS completion found in the answer – paste the whole answer including the ```json block (kind "' + KIND + '").' };
+  }
+
+  /* ------------------------------------------------------- review & apply */
+  function label(type, id) { const f = (D().objectDef(type).fields || []).filter(function (x) { return x.id === id; })[0]; return f ? f.label : id; }
+  function qlabel(id) { const f = quality().filter(function (x) { return x.id === id; })[0]; return f ? f.label : id; }
+  function shortVal(v) {
+    if (Array.isArray(v)) return v.length + ' ' + (v.length === 1 ? 'entry' : 'entries') + (typeof v[0] === 'string' ? ': ' + v.join(', ') : '');
+    if (v === true) return 'yes';
+    return String(v).replace(/\s*\n\s*/g, ' · ').slice(0, 140);
+  }
+  function hasTbc(v) { let t = false; walk(v, function (x) { if (x.indexOf(TBC) >= 0) t = true; }); return t; }
+
+  /* → [{ id, label, items[], checked }] – only parts that would fill something still empty */
+  function preview(s, d) {
+    const parts = [];
+    d.objects.forEach(function (r) {
+      const o = s.objects.filter(function (x) { return x.id === r.id; })[0];
+      if (!o) return;
+      Object.keys(r.detail).forEach(function (k) {
+        if (filled((o.detail || {})[k])) return;
+        parts.push({ id: 'obj:' + o.id + ':' + k, label: (o.name || o.type) + ' – ' + label(o.type, k) + (hasTbc(r.detail[k]) ? ' (contains ' + TBC + ')' : ''), items: [shortVal(r.detail[k])], checked: true, source: 'Copilot proposal' });
+      });
+    });
+    Object.keys(d.quality).forEach(function (k) {
+      if (filled(s.quality[k])) return;
+      parts.push({ id: 'q:' + k, label: qlabel(k), items: [shortVal(d.quality[k])], checked: true, source: 'Copilot proposal' });
+    });
+    if (d.expectedOutput && !filled(s.requirement.expectedOutput)) parts.push({ id: 'output', label: 'Expected output', items: [shortVal(d.expectedOutput)], checked: true, source: 'Copilot proposal' });
+    if (d.openQuestions.length) parts.push({ id: 'questions', label: 'Open questions (added to Assumptions & open points)', items: d.openQuestions, checked: true, source: 'Copilot' });
+    if (d.unconfirmed) parts.push({ id: 'grounding', label: d.unconfirmed + ' SAP name' + (d.unconfirmed > 1 ? 's' : '') + ' not found in the FS, the TS or SAP – marked ' + TBC, items: ['Confirm them (Check & read in SAP) before Copilot implements them.'], checked: true, info: true });
+    return parts;
+  }
+
+  /* ids: picked part ids → { state, applied[] } – fills only empty fields */
+  function apply(s, d, ids) {
+    const next = clone(s);
+    const on = function (id) { return ids.indexOf(id) >= 0; };
+    const applied = [];
+    d.objects.forEach(function (r) {
+      const o = next.objects.filter(function (x) { return x.id === r.id; })[0];
+      if (!o) return;
+      o.detail = o.detail || {};
+      Object.keys(r.detail).forEach(function (k) {
+        if (!on('obj:' + o.id + ':' + k) || filled(o.detail[k])) return;
+        o.detail[k] = clone(r.detail[k]);
+        applied.push((o.name || o.type) + '.' + k);
+      });
+    });
+    Object.keys(d.quality).forEach(function (k) {
+      if (!on('q:' + k) || filled(next.quality[k])) return;
+      next.quality[k] = clone(d.quality[k]);
+      applied.push('quality.' + k);
+    });
+    if (on('output') && d.expectedOutput && !filled(next.requirement.expectedOutput)) { next.requirement.expectedOutput = d.expectedOutput; applied.push('expected output'); }
+    if (on('questions') && d.openQuestions.length) {
+      next.assumptions = [str(next.assumptions, 20000), 'Open questions (Copilot):\n' + d.openQuestions.map(function (q) { return '- ' + TBC + ' ' + q; }).join('\n')].filter(Boolean).join('\n\n');
+      applied.push(d.openQuestions.length + ' open question' + (d.openQuestions.length > 1 ? 's' : ''));
+    }
+    if (applied.length) {
+      next.origin = next.origin || { fsText: '', names: [] };
+      next.origin.copilot = (next.origin.copilot || []).concat(applied.filter(function (a) { return next.origin.copilot ? next.origin.copilot.indexOf(a) < 0 : true; })).slice(0, 200);
+    }
+    return { state: next, applied: applied };
+  }
+
+  APB.tsDraft = { MARK: MARK, KIND: KIND, prompt: prompt, parse: parse, preview: preview, apply: apply, knownNames: knownNames, ground: ground, refs: refs };
 })(window.APB = window.APB || {});
 
 </script>
@@ -17529,6 +17999,11 @@ window.APB_CONFIG = {
 
   /* kind → title and what the agent does, shown in turn */
   const JOBS = {
+    tsdraft: { title: 'AI is completing the Technical spec', sap: false, lines: [
+      'Reading the functional spec extract, the requirement and the SAP facts…',
+      'Filling the empty designer fields: logic, selection screen, output, parameters…',
+      'Writing error handling, messages and test scenarios…',
+      'Marking every SAP name it cannot find in the sources as [TO BE CONFIRMED]…'] },
     docs: { title: 'AI is reading your BRD and solution document', sap: true, lines: [
       'Extracting requirements, business rules and process steps…',
       'Reading the DEWA SAP system: checking the ABAP artifacts named in the documents (read-only)…',
@@ -18263,7 +18738,13 @@ window.APB_CONFIG = {
     if (pack) pack.enhancements.forEach(function (e) { known[e.name] = 'BAdI / Enhancement'; });
     const ct = s.context.changeType;
     const mainStatus = { enhancement: 'change', asbuilt: 'existing' }[ct] || 'new';
-    const objects = [{ type: APB.defs.types[devType].mainObject[0], name: (r.name || '').trim(), status: mainStatus, purpose: 'Main object (' + id + ')' + ({ enhancement: ' – existing, to be changed', asbuilt: ' – existing (as-built)' }[ct] || '') }];
+    const mainType = APB.defs.types[devType].mainObject[0];
+    // no name in the FS for a new object: a proposal from the module prefix (the developer confirms it)
+    const proposed = !(r.name || '').trim() && mainStatus === 'new' ? APB.fsToTs.proposeName(s, r, mainType) : '';
+    const objects = [{ type: mainType, name: (r.name || '').trim() || proposed, status: mainStatus,
+      purpose: 'Main object (' + id + ')' + ({ enhancement: ' – existing, to be changed', asbuilt: ' – existing (as-built)' }[ct] || '') + (proposed ? ' – proposed name, confirm' : ''),
+      // the FS data rows (selection / output …) and outputs become the designer of the main object – no AI
+      detail: APB.fsToTs.designer(s, mainType, r) }];
     // objects the FS lists as existing (step 1, or read from the documents) keep their type
     const listed = {};
     (s.context.objects || []).forEach(function (o) { const n = String((o && o.name) || '').trim().toUpperCase(); if (n) listed[n] = devObjectType(o.type); });
@@ -18286,12 +18767,13 @@ window.APB_CONFIG = {
     const users = roles.map(function (x) { return (x.role || '').trim(); }).filter(Boolean).join(', ');
     const docRef = 'Source: functional specification ' + ([s.control.docId, s.control.version && 'v' + s.control.version].filter(Boolean).join(' ') || '"' + F.model.name(s) + '"') + ', RICEFW item ' + id + (frRefs.length ? ' (' + frRefs.join(', ') + ')' : '') + '.';
     const ctLabel = ct ? ' Type of change: ' + F.field('context', 'changeType').options.filter(function (o) { return o.value === ct; })[0].label + '.' : '';
-    const quality = { authorization: auth.length ? 'yes' : '', authChecks: auth.map(function (x) { return { object: x.authObj.trim(), fields: (x.scope || '').trim(), where: (x.role || '').trim() }; }), dataVolume: '', performanceReq: (s.quality.performance || '').trim(), testTypes: ['Unit', 'Functional', 'Integration'], testScenarios: tests.join('\n'), cleanCore: '', cleanCoreNote: '' };
+    const quality = { authorization: auth.length ? 'yes' : 'no', authChecks: auth.map(function (x) { return { object: x.authObj.trim(), fields: (x.scope || '').trim(), where: (x.role || '').trim() }; }), dataVolume: '', performanceReq: (s.quality.performance || '').trim(), testTypes: ['Unit', 'Functional', 'Integration'], testScenarios: tests.join('\n'), cleanCore: '', cleanCoreNote: '' };
     return APB.state.migrate({
       project: { name: [s.control.docId, id, (r.name || '').trim()].filter(Boolean).join(' · ') },
       types: [devType],
       requirement: { text: reqText, objective: APB.markdown.helpers.splitLines(s.context.objectives).join('; '), users: users, expectedOutput: '' },
-      objects: objects.map(function (o) { o.id = S.uid(); o.detail = {}; return o; }),
+      objects: objects.map(function (o) { o.id = S.uid(); o.detail = o.detail || {}; return o; }),
+      origin: { fsText: APB.fsToTs.fsText(s, frRefs), names: APB.fsToTs.fsNames(s) },
       rules: rules.map(function (b) { b.id = S.uid(); return b; }),
       acceptance: acceptance.map(function (a) { a.id = S.uid(); return a; }),
       assumptions: docRef + ctLabel,
@@ -18312,10 +18794,18 @@ window.APB_CONFIG = {
     APB.gov.audit.add(dev, 'created-from', { fs: F.model.name(fs), item: item || '', fsApproval: APB.gov.status(fs).state });
     U().loadState(dev, msg);
     const named = (dev.objects || []).some(function (o) { return (o.name || '').trim(); });
-    if (H.isVscode && named && copilotReady() && U().startSapCheck) {
-      U().ui.step = 3;
-      U().renderMain();
-      U().startSapCheck();
+    if (H.isVscode && copilotReady() && U().startSapCheck) {
+      // read-only SAP check first (facts), then Copilot completes the empty parts of the TS from the FS extract
+      if (named) {
+        U().ui.step = 3;
+        U().renderMain();
+        if (U().startTsComplete) U().startTsComplete(true);
+        U().startSapCheck();
+      } else if (U().startTsComplete) {
+        U().ui.step = 4;
+        U().renderMain();
+        U().startTsComplete(false);
+      }
     }
   }
 
@@ -19470,6 +19960,83 @@ window.APB_CONFIG = {
     return true;
   }
 
+  /* Key designer fields per object type that dewa-abap needs; empty or [TO BE CONFIRMED] → named in a hint */
+  const KEY_FIELDS = { Report: ['selection', 'columns', 'logic'], RFC: ['importing', 'exporting', 'logic'], 'Function Module': ['importing', 'exporting', 'logic'],
+    CDS: ['source', 'elements'], 'Fiori/UI5': ['appType', 'service'], Class: ['methods'], Table: ['fields'], 'BAdI / Enhancement': ['spot', 'logic'], RAP: ['implementation', 'entities'] };
+  function readinessGaps(s) {
+    const out = [];
+    s.objects.filter(function (o) { return (o.status === 'new' || o.status === 'change') && KEY_FIELDS[o.type]; }).forEach(function (o) {
+      const d = o.detail || {};
+      KEY_FIELDS[o.type].forEach(function (k) {
+        const f = (D.objectDef(o.type).fields || []).filter(function (x) { return x.id === k; })[0];
+        const v = d[k];
+        if (o.status === 'change' && !V.isFilled(v)) return; // a change describes only what changes
+        if (!V.isFilled(v)) out.push((o.name || o.type) + ': ' + (f ? f.label : k));
+        else if (JSON.stringify(v).indexOf('[TO BE CONFIRMED]') >= 0) out.push((o.name || o.type) + ': ' + (f ? f.label : k) + ' (to be confirmed)');
+      });
+    });
+    return out;
+  }
+
+  /* ------------------------------------------- Complete the TS with Copilot (ts-draft.js) */
+  const tsd = { running: false, mode: '', status: '', error: '', pending: null, t0: 0 };
+  function tsdTargets(s) { return s.objects.filter(function (o) { return (o.status === 'new' || o.status === 'change') && D.hasBuilder(o); }); }
+  function tsdCardHtml(s) {
+    const n = tsdTargets(s).length;
+    const can = n > 0 && !tsd.running && (!H.isVscode || FA.copilotReady());
+    const run = H.isVscode
+      ? (tsd.running
+        ? '<button type="button" class="btn btn-ghost" data-action="tsd-stop">' + (tsd.mode === 'chat' ? 'Stop waiting' : 'Stop') + '</button><span class="muted small tsd-status">' + esc(tsd.status || 'Copilot is completing the TS…') + '</span>'
+        : '<button type="button" class="btn btn-primary" data-action="tsd-auto"' + (can ? '' : ' disabled') + '>✦ Complete the TS with Copilot</button>' +
+          '<button type="button" class="btn btn-ghost" data-action="tsd-chat"' + (can ? '' : ' disabled') + '>In Copilot Chat</button>')
+      : '<button type="button" class="btn btn-primary" data-action="tsd-copy"' + (n ? '' : ' disabled') + '>✦ Copy prompt</button>';
+    const src = s.origin && s.origin.fsText ? 'the functional spec it was made from, ' : '';
+    return '<section class="card tsd-card" id="tsd-card" aria-labelledby="h-tsd"><h3 id="h-tsd">Complete the TS with Copilot <span class="hint">empty fields only</span></h3>' +
+      '<p class="muted small">Copilot fills the <strong>empty</strong> designer fields of the new and changed objects – processing logic, output, selection screen, parameters, error handling, tests – from ' + src + 'the requirement and what was read in SAP. It never changes what is filled, never changes the authorization, and SAP names it cannot find in those sources are marked <mark>[TO BE CONFIRMED]</mark>. You review it first.</p>' +
+      '<div class="gen-actions">' + run + (n ? '' : '<span class="muted small">No new or changed object with a designer.</span>') + '</div>' +
+      (tsd.error ? '<p class="field-error" role="alert">' + esc(tsd.error) + '</p>' : '') +
+      '<details class="paste"' + detailsAttrs('tsd-paste', false) + '><summary>' + (H.isVscode ? 'Paste an answer instead' : 'Paste the answer') + '</summary>' +
+      (H.isVscode ? '' : '<p class="small muted">Paste the prompt into Copilot Chat in VS Code, then paste the whole answer here.</p>') +
+      '<textarea id="tsd-answer" rows="4" spellcheck="false" aria-label="Answer with the TS completion"></textarea>' +
+      '<button type="button" class="btn btn-ghost btn-sm" data-action="tsd-review">Review the answer</button></details></section>';
+  }
+  function rerenderTsd() { const el = document.getElementById('tsd-card'); if (el) el.outerHTML = tsdCardHtml(S.get()); }
+  function tsdStart(mode) {
+    const s = S.get();
+    if (!tsdTargets(s).length) { toast('No new or changed object to complete'); return; }
+    if (tsd.running || sap.running) return;
+    const prompt = APB.tsDraft.prompt(s);
+    tsd.running = true; tsd.mode = mode; tsd.error = ''; tsd.t0 = Date.now();
+    tsd.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Copilot is completing the TS from ' + (s.origin && s.origin.fsText ? 'the FS, ' : '') + 'the requirement and the SAP facts…';
+    APB.busy.start('tsdraft', mode, function () { actions['tsd-stop'](); });
+    auditAdd('ai-input', { job: 'tsdraft', objects: tsdTargets(s).map(function (o) { return o.name || o.type; }).join(', '), fsExtract: s.origin && s.origin.fsText ? s.origin.fsText.length + ' chars' : 'none', promptChars: prompt.length });
+    H.post({ type: 'ts-draft', mode: mode, prompt: prompt });
+    rerenderTsd();
+  }
+  function tsdReview(text) {
+    const r = APB.tsDraft.parse(APB.guard.unmask(String(text || '')), S.get());
+    if (!r.draft) { tsd.error = r.error; rerenderTsd(); toast(r.error, 6000); return false; }
+    tsd.error = '';
+    tsd.pending = r.draft;
+    const parts = APB.tsDraft.preview(S.get(), r.draft);
+    if (!parts.filter(function (p) { return !p.info; }).length) { tsd.pending = null; toast('Copilot found nothing to add – every field it could fill is already filled', 7000); return true; }
+    $('#tsd-list').innerHTML = parts.map(function (p) {
+      const box = p.info ? '<strong>' + esc(p.label) + '</strong>' : '<label class="check"><input type="checkbox" name="tsd-part" value="' + esc(p.id) + '"' + (p.checked ? ' checked' : '') + '> <strong>' + esc(p.label) + '</strong> <span class="hint">' + esc(p.source || '') + '</span></label>';
+      return '<li' + (p.info ? ' class="info"' : '') + '>' + box + '<ul class="small">' + p.items.slice(0, 6).map(function (i) { return '<li>' + esc(String(i).slice(0, 220)) + '</li>'; }).join('') + '</ul></li>';
+    }).join('');
+    const dlg = $('#tsd-dialog');
+    if (typeof dlg.showModal === 'function') { if (!dlg.open) dlg.showModal(); } else dlg.setAttribute('open', '');
+    return true;
+  }
+  /* hand-off from the FS: complete the TS once the SAP check is done (or right away when there is none) */
+  // the SAP check review closed (taken over or dismissed) → go on with the completion
+  (function () { const d = document.getElementById('devctx-dialog'); if (d) d.addEventListener('close', function () { tsdAfterSap(); }); })();
+  function tsdAfterSap() {
+    if (!ui.autoComplete) return;
+    ui.autoComplete = false;
+    if (H.isVscode && FA.copilotReady() && !isFs()) setTimeout(function () { tsdStart('auto'); }, 50);
+  }
+
   /* Step 4: what the object looks like today, read-only, next to the developer's design. */
   function sapCurrentHtml(o) {
     if (!o.sap) return '';
@@ -19508,9 +20075,21 @@ window.APB_CONFIG = {
         ui.open['devctx-paste'] = true; rerenderSap();
         const ta = $('#devctx-answer');
         if (ta) ta.value = answer;
+        tsdAfterSap();
       }
     });
-    H.on('devctx-error', function (m) { APB.busy.done('error'); sap.running = false; sap.status = ''; sap.error = String(m.message || 'The SAP check failed').slice(0, 400); rerenderSap(); });
+    H.on('devctx-error', function (m) { APB.busy.done('error'); sap.running = false; sap.status = ''; sap.error = String(m.message || 'The SAP check failed').slice(0, 400); rerenderSap(); tsdAfterSap(); });
+    H.on('tsdraft-progress', function (m) { const text = String(m.text || '').slice(0, 300); APB.busy.progress(text, m.status); if (!m.key) { tsd.status = text; const el = document.querySelector('.tsd-status'); if (el) el.textContent = text; } });
+    H.on('tsdraft-result', function (m) {
+      APB.busy.done('result', APB.guard.usageAudit(m.evidence));
+      tsd.running = false; tsd.status = ''; tsd.mode = '';
+      APB.guard.evidenceAudit('tsdraft', m.evidence);
+      rerenderTsd();
+      const answer = String(m.text || '');
+      if (!tsdReview(answer)) { ui.open['tsd-paste'] = true; rerenderTsd(); const ta = $('#tsd-answer'); if (ta) ta.value = answer; }
+      else toast('TS completion ready to review · ' + Math.max(1, Math.round((Date.now() - tsd.t0) / 1000)) + ' s', 5000);
+    });
+    H.on('tsdraft-error', function (m) { APB.busy.done('error'); tsd.running = false; tsd.status = ''; tsd.error = String(m.message || 'Completing the TS failed').slice(0, 400); rerenderTsd(); });
   }
 
   function step3(s) {
@@ -19575,7 +20154,7 @@ window.APB_CONFIG = {
     }).join('') + '</nav>' : '';
     return '<h2 class="step-title">' + STEPS[3].title + '</h2>' +
       '<p class="muted">New and changed objects get a full designer (SE11 fields, SE37 parameters, SE24 methods, CDS elements, RAP behavior, CAP model…). For reused objects, just note what you need. Leave anything unknown empty — it becomes an open question, not an invention.</p>' +
-      index +
+      index + tsdCardHtml(s) +
       (refs.length ? '<div class="refs" role="note"><strong>Referenced but not in your object list:</strong> ' + refs.map(function (r) {
         return '<button type="button" class="chip" data-action="add-ref" data-type="' + esc(r.type) + '" data-name="' + esc(r.name) + '">+ ' + esc(r.type) + ' ' + esc(r.name) + '</button>';
       }).join(' ') + '</div>' : '') +
@@ -19960,7 +20539,7 @@ window.APB_CONFIG = {
   function openUsage() {
     const u = APB.guard.usage(), months = Object.keys(u.months).sort().reverse().slice(0, 3);
     const num = function (v) { return '<td class="num">' + (v || 0) + '</td>'; };
-    const JOB = { docs: 'Read BRD / solution document', program: 'Read existing objects', asis: 'AS-IS process', tobe: 'TO-BE process', draft: 'Generate FS', discovery: 'System discovery', devctx: 'Check & read in SAP' };
+    const JOB = { docs: 'Read BRD / solution document', program: 'Read existing objects', asis: 'AS-IS process', tobe: 'TO-BE process', draft: 'Generate FS', discovery: 'System discovery', devctx: 'Check & read in SAP', tsdraft: 'Complete TS' };
     $('#usage-body').innerHTML = !months.length ? '<p class="empty">Nothing recorded yet' + (APB.guard.policy().telemetry === 'off' ? ' – switched off by the setting dewaSpecBuilder.telemetry.' : '.') + '</p>' : months.map(function (m) {
       const b = u.months[m], e = b.events;
       const jobs = Object.keys(b.jobs).map(function (k) {
@@ -20021,6 +20600,31 @@ window.APB_CONFIG = {
         rerenderSap();
         toast(ok ? 'Prompt copied ✓ Paste it into Copilot Chat in VS Code (dewa-fs-discovery), then paste the answer here' : 'Copy failed', 8000);
       });
+    },
+    'tsd-auto': function () { tsdStart('auto'); },
+    'tsd-chat': function () { tsdStart('chat'); },
+    'tsd-stop': function () { APB.busy.done('stopped'); if (tsd.mode !== 'chat') H.post({ type: 'stop' }); tsd.running = false; tsd.mode = ''; tsd.status = ''; rerenderTsd(); },
+    'tsd-copy': function () {
+      const s = S.get();
+      auditAdd('export', { to: 'clipboard (TS completion prompt)', approval: APB.gov.status(s).state });
+      Promise.resolve(X.copy(APB.guard.outbound(APB.tsDraft.prompt(s), 'clipboard'))).then(function (ok) {
+        ui.open['tsd-paste'] = true; rerenderTsd();
+        toast(ok ? 'Prompt copied ✓ Paste it into Copilot Chat in VS Code, then paste the answer here' : 'Copy failed', 8000);
+      });
+    },
+    'tsd-review': function () { const ta = $('#tsd-answer'); if (ta && tsdReview(ta.value)) ui.open['tsd-paste'] = false; },
+    'tsd-apply': function () {
+      const ids = $$('#tsd-list input[name="tsd-part"]:checked').map(function (i) { return i.value; });
+      const dlg = $('#tsd-dialog');
+      if (dlg.close) dlg.close(); else dlg.removeAttribute('open');
+      if (!tsd.pending) return;
+      const offered = APB.tsDraft.preview(S.get(), tsd.pending).filter(function (p) { return !p.info; }).map(function (p) { return p.id; });
+      const r = APB.tsDraft.apply(S.get(), tsd.pending, ids);
+      APB.gov.audit.add(r.state, 'review', { job: 'tsdraft', accepted: ids.length, declined: offered.length - ids.length, applied: r.applied.join(', ').slice(0, 900), unconfirmed: tsd.pending.unconfirmed });
+      tsd.pending = null;
+      S.replace(r.state);
+      renderMain();
+      toast(r.applied.length ? 'Filled by Copilot: ' + r.applied.length + ' part' + (r.applied.length > 1 ? 's' : '') + ' – check the [TO BE CONFIRMED] marks in step 4' : 'Nothing taken over', 7000);
     },
     'devctx-review': function () {
       const ta = $('#devctx-answer');
@@ -20268,6 +20872,8 @@ window.APB_CONFIG = {
     'vscode-go': function () {
       const s = S.get();
       if (V.checkMandatory(s).length) { toast('Add a requirement and a development object first'); return; }
+      const gaps = readinessGaps(s);
+      if (gaps.length) toast('Before Copilot builds it – still open: ' + gaps.slice(0, 4).join(' · ') + (gaps.length > 4 ? ' …' : '') + '. Copilot will ask about these instead of guessing.', 9000);
       const h = M.handoff(s);
       // a Fiori app always gets the choice: build it (dewa-fiori) or review it (dewa-fiori-review)
       if (h.agents.length > 1 || h.hasFiori) {
@@ -20627,7 +21233,9 @@ window.APB_CONFIG = {
     renderDatalists: renderDatalists, savedMsg: savedMsg,
     // Check & read in SAP for the open Technical spec (used after a hand-off from the FS)
     onReset: onReset, approvalCardHtml: approvalCardHtml, gateGuard: gateGuard, auditAdd: auditAdd,
-    startSapCheck: function () { if (!isFs() && APB.devSap.checkTargets(S.get()).length) sapStart('auto'); }
+    startSapCheck: function () { if (!isFs() && APB.devSap.checkTargets(S.get()).length) sapStart('auto'); },
+    // FS hand-off: complete the TS with Copilot after the SAP check (afterSap) or right away
+    startTsComplete: function (afterSap) { if (isFs()) return; if (afterSap) ui.autoComplete = true; else tsdStart('auto'); }
   };
 
   async function init() {

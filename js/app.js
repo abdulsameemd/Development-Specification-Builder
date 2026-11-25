@@ -366,6 +366,83 @@
     return true;
   }
 
+  /* Key designer fields per object type that dewa-abap needs; empty or [TO BE CONFIRMED] → named in a hint */
+  const KEY_FIELDS = { Report: ['selection', 'columns', 'logic'], RFC: ['importing', 'exporting', 'logic'], 'Function Module': ['importing', 'exporting', 'logic'],
+    CDS: ['source', 'elements'], 'Fiori/UI5': ['appType', 'service'], Class: ['methods'], Table: ['fields'], 'BAdI / Enhancement': ['spot', 'logic'], RAP: ['implementation', 'entities'] };
+  function readinessGaps(s) {
+    const out = [];
+    s.objects.filter(function (o) { return (o.status === 'new' || o.status === 'change') && KEY_FIELDS[o.type]; }).forEach(function (o) {
+      const d = o.detail || {};
+      KEY_FIELDS[o.type].forEach(function (k) {
+        const f = (D.objectDef(o.type).fields || []).filter(function (x) { return x.id === k; })[0];
+        const v = d[k];
+        if (o.status === 'change' && !V.isFilled(v)) return; // a change describes only what changes
+        if (!V.isFilled(v)) out.push((o.name || o.type) + ': ' + (f ? f.label : k));
+        else if (JSON.stringify(v).indexOf('[TO BE CONFIRMED]') >= 0) out.push((o.name || o.type) + ': ' + (f ? f.label : k) + ' (to be confirmed)');
+      });
+    });
+    return out;
+  }
+
+  /* ------------------------------------------- Complete the TS with Copilot (ts-draft.js) */
+  const tsd = { running: false, mode: '', status: '', error: '', pending: null, t0: 0 };
+  function tsdTargets(s) { return s.objects.filter(function (o) { return (o.status === 'new' || o.status === 'change') && D.hasBuilder(o); }); }
+  function tsdCardHtml(s) {
+    const n = tsdTargets(s).length;
+    const can = n > 0 && !tsd.running && (!H.isVscode || FA.copilotReady());
+    const run = H.isVscode
+      ? (tsd.running
+        ? '<button type="button" class="btn btn-ghost" data-action="tsd-stop">' + (tsd.mode === 'chat' ? 'Stop waiting' : 'Stop') + '</button><span class="muted small tsd-status">' + esc(tsd.status || 'Copilot is completing the TS…') + '</span>'
+        : '<button type="button" class="btn btn-primary" data-action="tsd-auto"' + (can ? '' : ' disabled') + '>✦ Complete the TS with Copilot</button>' +
+          '<button type="button" class="btn btn-ghost" data-action="tsd-chat"' + (can ? '' : ' disabled') + '>In Copilot Chat</button>')
+      : '<button type="button" class="btn btn-primary" data-action="tsd-copy"' + (n ? '' : ' disabled') + '>✦ Copy prompt</button>';
+    const src = s.origin && s.origin.fsText ? 'the functional spec it was made from, ' : '';
+    return '<section class="card tsd-card" id="tsd-card" aria-labelledby="h-tsd"><h3 id="h-tsd">Complete the TS with Copilot <span class="hint">empty fields only</span></h3>' +
+      '<p class="muted small">Copilot fills the <strong>empty</strong> designer fields of the new and changed objects – processing logic, output, selection screen, parameters, error handling, tests – from ' + src + 'the requirement and what was read in SAP. It never changes what is filled, never changes the authorization, and SAP names it cannot find in those sources are marked <mark>[TO BE CONFIRMED]</mark>. You review it first.</p>' +
+      '<div class="gen-actions">' + run + (n ? '' : '<span class="muted small">No new or changed object with a designer.</span>') + '</div>' +
+      (tsd.error ? '<p class="field-error" role="alert">' + esc(tsd.error) + '</p>' : '') +
+      '<details class="paste"' + detailsAttrs('tsd-paste', false) + '><summary>' + (H.isVscode ? 'Paste an answer instead' : 'Paste the answer') + '</summary>' +
+      (H.isVscode ? '' : '<p class="small muted">Paste the prompt into Copilot Chat in VS Code, then paste the whole answer here.</p>') +
+      '<textarea id="tsd-answer" rows="4" spellcheck="false" aria-label="Answer with the TS completion"></textarea>' +
+      '<button type="button" class="btn btn-ghost btn-sm" data-action="tsd-review">Review the answer</button></details></section>';
+  }
+  function rerenderTsd() { const el = document.getElementById('tsd-card'); if (el) el.outerHTML = tsdCardHtml(S.get()); }
+  function tsdStart(mode) {
+    const s = S.get();
+    if (!tsdTargets(s).length) { toast('No new or changed object to complete'); return; }
+    if (tsd.running || sap.running) return;
+    const prompt = APB.tsDraft.prompt(s);
+    tsd.running = true; tsd.mode = mode; tsd.error = ''; tsd.t0 = Date.now();
+    tsd.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Copilot is completing the TS from ' + (s.origin && s.origin.fsText ? 'the FS, ' : '') + 'the requirement and the SAP facts…';
+    APB.busy.start('tsdraft', mode, function () { actions['tsd-stop'](); });
+    auditAdd('ai-input', { job: 'tsdraft', objects: tsdTargets(s).map(function (o) { return o.name || o.type; }).join(', '), fsExtract: s.origin && s.origin.fsText ? s.origin.fsText.length + ' chars' : 'none', promptChars: prompt.length });
+    H.post({ type: 'ts-draft', mode: mode, prompt: prompt });
+    rerenderTsd();
+  }
+  function tsdReview(text) {
+    const r = APB.tsDraft.parse(APB.guard.unmask(String(text || '')), S.get());
+    if (!r.draft) { tsd.error = r.error; rerenderTsd(); toast(r.error, 6000); return false; }
+    tsd.error = '';
+    tsd.pending = r.draft;
+    const parts = APB.tsDraft.preview(S.get(), r.draft);
+    if (!parts.filter(function (p) { return !p.info; }).length) { tsd.pending = null; toast('Copilot found nothing to add – every field it could fill is already filled', 7000); return true; }
+    $('#tsd-list').innerHTML = parts.map(function (p) {
+      const box = p.info ? '<strong>' + esc(p.label) + '</strong>' : '<label class="check"><input type="checkbox" name="tsd-part" value="' + esc(p.id) + '"' + (p.checked ? ' checked' : '') + '> <strong>' + esc(p.label) + '</strong> <span class="hint">' + esc(p.source || '') + '</span></label>';
+      return '<li' + (p.info ? ' class="info"' : '') + '>' + box + '<ul class="small">' + p.items.slice(0, 6).map(function (i) { return '<li>' + esc(String(i).slice(0, 220)) + '</li>'; }).join('') + '</ul></li>';
+    }).join('');
+    const dlg = $('#tsd-dialog');
+    if (typeof dlg.showModal === 'function') { if (!dlg.open) dlg.showModal(); } else dlg.setAttribute('open', '');
+    return true;
+  }
+  /* hand-off from the FS: complete the TS once the SAP check is done (or right away when there is none) */
+  // the SAP check review closed (taken over or dismissed) → go on with the completion
+  (function () { const d = document.getElementById('devctx-dialog'); if (d) d.addEventListener('close', function () { tsdAfterSap(); }); })();
+  function tsdAfterSap() {
+    if (!ui.autoComplete) return;
+    ui.autoComplete = false;
+    if (H.isVscode && FA.copilotReady() && !isFs()) setTimeout(function () { tsdStart('auto'); }, 50);
+  }
+
   /* Step 4: what the object looks like today, read-only, next to the developer's design. */
   function sapCurrentHtml(o) {
     if (!o.sap) return '';
@@ -404,9 +481,21 @@
         ui.open['devctx-paste'] = true; rerenderSap();
         const ta = $('#devctx-answer');
         if (ta) ta.value = answer;
+        tsdAfterSap();
       }
     });
-    H.on('devctx-error', function (m) { APB.busy.done('error'); sap.running = false; sap.status = ''; sap.error = String(m.message || 'The SAP check failed').slice(0, 400); rerenderSap(); });
+    H.on('devctx-error', function (m) { APB.busy.done('error'); sap.running = false; sap.status = ''; sap.error = String(m.message || 'The SAP check failed').slice(0, 400); rerenderSap(); tsdAfterSap(); });
+    H.on('tsdraft-progress', function (m) { const text = String(m.text || '').slice(0, 300); APB.busy.progress(text, m.status); if (!m.key) { tsd.status = text; const el = document.querySelector('.tsd-status'); if (el) el.textContent = text; } });
+    H.on('tsdraft-result', function (m) {
+      APB.busy.done('result', APB.guard.usageAudit(m.evidence));
+      tsd.running = false; tsd.status = ''; tsd.mode = '';
+      APB.guard.evidenceAudit('tsdraft', m.evidence);
+      rerenderTsd();
+      const answer = String(m.text || '');
+      if (!tsdReview(answer)) { ui.open['tsd-paste'] = true; rerenderTsd(); const ta = $('#tsd-answer'); if (ta) ta.value = answer; }
+      else toast('TS completion ready to review · ' + Math.max(1, Math.round((Date.now() - tsd.t0) / 1000)) + ' s', 5000);
+    });
+    H.on('tsdraft-error', function (m) { APB.busy.done('error'); tsd.running = false; tsd.status = ''; tsd.error = String(m.message || 'Completing the TS failed').slice(0, 400); rerenderTsd(); });
   }
 
   function step3(s) {
@@ -471,7 +560,7 @@
     }).join('') + '</nav>' : '';
     return '<h2 class="step-title">' + STEPS[3].title + '</h2>' +
       '<p class="muted">New and changed objects get a full designer (SE11 fields, SE37 parameters, SE24 methods, CDS elements, RAP behavior, CAP model…). For reused objects, just note what you need. Leave anything unknown empty — it becomes an open question, not an invention.</p>' +
-      index +
+      index + tsdCardHtml(s) +
       (refs.length ? '<div class="refs" role="note"><strong>Referenced but not in your object list:</strong> ' + refs.map(function (r) {
         return '<button type="button" class="chip" data-action="add-ref" data-type="' + esc(r.type) + '" data-name="' + esc(r.name) + '">+ ' + esc(r.type) + ' ' + esc(r.name) + '</button>';
       }).join(' ') + '</div>' : '') +
@@ -856,7 +945,7 @@
   function openUsage() {
     const u = APB.guard.usage(), months = Object.keys(u.months).sort().reverse().slice(0, 3);
     const num = function (v) { return '<td class="num">' + (v || 0) + '</td>'; };
-    const JOB = { docs: 'Read BRD / solution document', program: 'Read existing objects', asis: 'AS-IS process', tobe: 'TO-BE process', draft: 'Generate FS', discovery: 'System discovery', devctx: 'Check & read in SAP' };
+    const JOB = { docs: 'Read BRD / solution document', program: 'Read existing objects', asis: 'AS-IS process', tobe: 'TO-BE process', draft: 'Generate FS', discovery: 'System discovery', devctx: 'Check & read in SAP', tsdraft: 'Complete TS' };
     $('#usage-body').innerHTML = !months.length ? '<p class="empty">Nothing recorded yet' + (APB.guard.policy().telemetry === 'off' ? ' – switched off by the setting dewaSpecBuilder.telemetry.' : '.') + '</p>' : months.map(function (m) {
       const b = u.months[m], e = b.events;
       const jobs = Object.keys(b.jobs).map(function (k) {
@@ -917,6 +1006,31 @@
         rerenderSap();
         toast(ok ? 'Prompt copied ✓ Paste it into Copilot Chat in VS Code (dewa-fs-discovery), then paste the answer here' : 'Copy failed', 8000);
       });
+    },
+    'tsd-auto': function () { tsdStart('auto'); },
+    'tsd-chat': function () { tsdStart('chat'); },
+    'tsd-stop': function () { APB.busy.done('stopped'); if (tsd.mode !== 'chat') H.post({ type: 'stop' }); tsd.running = false; tsd.mode = ''; tsd.status = ''; rerenderTsd(); },
+    'tsd-copy': function () {
+      const s = S.get();
+      auditAdd('export', { to: 'clipboard (TS completion prompt)', approval: APB.gov.status(s).state });
+      Promise.resolve(X.copy(APB.guard.outbound(APB.tsDraft.prompt(s), 'clipboard'))).then(function (ok) {
+        ui.open['tsd-paste'] = true; rerenderTsd();
+        toast(ok ? 'Prompt copied ✓ Paste it into Copilot Chat in VS Code, then paste the answer here' : 'Copy failed', 8000);
+      });
+    },
+    'tsd-review': function () { const ta = $('#tsd-answer'); if (ta && tsdReview(ta.value)) ui.open['tsd-paste'] = false; },
+    'tsd-apply': function () {
+      const ids = $$('#tsd-list input[name="tsd-part"]:checked').map(function (i) { return i.value; });
+      const dlg = $('#tsd-dialog');
+      if (dlg.close) dlg.close(); else dlg.removeAttribute('open');
+      if (!tsd.pending) return;
+      const offered = APB.tsDraft.preview(S.get(), tsd.pending).filter(function (p) { return !p.info; }).map(function (p) { return p.id; });
+      const r = APB.tsDraft.apply(S.get(), tsd.pending, ids);
+      APB.gov.audit.add(r.state, 'review', { job: 'tsdraft', accepted: ids.length, declined: offered.length - ids.length, applied: r.applied.join(', ').slice(0, 900), unconfirmed: tsd.pending.unconfirmed });
+      tsd.pending = null;
+      S.replace(r.state);
+      renderMain();
+      toast(r.applied.length ? 'Filled by Copilot: ' + r.applied.length + ' part' + (r.applied.length > 1 ? 's' : '') + ' – check the [TO BE CONFIRMED] marks in step 4' : 'Nothing taken over', 7000);
     },
     'devctx-review': function () {
       const ta = $('#devctx-answer');
@@ -1164,6 +1278,8 @@
     'vscode-go': function () {
       const s = S.get();
       if (V.checkMandatory(s).length) { toast('Add a requirement and a development object first'); return; }
+      const gaps = readinessGaps(s);
+      if (gaps.length) toast('Before Copilot builds it – still open: ' + gaps.slice(0, 4).join(' · ') + (gaps.length > 4 ? ' …' : '') + '. Copilot will ask about these instead of guessing.', 9000);
       const h = M.handoff(s);
       // a Fiori app always gets the choice: build it (dewa-fiori) or review it (dewa-fiori-review)
       if (h.agents.length > 1 || h.hasFiori) {
@@ -1523,7 +1639,9 @@
     renderDatalists: renderDatalists, savedMsg: savedMsg,
     // Check & read in SAP for the open Technical spec (used after a hand-off from the FS)
     onReset: onReset, approvalCardHtml: approvalCardHtml, gateGuard: gateGuard, auditAdd: auditAdd,
-    startSapCheck: function () { if (!isFs() && APB.devSap.checkTargets(S.get()).length) sapStart('auto'); }
+    startSapCheck: function () { if (!isFs() && APB.devSap.checkTargets(S.get()).length) sapStart('auto'); },
+    // FS hand-off: complete the TS with Copilot after the SAP check (afterSap) or right away
+    startTsComplete: function (afterSap) { if (isFs()) return; if (afterSap) ui.autoComplete = true; else tsdStart('auto'); }
   };
 
   async function init() {
