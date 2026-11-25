@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.32
+
+- **Faster "Generate FS from the documents" for small requirements.** The SAP search before writing the FS is now sized: *Auto* (default) runs the full process search when the documents name SAP objects or are long, and a **quick** search for short documents that name no SAP object – at most 3 keyword searches, no program reading, 90 seconds at most (before: up to 12 searches and 3 program reads, 8 rounds, 5 minutes). *Quick*, *Full* and *Skip* (no SAP access, one Copilot call) override it on the card; the choice and the reason are in the audit trail.
+- The job log shows the time of each phase ("SAP search (quick) done in 41 s", "FS written in 58 s · whole job 99 s").
+- The extension accepts a shorter SAP time budget from the builder for a job, never a longer one than configured.
+
 ## 1.0.31
 
 - **New Copilot agent `dewa-fiori-review`** – code review for Fiori / UI5 front ends (Fiori elements, FPM, freestyle). Tool checks first with their real output (UI5 linter, manifest validation, the Fiori ESLint plugin, `npm audit`, build, tests), then a fixed source scan for what the tools miss (OData `$filter` / key concatenation, HTML and code injection, open redirects, requests that bypass the model's CSRF handling, secrets, insecure or hard-coded URLs, browser storage, hard-coded texts, icon-only buttons, synchronous loading, reads in loops), then the full catalogue: security layers incl. backend authorization (read-only in SAP), SAP standards and Fiori guidelines, accessibility, i18n / RTL, performance, tests and the Technical spec. Every finding has a severity, `file:line` and evidence; verdict Approve / Approve with fixes / Reject. Fixes only for accepted findings, after `CONFIRM FIX`, then the checks run again. Also as a skill (`docs/agent-kit/skills/fiori-review`).

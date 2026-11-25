@@ -141,3 +141,31 @@ test('two phases: the SAP search gets a short brief, the writing step gets the d
   // letters-only names (VBAK) look like ordinary words – the model finds those from the text
   assert.deepStrictEqual(plain(APB.fsDraft.sapNames('see VBAK, LFA1 and SE38; not THE or AND. Z_A1 ok')), ['LFA1', 'SE38', 'Z_A1']);
 });
+
+test('search depth of the BRD job: named objects or long documents → full; short without names → quick; prompts per depth', () => {
+  const st = APB.fs.model.blank();
+  st.context.module = 'SD';
+  const small = [{ role: 'brd', name: 'BRD.txt', text: 'Simple ALV list of open sales orders per sales organization with customer and net value.' }];
+  const named = [{ role: 'brd', name: 'BRD.txt', text: 'Change report ZSD_OPEN_ORDERS to add the net value.' }];
+  const long = [{ role: 'brd', name: 'BRD.txt', text: 'Open sales orders. '.repeat(1200) }];
+  assert.deepStrictEqual(plain(APB.fsDraft.searchDepth(st, small)).depth, 'quick');
+  assert.match(APB.fsDraft.searchDepth(st, named).reason, /name SAP objects \(ZSD_OPEN_ORDERS\)/);
+  assert.strictEqual(APB.fsDraft.searchDepth(st, named).depth, 'full');
+  assert.strictEqual(APB.fsDraft.searchDepth(st, long).depth, 'full');
+  assert.strictEqual(APB.fsDraft.searchDepth(st, []).depth, 'quick');
+  const quick = APB.fsDraft.docsSearchPrompt(st, small, 'quick');
+  assert.match(quick, /QUICK SAP SEARCH/);
+  assert.match(quick, /At most 3 search calls in total[^\n]*at most 10 hits each/);
+  assert.match(quick, /Do NOT read program logic/);
+  assert.doesNotMatch(quick, /SEARCH THE SAP SYSTEM BY PROCESS|read the logic of the main objects/);
+  const full = APB.fsDraft.docsSearchPrompt(st, small);
+  assert.strictEqual(full, APB.fsDraft.docsSearchPrompt(st, small, 'full'), 'full is the default and unchanged');
+  assert.match(full, /SEARCH THE SAP SYSTEM BY PROCESS/);
+  // chat / clipboard prompt (one step): skip removes SAP, quick shortens it
+  const skip = APB.fsDraft.docsPrompt(st, small, { depth: 'skip' });
+  assert.match(skip, /Do not use the SAP system\./);
+  assert.match(skip, /Do NOT use the SAP system in this job/);
+  assert.doesNotMatch(skip, /SEARCH THE SAP SYSTEM BY PROCESS|QUICK SAP SEARCH/);
+  assert.match(APB.fsDraft.docsPrompt(st, small, { depth: 'quick' }), /QUICK SAP SEARCH/);
+  assert.match(APB.fsDraft.docsPrompt(st, small), /SEARCH THE SAP SYSTEM BY PROCESS/, 'default unchanged');
+});

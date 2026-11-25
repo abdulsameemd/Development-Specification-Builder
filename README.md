@@ -65,6 +65,11 @@ Step 1 opens with **Start from documents**. Upload the **BRD** and/or the **solu
 Word (`.docx`), PDF with a text layer, Excel (`.xlsx`), Markdown or text. The builder reads them on your computer (no
 upload anywhere else; scanned PDFs have no text – use the Word original) and shows how much text it found.
 
+**SAP search depth** (VS Code): *Auto* decides before calling Copilot – documents that name SAP objects, or long
+documents, get the **full** process search; short documents that name no SAP object (a small new requirement such as a
+simple ALV report) get a **quick** search: at most 3 keyword searches, no program reading, 90 seconds at most. Choose
+*Quick*, *Full* or *Skip* (no SAP access, one Copilot call) to override. The job log shows how long each phase took.
+
 **✦ Generate FS from the documents** (VS Code; *In Copilot Chat*, or *Copy prompt* in the browser) sends both texts to
 your GitHub Copilot with the read-only SAP tools. Copilot:
 
@@ -193,7 +198,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.31.vsix`](dist/dewa-sap-spec-builder-1.0.31.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.31.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.32.vsix`](dist/dewa-sap-spec-builder-1.0.32.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.32.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **If the .vsix download is blocked** (the downloaded file is only a few KB, and VS Code says *End of central directory record signature not found*): some company networks replace `.vsix` downloads with a web page. The repository also holds the extension **unpacked** in `dist/vscode-extension/dewa.dewa-sap-spec-builder-<version>/`, as plain files, so no `.vsix` is downloaded:
 

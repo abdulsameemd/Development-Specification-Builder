@@ -696,3 +696,20 @@ test('the panel accepts the dewa-fiori-review agent for Copilot Chat', async () 
   const open = vs.calls.commands.filter((c) => c.id === 'workbench.action.chat.open').pop();
   assert.strictEqual(open.args.mode, 'dewa-fiori-review');
 });
+
+test('read-program route: the builder may ask for a shorter SAP time budget (quick BRD search), never a longer one', async () => {
+  const pr = require('../src/programReader');
+  const orig = pr.run;
+  const seen = [];
+  pr.run = async function (vs, opts) { seen.push([opts.maxRounds, opts.budgetMs]); return 'ok'; };
+  try {
+    const vs = fakeVscode();
+    const { r } = router(vs);
+    await r.handle({ type: 'read-program', mode: 'auto', prompt: pr.MARKER + '\nquick', maxRounds: 3, budgetSeconds: 90 });
+    await r.handle({ type: 'read-program', mode: 'auto', prompt: pr.MARKER + '\nfull', maxRounds: 8 });
+    await r.handle({ type: 'read-program', mode: 'auto', prompt: pr.MARKER + '\nlonger', budgetSeconds: 3600 });
+    assert.deepStrictEqual(seen, [[3, 90000], [8, 300000], [25, 300000]]);
+  } finally {
+    pr.run = orig;
+  }
+});
