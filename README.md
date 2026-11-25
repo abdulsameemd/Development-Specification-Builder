@@ -21,6 +21,18 @@ open index.html          # double-click it; works from file://
 
 Optional: serve the folder with any static host (GitHub Pages: *Settings → Pages → Deploy from branch → root*).
 
+## How to update
+
+**Windows:** double-click **`update.cmd`** in the project folder. **Mac / Linux:** `bash scripts/update.sh`.
+
+It downloads the latest `main` from GitHub and always succeeds – no `git stash`, no merge errors:
+- files changed in this folder are first saved to `.update-backups/<date-time>.patch` (restore with `git apply …`),
+  then every project file is put back exactly as on GitHub;
+- it installs the new `.vsix` into VS Code when the `code` command is available (then reload VS Code).
+
+Line endings are fixed by `.gitattributes` (LF for every text file), so Windows tools no longer make files look
+changed. After one run of the script, a plain `git pull` on `main` works as well.
+
 ## Functional specifications
 
 ```text
