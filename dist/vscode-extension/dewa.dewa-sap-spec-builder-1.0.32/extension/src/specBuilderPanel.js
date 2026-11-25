@@ -202,7 +202,10 @@ function createRouter(vscode, context, deps) {
           prompt: m.prompt,
           allowPatterns: cfg.get('discoveryTools', []),
           maxRounds: Math.min(cfg.get('maxToolRounds', 25), Number(m.maxRounds) > 0 ? Number(m.maxRounds) : 60),
-          toolTimeoutMs: seconds(cfg, 'toolTimeoutSeconds', 60), parallel: Number(cfg.get('parallelToolCalls', 1)) || 1, budgetMs: seconds(cfg, 'sapTimeBudgetSeconds', 300), shouldFinish: function () { return finishNow; },
+          toolTimeoutMs: seconds(cfg, 'toolTimeoutSeconds', 60), parallel: Number(cfg.get('parallelToolCalls', 1)) || 1,
+          // the builder may ask for a shorter SAP budget (quick search of the BRD job) – never a longer one than configured
+          budgetMs: Number(m.budgetSeconds) > 0 ? Math.min(seconds(cfg, 'sapTimeBudgetSeconds', 300), Math.min(600, Number(m.budgetSeconds)) * 1000) : seconds(cfg, 'sapTimeBudgetSeconds', 300),
+          shouldFinish: function () { return finishNow; },
           model: cfg.get('model', ''),
           exclude: [submitTool.TOOL_NAME, submitTool.DRAFT_TOOL_NAME],
           token: cts.token,

@@ -263,7 +263,7 @@
     "extensionId": "dewa.dewa-sap-spec-builder",
     "staleDays": 30,
     "mcpServers": ["SAP ABAP ADT", "SAP Fiori", "SAP UI5", "SAP CAP"],
-    "processSearch": { "maxSearches": 12, "maxReads": 3, "maxHits": 50, "fewObjects": 3 },
+    "processSearch": { "maxSearches": 12, "maxReads": 3, "maxHits": 50, "fewObjects": 3, "quickMaxChars": 15000, "quickSearches": 3, "quickHits": 10 },
     "moduleNamespaces": {
       "FI/CO": ["ZFI", "ZWFI", "ZCO", "ZWCO"], "MM": ["ZMM", "ZWMM"], "SD": ["ZSD", "ZWSD"],
       "IS-U": ["ZISU", "ZWISU", "ZIU"], "CRM": ["ZCRM", "ZWCRM"], "PS/PM": ["ZPS", "ZWPS", "ZPM", "ZWPM"],

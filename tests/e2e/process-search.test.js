@@ -26,6 +26,9 @@ test('BRD without SAP names: phase 1 searches SAP (short brief), phase 2 writes 
     await p.evaluate(() => { APB.state.set('context.system', 'sap'); APB.state.set('context.module', 'HCM'); APB.ui.renderMain(); });
     await p.setInputFiles('#fs-doc-brd', { name: 'BRD_Bonus.txt', mimeType: 'text/plain', buffer: Buffer.from(BRD) });
     await p.waitForTimeout(500);
+    // a short BRD without SAP names is a quick search by default (see the next test); this test runs the full search
+    assert.match(await p.locator('.fs-depth-note').innerText(), /^Auto → Quick \(no SAP objects named, short documents\)$/);
+    await p.click('[data-action="fs-docs-depth"][data-depth="full"]');
     await p.click('[data-action="fs-docs-auto"]');
     const prompt = await p.evaluate(() => window.__posted.filter((m) => m.type === 'read-program').pop().prompt);
     assert.match(prompt, /SEARCH THE SAP SYSTEM BY PROCESS/);
@@ -79,6 +82,75 @@ test('BRD without SAP names: phase 1 searches SAP (short brief), phase 2 writes 
     await p.click('[data-action="usage"]');
     assert.match(await p.locator('#usage-body').innerText(), /Read BRD \/ solution document\s+1\s+100%/);
     assert.deepStrictEqual(errors, []);
+  } finally {
+    await browser.close();
+  }
+});
+
+async function brdPage(browser, brd) {
+  const p = await browser.newPage({ viewport: { width: 1300, height: 900 } });
+  p.errors = [];
+  p.on('pageerror', (e) => p.errors.push(e.message));
+  await p.addInitScript(() => {
+    window.__posted = [];
+    window.APB_HOST = { kind: 'vscode', version: 'test', storage: {} };
+    window.acquireVsCodeApi = () => ({ postMessage: (m) => window.__posted.push(m), setState() {}, getState() {} });
+  });
+  await p.goto(APP);
+  await p.waitForFunction(() => window.APB && APB.fsDraft);
+  await p.evaluate((m) => window.postMessage(m, '*'), { type: 'auth', signedIn: true, account: 'analyst', copilot: true, policy: { namespaces: { SD: ['ZSD'] } } });
+  await p.click('[data-mode="fs"]');
+  await p.evaluate(() => { APB.state.set('context.system', 'sap'); APB.state.set('context.module', 'SD'); APB.ui.renderMain(); });
+  await p.setInputFiles('#fs-doc-brd', { name: 'BRD.txt', mimeType: 'text/plain', buffer: Buffer.from(brd) });
+  await p.waitForTimeout(400);
+  return p;
+}
+const ALV = 'Business Requirement: Open sales orders report\nSales managers need a simple ALV list of open sales orders per sales organization with customer and net value.\n';
+
+test('small new requirement: Auto → quick SAP search (3 rounds, 90 s), phase timings in the log; Skip → one Copilot call; named objects → full', async () => {
+  const browser = await chromium.launch();
+  try {
+    let p = await brdPage(browser, ALV);
+    assert.match(await p.locator('.fs-depth-note').innerText(), /^Auto → Quick/);
+    await p.click('[data-action="fs-docs-auto"]');
+    const q = await p.evaluate(() => window.__posted.filter((m) => m.type === 'read-program').pop());
+    assert.deepStrictEqual([q.maxRounds, q.budgetSeconds], [3, 90]);
+    assert.match(q.prompt, /QUICK SAP SEARCH \(read-only\)/);
+    assert.match(q.prompt, /At most 3 search calls/);
+    assert.match(q.prompt, /Do NOT read program logic/);
+    assert.doesNotMatch(q.prompt, /SEARCH THE SAP SYSTEM BY PROCESS/);
+    assert.match(await p.locator('.busy-step').innerText(), /1\/2 Quick SAP search/);
+    const audit = await p.evaluate(() => APB.state.get().audit.filter((e) => e.type === 'ai-input').pop().data.searchDepth);
+    assert.match(audit, /^quick \(auto: no SAP objects named, short documents\)$/);
+    await p.evaluate((m) => window.postMessage(m, '*'), { type: 'draft-result', text: '```json\n{"kind":"fs-draft","version":1,"changeType":"new"}\n```', evidence: { calls: [{}], names: [], flags: 0, masked: 0, searches: 1, artifacts: [] } });
+    await p.waitForFunction(() => window.__posted.some((m) => m.type === 'draft'));
+    assert.match(await p.locator('.fs-log').innerText(), /SAP search \(quick\) done in \d+ s/);
+    await p.evaluate((m) => window.postMessage(m, '*'), { type: 'draft-result', text: '```json\n{"kind":"fs-draft","version":1,"title":"Open sales orders","frs":[{"title":"Show open orders","priority":"must"}]}\n```', evidence: { calls: [], names: [], flags: 0, masked: 0 } });
+    await p.waitForSelector('#draft-dialog[open]');
+    assert.deepStrictEqual(p.errors, []);
+    await p.close();
+
+    p = await brdPage(browser, ALV);
+    await p.click('[data-action="fs-docs-depth"][data-depth="skip"]');
+    assert.match(await p.locator('.fs-depth-note').innerText(), /no SAP access – one Copilot call/);
+    await p.click('[data-action="fs-docs-auto"]');
+    await p.waitForFunction(() => window.__posted.some((m) => m.type === 'draft'));
+    assert.strictEqual(await p.evaluate(() => window.__posted.filter((m) => m.type === 'read-program').length), 0, 'no SAP job');
+    const w = await p.evaluate(() => window.__posted.filter((m) => m.type === 'draft').pop().prompt);
+    assert.match(w, /SAP search skipped \(chosen by the consultant\)/);
+    assert.match(await p.locator('.fs-log').innerText(), /SAP search skipped/);
+    await p.evaluate((m) => window.postMessage(m, '*'), { type: 'draft-result', text: '```json\n{"kind":"fs-draft","version":1,"title":"Open sales orders"}\n```', evidence: { calls: [], names: [], flags: 0, masked: 0 } });
+    await p.waitForSelector('#draft-dialog[open]');
+    assert.match(await p.locator('.fs-log').innerText(), /FS written in \d+ s · whole job \d+ s/);
+    assert.deepStrictEqual(p.errors, []);
+    await p.close();
+
+    p = await brdPage(browser, ALV + 'Reuse report ZSD_OPEN_ORDERS_OLD.\n');
+    assert.match(await p.locator('.fs-depth-note').innerText(), /^Auto → Full \(the documents name SAP objects \(ZSD_OPEN_ORDERS_OLD\)\)$/);
+    await p.click('[data-action="fs-docs-auto"]');
+    const f = await p.evaluate(() => window.__posted.filter((m) => m.type === 'read-program').pop());
+    assert.deepStrictEqual([f.maxRounds, f.budgetSeconds], [8, undefined]);
+    assert.deepStrictEqual(p.errors, []);
   } finally {
     await browser.close();
   }

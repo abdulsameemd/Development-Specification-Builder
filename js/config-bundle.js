@@ -9658,7 +9658,10 @@ window.APB_CONFIG = {
     "maxSearches": 12,
     "maxReads": 3,
     "maxHits": 50,
-    "fewObjects": 3
+    "fewObjects": 3,
+    "quickMaxChars": 15000,
+    "quickSearches": 3,
+    "quickHits": 10
    },
    "moduleNamespaces": {
     "FI/CO": [

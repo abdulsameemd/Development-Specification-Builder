@@ -118,7 +118,7 @@
   /* SAP only: read an existing program (and what it uses) read-only, and bring its logic into the spec. */
   /* Start from documents: the BRD and the solution document are read here (js/doc-reader.js), kept in memory only,
      and sent to Copilot, which checks the SAP objects they name read-only and drafts the whole FS for review. */
-  const docs = { brd: null, solution: null, busy: '' };
+  const docs = { brd: null, solution: null, busy: '', depth: 'auto' }; // depth: SAP search of the BRD job – auto | quick | full | skip
   const DOC_ROLES = [['brd', 'BRD', 'Business requirements: need, scope, requirements, rules, benefits'], ['solution', 'Solution document', 'Process details, design, objects']];
 
   // nothing of the previous spec stays when another one is opened (New, Drafts, Upload, mode switch); app.js calls it
@@ -179,6 +179,7 @@
       docsIntro(s) +
       '<div class="fs-doc-slots">' + DOC_ROLES.map(slot).join('') + '</div>' +
       (H.isVscode && list.length ? '<div class="chips fs-copilot">' + copilotStatus() + '</div>' : '') +
+      (H.isVscode && list.length ? depthHtml(s, list) : '') +
       '<div class="gen-actions">' + run + (list.length ? '' : '<span class="muted small">Choose at least one document.</span>') + '</div>' +
       (drf.kind === 'docs' ? draftLogHtml() : '') +
       (drf.error && drf.kind === 'docs' ? '<p class="field-error" role="alert">' + esc(drf.error) + '</p>' : '') +
@@ -188,6 +189,22 @@
         '<button type="button" class="btn btn-ghost btn-sm" data-action="fs-docs-review">Review the answer</button></details>' : '') +
       classified + '</section>';
   }
+
+  /* SAP search depth of the BRD job (UI choice, not saved in the spec) */
+  const DEPTHS = [['auto', 'Auto'], ['quick', 'Quick'], ['full', 'Full'], ['skip', 'Skip']];
+  const DEPTH_HELP = { quick: 'a few keyword searches, no program reading (about a minute)', full: 'process search and reading of the main objects (several minutes)', skip: 'no SAP access – one Copilot call' };
+  function depthOf(s, list) {
+    if (docs.depth !== 'auto') return { depth: docs.depth, reason: 'chosen' };
+    return APB.fsDraft.searchDepth(s, list);
+  }
+  function depthHtml(s, list) {
+    const d = depthOf(s, list);
+    const note = docs.depth === 'auto' ? 'Auto → ' + d.depth.charAt(0).toUpperCase() + d.depth.slice(1) + ' (' + d.reason + ')' : DEPTH_HELP[d.depth];
+    return '<div class="fs-depth"><span class="small"><strong>SAP search</strong></span> <span class="seg" role="group" aria-label="SAP search depth">' +
+      DEPTHS.map(function (x) { return '<button type="button" aria-pressed="' + (docs.depth === x[0]) + '" data-action="fs-docs-depth" data-depth="' + x[0] + '" title="' + esc(x[0] === 'auto' ? 'Decide from the documents' : DEPTH_HELP[x[0]]) + '"' + (drf.running ? ' disabled' : '') + '>' + x[1] + '</button>'; }).join('') +
+      '</span> <span class="muted small fs-depth-note">' + esc(note) + '</span></div>';
+  }
+  function secs(t0) { return Math.max(1, Math.round((Date.now() - t0) / 1000)) + ' s'; }
 
   function setSource(role, d) {
     U().updateSteps(function (st) {
@@ -800,8 +817,9 @@
         evidence = APB.guard.combineEvidence(drf.ev1, m.evidence);
         const r = APB.fsDraft.parse(APB.guard.unmask(answer));
         if (r.draft) ready = { draft: APB.fsDraft.withFindings(r.draft, drf.found || {}), error: '' };
-        answer = answer + '\n\n' + drf.answer1;
+        answer = answer + (drf.answer1 ? '\n\n' + drf.answer1 : '');
         drf.phase = '';
+        drf.log.push({ text: 'FS written in ' + secs(drf.t0) + ' · whole job ' + secs(drf.tJob), status: 'done' });
       }
       APB.busy.done('result', APB.guard.usageAudit(evidence));
       drf.running = false; drf.status = ''; drf.mode = '';
@@ -847,38 +865,53 @@
     if (!list.length) { U().toast('Choose the BRD or the solution document first'); return; }
     drf.running = true; drf.kind = 'docs'; drf.mode = mode; drf.error = ''; drf.log = [];
     APB.busy.start('docs', mode, function () { actions['fs-draft-stop'](); });
-    drf.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Copilot is reading ' + list.map(function (d) { return d.name; }).join(' and ') + ' and checking SAP (read-only)…';
-    // VS Code, automatic: phase 1 searches SAP with a small prompt, phase 2 writes the FS from the full documents
-    // without tools – the documents are processed twice instead of once per tool round
+    const dp = H.isVscode ? depthOf(S.get(), list) : { depth: 'full', reason: '' };
+    drf.depth = dp.depth; drf.t0 = Date.now(); drf.tJob = drf.t0;
+    drf.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Copilot is reading ' + list.map(function (d) { return d.name; }).join(' and ') + (dp.depth === 'skip' ? '…' : ' and checking SAP (read-only)…');
+    // VS Code, automatic: phase 1 searches SAP with a small prompt (quick or full), phase 2 writes the FS from the full
+    // documents without tools – the documents are processed twice instead of once per tool round. Skip: phase 2 only.
     drf.phase = mode === 'auto' && H.isVscode ? 'search' : '';
     drf.docs = list; drf.found = null; drf.ev1 = null; drf.answer1 = '';
-    const prompt = drf.phase ? APB.fsDraft.docsSearchPrompt(S.get(), list) : APB.fsDraft.docsPrompt(S.get(), list);
-    if (drf.phase) { drf.status = '1/2 Searching the SAP system (read-only)…'; APB.busy.progress('1/2 Searching the SAP system (read-only) with a short brief of the documents…', 'info'); }
-    U().auditAdd('ai-input', { job: 'docs', documents: list.map(function (d) { return d.role + ': ' + d.name + ' (' + d.chars + ' chars, fp ' + APB.gov.fingerprint({ t: d.text }) + ')'; }), promptChars: prompt.length });
+    const prompt = drf.phase ? APB.fsDraft.docsSearchPrompt(S.get(), list, dp.depth) : APB.fsDraft.docsPrompt(S.get(), list, { depth: dp.depth });
+    U().auditAdd('ai-input', { job: 'docs', searchDepth: dp.depth + (docs.depth === 'auto' && dp.reason ? ' (auto: ' + dp.reason + ')' : ''), documents: list.map(function (d) { return d.role + ': ' + d.name + ' (' + d.chars + ' chars, fp ' + APB.gov.fingerprint({ t: d.text }) + ')'; }), promptChars: prompt.length });
+    if (drf.phase && dp.depth !== 'skip') {
+      const what = dp.depth === 'quick' ? 'Quick SAP search (read-only, a few keyword searches)' : 'Full SAP search (read-only)';
+      drf.status = '1/2 ' + what + '…'; APB.busy.progress('1/2 ' + what + ' with a short brief of the documents…', 'info');
+    }
     // instructions hidden in the documents are fenced as data; flag them for the reviewer as well
     drf.docFlags = [];
     list.forEach(function (d) { APB.guard.injection(d.text).forEach(function (f) { drf.docFlags.push({ where: d.name, excerpt: f.excerpt }); }); });
     if (drf.docFlags.length) U().auditAdd('guard-flag', { job: 'docs', flags: drf.docFlags.length, where: 'uploaded documents', first: drf.docFlags[0].excerpt });
-    // phase 1 is a short search: fewer tool rounds (the extension also caps it with its own settings)
-    H.post(drf.phase ? { type: 'read-program', mode: mode, prompt: prompt, maxRounds: 8 } : { type: 'read-program', mode: mode, prompt: prompt });
+    if (drf.phase && dp.depth === 'skip') {
+      drf.log.push({ text: 'SAP search skipped', status: 'info' });
+      docsWritePhase({ text: '', evidence: null, skipped: true });
+      return;
+    }
+    // phase 1 is a short search: fewer tool rounds, and the quick search also a short time budget (the extension caps both)
+    H.post(!drf.phase ? { type: 'read-program', mode: mode, prompt: prompt }
+      : dp.depth === 'quick' ? { type: 'read-program', mode: mode, prompt: prompt, maxRounds: 3, budgetSeconds: 90 }
+        : { type: 'read-program', mode: mode, prompt: prompt, maxRounds: 8 });
     rerenderStep1();
   }
 
   /* Phase 1 answered: keep its SAP findings and evidence, then write the FS from the full documents without tools. */
   function docsWritePhase(m) {
     const answer = APB.guard.unmask(String(m.text || ''));
-    const r = APB.fsDraft.parse(answer);
+    const r = m.skipped ? { draft: null } : APB.fsDraft.parse(answer);
     drf.found = r.draft || {};
     drf.ev1 = m.evidence || null;
     drf.answer1 = answer;
     drf.phase = 'write';
-    APB.guard.evidenceAudit('docs', m.evidence);
-    const u = APB.guard.usageText(m.evidence);
-    drf.log.push({ text: 'SAP search done' + (u ? ' · ' + u : ''), status: 'done' });
-    if (APB.guard.blockedText(m.evidence)) drf.log.push({ text: APB.guard.blockedText(m.evidence), status: 'blocked' });
+    if (!m.skipped) {
+      APB.guard.evidenceAudit('docs', m.evidence);
+      const u = APB.guard.usageText(m.evidence);
+      drf.log.push({ text: 'SAP search (' + (drf.depth || 'full') + ') done in ' + secs(drf.t0) + (u ? ' · ' + u : ''), status: 'done' });
+      if (APB.guard.blockedText(m.evidence)) drf.log.push({ text: APB.guard.blockedText(m.evidence), status: 'blocked' });
+    }
+    drf.t0 = Date.now();
     drf.status = '2/2 Writing the FS from the documents…';
     APB.busy.progress('2/2 Writing the functional spec from the documents and the SAP findings (no SAP access)…', 'info');
-    H.post({ type: 'draft', prompt: APB.fsDraft.docsPrompt(S.get(), drf.docs || [], { findings: APB.fsDraft.findingsText(drf.found) }) });
+    H.post({ type: 'draft', prompt: APB.fsDraft.docsPrompt(S.get(), drf.docs || [], { findings: m.skipped ? '- SAP search skipped (chosen by the consultant) – nothing was checked in SAP; mark SAP objects as "not checked".' : APB.fsDraft.findingsText(drf.found) }) });
     rerenderStep1();
   }
 
@@ -906,6 +939,7 @@
   const actions = {
     'fs-docs-auto': function () { readDocs('auto'); },
     'fs-docs-chat': function () { readDocs('chat'); },
+    'fs-docs-depth': function (el) { if (drf.running) return; docs.depth = el.dataset.depth || 'auto'; rerenderStep1(); },
     'fs-docs-copy': function () {
       const list = docsList();
       if (!list.length) { U().toast('Choose the BRD or the solution document first'); return; }
