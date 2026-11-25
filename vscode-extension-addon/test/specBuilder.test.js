@@ -713,3 +713,26 @@ test('read-program route: the builder may ask for a shorter SAP time budget (qui
     pr.run = orig;
   }
 });
+
+test('ts-draft route: TS-DRAFT v1 only, results as tsdraft-* (FS drafts keep draft-*); the runner accepts a dewa-ts-draft answer', async () => {
+  const dr = require('../src/draftRunner');
+  assert.ok(dr.hasTsDraft('x ```json\n{"kind": "dewa-ts-draft", "version": 1}\n```'));
+  assert.ok(!dr.hasTsDraft('{"kind":"fs-draft","frs":[]}'));
+  const orig = dr.run;
+  const seen = [];
+  dr.run = async function (vs, opts) { seen.push(opts.prompt.slice(0, 11)); return '{"kind":"dewa-ts-draft"}'; };
+  try {
+    const vs = fakeVscode();
+    const { r, posts } = router(vs);
+    assert.strictEqual(await r.handle({ type: 'ts-draft', mode: 'auto', prompt: 'FS-DRAFT v1\nx' }), false, 'FS prompt not on the TS route');
+    await r.handle({ type: 'ts-draft', mode: 'auto', prompt: 'TS-DRAFT v1\ncomplete' });
+    assert.deepStrictEqual(seen, ['TS-DRAFT v1']);
+    assert.ok(posts.some((p) => p.type === 'tsdraft-result' && /dewa-ts-draft/.test(p.text)));
+    assert.ok(!posts.some((p) => p.type === 'draft-result'));
+    await r.handle({ type: 'ts-draft', mode: 'chat', prompt: 'TS-DRAFT v1\nchat' });
+    const open = vs.calls.commands.filter((c) => c.id === 'workbench.action.chat.open').pop();
+    assert.match(open.args.query, /^TS-DRAFT v1[\s\S]*Do not edit any files and do not call any tools/);
+  } finally {
+    dr.run = orig;
+  }
+});

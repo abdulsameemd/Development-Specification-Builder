@@ -109,12 +109,12 @@
     const m = checkMap(s);
     const withCheck = !!s.discovery;
     if (!sap()) {
-      return table(['Business field', 'Stored in', 'Mandatory', 'Validation / format', 'Source'], l.map(function (r) {
-        return [cell(r.field), dash(r.table), r.mandatory ? 'Yes' : 'No', dash(r.validation), dash(opt('reqs', 'data', r.source, 'source'))];
+      return table(['Business field', 'Stored in', 'Mandatory', 'Validation / format', 'Used for', 'Source'], l.map(function (r) {
+        return [cell(r.field), dash(r.table), r.mandatory ? 'Yes' : 'No', dash(r.validation), dash(opt('reqs', 'data', r.usage, 'usage')), dash(opt('reqs', 'data', r.source, 'source'))];
       }));
     }
-    return table(['Business field', 'SAP table / CDS', 'SAP field', 'Mandatory', 'Validation / format', 'Source'].concat(withCheck ? ['System check'] : []), l.map(function (r) {
-      const row = [cell(r.field), cell(r.table), cell(r.sapField), r.mandatory ? 'Yes' : 'No', dash(r.validation), dash(opt('reqs', 'data', r.source, 'source'))];
+    return table(['Business field', 'SAP table / CDS', 'SAP field', 'Mandatory', 'Validation / format', 'Used for', 'Source'].concat(withCheck ? ['System check'] : []), l.map(function (r) {
+      const row = [cell(r.field), cell(r.table), cell(r.sapField), r.mandatory ? 'Yes' : 'No', dash(r.validation), dash(opt('reqs', 'data', r.usage, 'usage')), dash(opt('reqs', 'data', r.source, 'source'))];
       if (withCheck) {
         const n = APB.discovery.names(r.table)[0];
         row.push(n ? (CHECK_LABEL[m[n]] || '–') : '–');

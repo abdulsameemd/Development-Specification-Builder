@@ -169,6 +169,29 @@ in a second diagram (8 steps each). The diagram appears in the preview and the f
 for Copilot); the step table stays below it. A Technical spec created from the FS carries the TO-BE and shows it as
 *Business Process (TO-BE)*.
 
+### From the FS to a complete Technical spec
+
+**Create Technical spec** on a RICEFW item builds the TS in three steps:
+
+1. **Fixed mapping, no AI.** The FS *Data requirements* have a **Used for** column (Selection · Output · Selection +
+   output · Input file · Stored · Display only – Copilot fills it when it writes the FS). The main object's designer
+   is filled from it: a report gets its **selection screen** (`S_`/`P_` names, `TABLE-FIELD`, mandatory) and **ALV
+   columns**, output type from the FS outputs; Fiori apps get filters and columns, CDS views elements, RFCs
+   import / export parameters, tables their fields. A RICEFW item without a name gets a proposed name from the
+   module prefix (e.g. `ZSD_…`, marked *proposed*). **Authorization is No** when the FS has no roles or authorization
+   objects. The TS keeps a compact FS extract for step 3.
+2. **Check & read in SAP** (read-only, VS Code): the names and also every `TABLE-FIELD` used in the design are
+   checked; fields that do not exist are marked **[TO BE CONFIRMED]**.
+3. **Complete the TS with Copilot** (runs automatically after step 2; also a button in step 4): Copilot fills only the
+   **empty** fields – processing logic, output, background job, error handling, data volume, test scenarios, expected
+   output, open questions – from the FS extract, the requirement and the SAP facts, with no tools. It never changes
+   what is filled or the authorization. Every SAP name not in those sources is marked **[TO BE CONFIRMED]** before you
+   review it; you tick what to take over.
+
+The TS document lists its **Design Sources** (FS, SAP, Copilot proposals you accepted), and the Copilot Development
+Instructions tell dewa-abap never to replace a [TO BE CONFIRMED] value with an invented name. Before the hand-off to
+Copilot, a hint names the key designer fields that are still empty or unconfirmed.
+
 ### Functional ↔ Technical
 
 A Technical spec created from an FS (a RICEFW item, or *→ Technical spec: change …* after reading a program) stays
@@ -210,7 +233,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.32.vsix`](dist/dewa-sap-spec-builder-1.0.32.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.32.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.33.vsix`](dist/dewa-sap-spec-builder-1.0.33.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.33.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **If the .vsix download is blocked** (the downloaded file is only a few KB, and VS Code says *End of central directory record signature not found*): some company networks replace `.vsix` downloads with a web page. The repository also holds the extension **unpacked** in `dist/vscode-extension/dewa.dewa-sap-spec-builder-<version>/`, as plain files, so no `.vsix` is downloaded:
 

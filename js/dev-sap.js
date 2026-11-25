@@ -32,6 +32,19 @@
     return s.objects.filter(function (o) { return o.name.trim() && o.status !== 'new' && !(APB.rap && APB.rap.isDraftTable(s, o)); }).slice(0, MAX_READ);
   }
   function checkTargets(s) { return s.objects.filter(function (o) { return o.name.trim(); }); }
+  /* TABLE-FIELD references in the design (selection screen, columns, parameters, filters …) – verified in the DDIC */
+  const FIELD_RE = /\b([A-Z][A-Z0-9_\/]{1,29})-([A-Z][A-Z0-9_]{0,29})\b/g;
+  const NOT_FIELD = /^(SY|SELECT|SELECTION|END|START|AT|TOP|LOAD|NON|READ|E)$/;
+  function fieldRefs(s) {
+    const out = [];
+    const walk = function (v) {
+      if (typeof v === 'string') { let m; FIELD_RE.lastIndex = 0; while ((m = FIELD_RE.exec(v.toUpperCase()))) { if (!NOT_FIELD.test(m[1]) && v.indexOf('[TO BE CONFIRMED] ' + m[0]) < 0 && out.indexOf(m[0]) < 0) out.push(m[0]); } }
+      else if (Array.isArray(v)) v.forEach(walk);
+      else if (v && typeof v === 'object') Object.keys(v).forEach(function (k) { walk(v[k]); });
+    };
+    s.objects.forEach(function (o) { if (o.status === 'new' || o.status === 'change') walk(o.detail); });
+    return out.slice(0, 60);
+  }
 
   /* Designer field ids (and grid columns / record fields) the answer may use for a type. */
   function schemaLine(type) {
@@ -59,6 +72,7 @@
       all.map(function (o, i) { return (i + 1) + '. ' + o.type + ' ' + o.name.trim().toUpperCase() + ' – ' + st[o.status]; }).join('\n') || '(none)',
       '',
       read.length ? 'Objects to read (current state): ' + read.map(function (o) { return o.name.trim().toUpperCase(); }).join(', ') : 'Nothing to read – only check the names.',
+      fieldRefs(s).length ? '\nFields used in the design (TABLE-FIELD) – check in the DDIC that each field exists in that table, structure or CDS view: ' + fieldRefs(s).join(', ') + '. Put every one that does not exist into notFound as TABLE-FIELD.' : '',
       types.length ? '\nDetail fields per type (use only these ids; grids and records are arrays of objects with the ids in [ ]):\n' + types.map(function (t) { return '- ' + t + ': ' + schemaLine(t); }).join('\n') : '',
       '',
       'Rules:',
@@ -83,7 +97,7 @@
   /* ------------------------------------------------------------ validation */
   function cellValue(col, v) {
     if (col.kind === 'check') return v === true || /^(x|yes|true|1|✓)$/i.test(str(v, 5));
-    if (col.kind === 'select') {
+    if (col.kind === 'select' || col.kind === 'radio') { // only the designer's option values
       const t = str(v, 200);
       const opt = (col.options || []).filter(function (o) { return o.value === t || o.label === t; })[0];
       return opt ? opt.value : '';
@@ -136,7 +150,9 @@
       const type = known.indexOf(str(o.type, 40)) >= 0 ? str(o.type, 40) : '';
       objects.push({ name: n, type: type, summary: str(o.summary, 3000), detail: type ? sanitize(D().objectDef(type).fields, o.detail) : {}, uses: names(o.uses), usedBy: names(o.usedBy, 10) });
     });
-    return { kind: KIND, version: 1, system: str(raw.system, 40), checked: checked, objects: objects, notFound: names(raw.notFound, 50) };
+    const nf = [];
+    arr(raw.notFound, 80).forEach(function (x) { const n = upper(typeof x === 'object' && x ? x.name : x); if (/^[A-Z0-9_\/]{1,40}(-[A-Z0-9_]{1,30})?$/.test(n) && nf.indexOf(n) < 0) nf.push(n); });
+    return { kind: KIND, version: 1, system: str(raw.system, 40), checked: checked, objects: objects, notFound: nf };
   }
 
   /* text: the whole answer or only its JSON → { ctx, error } */
@@ -191,6 +207,8 @@
     if (read.length) parts.push({ id: 'current', label: 'Current state read from SAP (shown read-only, your design is not changed)', items: read, checked: true });
     const used = usedToAdd(s, ctx);
     if (used.length) parts.push({ id: 'used', label: 'Add the objects they use as Existing – reuse', items: used.map(function (u) { return u.name + ' (used by ' + u.by + ')'; }), checked: false });
+    const missingFields = ctx.notFound.filter(function (n) { return fieldRefs(s).indexOf(n) >= 0; });
+    if (missingFields.length) parts.push({ id: 'tbcfields', label: 'Fields of the design not found in SAP – mark them [TO BE CONFIRMED]', items: missingFields, checked: true });
     if (ctx.notFound.length) parts.push({ id: 'notfound', label: 'Could not be read', items: ctx.notFound, checked: true, info: true });
     return parts;
   }
@@ -232,6 +250,18 @@
       });
       if (n) applied.push('current state of ' + n + ' object' + (n > 1 ? 's' : ''));
     }
+    if (on('tbcfields')) {
+      const miss = ctx.notFound.filter(function (n) { return /-/.test(n); });
+      let n = 0;
+      const mark = function (v) {
+        if (typeof v === 'string') return v.replace(FIELD_RE, function (m, a, b, off, all) { const u = m.toUpperCase(); if (miss.indexOf(u) < 0 || all.slice(Math.max(0, off - 18), off).indexOf('[TO BE CONFIRMED]') >= 0) return m; n++; return '[TO BE CONFIRMED] ' + m; });
+        if (Array.isArray(v)) return v.map(mark);
+        if (v && typeof v === 'object') { const o = {}; Object.keys(v).forEach(function (k) { o[k] = mark(v[k]); }); return o; }
+        return v;
+      };
+      next.objects.forEach(function (o) { if (o.status === 'new' || o.status === 'change') o.detail = mark(o.detail || {}); });
+      if (n) applied.push(n + ' field' + (n > 1 ? 's' : '') + ' marked [TO BE CONFIRMED]');
+    }
     if (on('used')) {
       const add = usedToAdd(next, ctx);
       add.forEach(function (u) {
@@ -270,5 +300,5 @@
     return q;
   }
 
-  APB.devSap = { MARK: MARK, KIND: KIND, MAX_READ: MAX_READ, prompt: prompt, parse: parse, sanitize: sanitize, preview: preview, apply: apply, badge: badge, questions: questions, readTargets: readTargets, checkTargets: checkTargets };
+  APB.devSap = { MARK: MARK, KIND: KIND, MAX_READ: MAX_READ, prompt: prompt, parse: parse, sanitize: sanitize, fieldRefs: fieldRefs, preview: preview, apply: apply, badge: badge, questions: questions, readTargets: readTargets, checkTargets: checkTargets };
 })(window.APB = window.APB || {});

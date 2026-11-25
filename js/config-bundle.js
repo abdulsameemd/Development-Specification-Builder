@@ -8918,6 +8918,42 @@ window.APB_CONFIG = {
         "placeholder": "e.g. Must exist in company code"
        },
        {
+        "id": "usage",
+        "label": "Used for",
+        "kind": "select",
+        "w": 140,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "selection",
+          "label": "Selection (input)"
+         },
+         {
+          "value": "output",
+          "label": "Output (shown)"
+         },
+         {
+          "value": "both",
+          "label": "Selection + output"
+         },
+         {
+          "value": "input",
+          "label": "Input file / upload"
+         },
+         {
+          "value": "stored",
+          "label": "Stored (saved)"
+         },
+         {
+          "value": "display",
+          "label": "Display only"
+         }
+        ]
+       },
+       {
         "id": "source",
         "label": "Source",
         "kind": "select",

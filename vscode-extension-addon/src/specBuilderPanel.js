@@ -25,6 +25,7 @@ const SAVE_TYPES = { '.md': 'Markdown', '.docx': 'Word document', '.json': 'JSON
 const MAX_VALUE = 5 * 1024 * 1024;
 const CHAT_SUFFIX = '\n\nWhen the context pack is ready, call the ' + submitTool.TOOL_NAME + ' tool with it so it is imported into the SAP Spec Builder.';
 const DEV_SUFFIX = '\n\nWhen the JSON is ready, call the ' + submitTool.DEV_TOOL_NAME + ' tool once with the JSON object (kind "dewa-dev-context") so the developer can review it in the SAP Spec Builder. Do not edit any files.';
+const TS_SUFFIX = '\n\nAnswer here in the chat with the summary and the ```json block. Do not edit any files and do not call any tools.';
 const DRAFT_SUFFIX = '\n\nWhen the draft is ready, call the ' + submitTool.DRAFT_TOOL_NAME + ' tool once with the JSON object (kind "fs-draft") so the user can review it in the SAP Spec Builder. Do not edit any files.';
 
 /* Strict CSP + nonce on every <script>, and the host seed (storage, version) before the app scripts. */
@@ -174,6 +175,38 @@ function createRouter(vscode, context, deps) {
         deps.post({ type: 'draft-result', text: text, evidence: g.evidence });
       } catch (e) {
         deps.post({ type: 'draft-error', code: e.code || 'FAILED', message: String(e && e.message || e) });
+      } finally {
+        if (cts) cts.dispose();
+        cts = null;
+      }
+      return true;
+    },
+    /* Complete the TS with Copilot (no tools) → tsdraft-* messages (the FS draft keeps draft-*). */
+    'ts-draft': async function (m) {
+      if (!str(m.prompt, 200000) || m.prompt.indexOf(drafter.TS_MARKER) !== 0 || [undefined, 'auto', 'chat'].indexOf(m.mode) < 0) return false;
+      const auth = await deps.getAuth();
+      if (!auth.copilot) { deps.post({ type: 'tsdraft-error', code: 'NO_COPILOT', message: 'GitHub Copilot Chat is not installed in VS Code.' }); return true; }
+      if (!auth.signedIn) { deps.post({ type: 'tsdraft-error', code: 'SIGNED_OUT', message: 'Sign in to GitHub Copilot first.' }); return true; }
+      if (m.mode === 'chat') {
+        const sent = chat.autoSend ? chat.autoSend() : false;
+        await chat.openChat(m.prompt + TS_SUFFIX, { mode: 'ask' });
+        deps.post({ type: 'tsdraft-progress', text: (sent ? 'Copilot Chat is completing the TS' : 'The prompt is in Copilot Chat – press Enter there') + ' – then copy the whole answer and paste it into the builder (Paste an answer) for review' });
+        return true;
+      }
+      if (cts) { deps.post({ type: 'tsdraft-error', code: 'BUSY', message: 'Copilot is already working on a request.' }); return true; }
+      cts = new vscode.CancellationTokenSource(); finishNow = false;
+      try {
+        const g = guardOpts(deps.config());
+        const text = await drafter.run(vscode, {
+          guard: g,
+          prompt: m.prompt,
+          model: deps.config().get('model', ''),
+          token: cts.token,
+          onProgress: function (p) { deps.post(p.key ? { type: 'tsdraft-progress', key: p.key, status: p.status, text: p.text } : { type: 'tsdraft-progress', text: p.text }); }
+        });
+        deps.post({ type: 'tsdraft-result', text: text, evidence: g.evidence });
+      } catch (e) {
+        deps.post({ type: 'tsdraft-error', code: e.code || 'FAILED', message: String(e && e.message || e) });
       } finally {
         if (cts) cts.dispose();
         cts = null;
