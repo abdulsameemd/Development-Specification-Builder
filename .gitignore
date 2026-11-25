@@ -4,3 +4,6 @@ node_modules/
 *.mp4
 !docs/media/*.mp4
 build/
+
+# local backups made by update.cmd / scripts/update.sh before they reset the folder to main
+.update-backups/

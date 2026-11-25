@@ -1,6 +1,18 @@
+# Line endings: every text file is stored and checked out with LF on every OS, so Windows tools (VS Code, Git's
+# autocrlf, formatters) can never make files look "changed" – that is what blocked `git pull` before.
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
 # Packages and images are binary; the unpacked extension must stay byte-identical on every OS.
 *.vsix binary
 *.png binary
+*.jpg binary
+*.ico binary
 *.docx binary
+*.xlsx binary
+*.pdf binary
+*.zip binary
 *.mp4 binary
 dist/vscode-extension/** -text
