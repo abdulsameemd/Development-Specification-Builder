@@ -12,6 +12,7 @@
   (function resolveRefs(fields) {
     fields.forEach(function (f) {
       if (f.optionsRef) f.options = cfg[f.optionsRef];
+      if (f.generic && f.generic.optionsRef) f.generic.options = cfg[f.generic.optionsRef]; // non-SAP option list
       if (f.fields) resolveRefs(f.fields);
     });
   })(cfg.sections.reduce(function (all, s) { return all.concat(s.fields); }, []));
@@ -50,7 +51,8 @@
     delete g.generic;
     if (f.columns) g.columns = f.columns.filter(function (c) { return !c.sapOnly; }).map(generic);
     if (f.fields) g.fields = f.fields.filter(function (c) { return !c.sapOnly; }).map(generic);
-    if (f.options) g.options = f.options.filter(function (o) { return !o.sapOnly; }).map(function (o) { return o.generic ? Object.assign({}, o, o.generic) : o; });
+    const opts = (f.generic && f.generic.options) || f.options; // a non-SAP option list replaces the SAP one
+    if (opts) g.options = opts.filter(function (o) { return !o.sapOnly; }).map(function (o) { return o.generic ? Object.assign({}, o, o.generic) : o; });
     genericCache.set(f, g);
     return g;
   }
@@ -58,7 +60,10 @@
   function view(f, s) {
     if (!f) return null;
     if (isSap(s)) return f;
-    return f.sapOnly ? null : generic(f);
+    if (f.sapOnly) return null;
+    // hideTbd: SAP and "Other system" only (e.g. RICEFW items / solution components) – not while the system is open
+    if (f.hideTbd && !(s && s.context && s.context.system === 'other')) return null;
+    return generic(f);
   }
   function fieldsFor(sectionId, s) {
     return ((sections[sectionId] || {}).fields || []).map(function (f) { return view(f, s); }).filter(Boolean);
@@ -79,7 +84,8 @@
     return 'To be decided';
   }
 
-  function ricefwType(value) { return cfg.ricefw.filter(function (r) { return r.value === value; })[0] || cfg.ricefw[0]; }
+  // SAP RICEFW types, then the non-SAP solution components (distinct values, code C)
+  function ricefwType(value) { return cfg.ricefw.filter(function (r) { return r.value === value; })[0] || (cfg.genericComponents || []).filter(function (r) { return r.value === value && value; })[0] || cfg.ricefw[0]; }
 
   /* ---------------------------------------------------------------- model */
   function uid() { return APB.state.uid(); }

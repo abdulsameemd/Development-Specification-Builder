@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.34
+
+- **Non-SAP specifications.** An FS for *Other system* gets **Solution components** (C-01 …: web screen, API / service, database table, Power App, Power Automate flow, integration, scheduled job, report / export, notification); Copilot proposes them when it drafts the FS, and each becomes a Technical spec with **Create Technical spec**.
+- **Technical spec on "Other platform"** (step 1 switch, tech stack .NET / Java / Power Platform / Azure Integration / MuleSoft / SAP BTP Integration Suite / other): designers for Web Screen, API Endpoint, Data Entity, Service / Component, Power App, Power Automate Flow, Dataverse Table, Integration Flow, Scheduled Job, Notification – filled from the FS data ("Used for"), authorization No without roles, names proposed in PascalCase.
+- **Complete the TS with Copilot** works for non-SAP too (no SAP wording or check; `Entity.Field` names not in the FS / TS marked [TO BE CONFIRMED]).
+- Non-SAP documents get repository-first Copilot instructions (architecture and stack of the repo, OWASP basics, migrations, OpenAPI, Power Platform solutions, idempotent integrations), a non-SAP Definition of Done and title; the hand-off opens **Copilot's built-in agent mode** (`DEWA-GENERIC v1`).
+- **SAP unchanged** – a new snapshot test compares every SAP output (TS examples and templates, FS documents and prompts, FS → TS hand-offs, prompts) byte for byte with the version before.
+
 ## 1.0.33
 
 - **The FS design reaches the Technical spec.** FS *Data requirements* get a **Used for** column (selection, output, both, input file, stored, display – Copilot fills it when it writes the FS). Create Technical spec fills the main object's designer from it without AI: report selection screen and ALV columns (with `TABLE-FIELD` and mandatory), output type from the FS outputs, Fiori filters / columns, CDS elements, RFC parameters, table fields; a proposed name from the module prefix when the RICEFW item has none.

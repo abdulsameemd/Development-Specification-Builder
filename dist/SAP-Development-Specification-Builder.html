@@ -334,6 +334,8 @@ details.more > summary { cursor: pointer; font-weight: 700; padding: 4px 0; colo
 .seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 8px; overflow: hidden; flex: none; }
 .seg button { font: inherit; font-size: .75rem; font-weight: 700; border: 0; background: transparent; color: var(--muted); padding: 5px 11px; cursor: pointer; }
 .seg button[aria-pressed="true"] { background: var(--grad-btn); color: #0a0e11; }
+.ts-platform { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 4px 0 14px; }
+.ts-platform select { max-width: 340px; }
 .fs-depth { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0 4px; }
 #pv-status { padding: 0 14px; }
 .preview-panel .status { margin: 12px 0 4px; padding: 10px 12px; }
@@ -8995,6 +8997,67 @@ window.APB_CONFIG = {
     "label": "Cross-module"
    }
   ],
+  "genericComponents": [
+   {
+    "value": "",
+    "label": "— type —",
+    "code": "X"
+   },
+   {
+    "value": "screen",
+    "label": "Web screen / page",
+    "code": "C",
+    "devType": "G_WEB"
+   },
+   {
+    "value": "api",
+    "label": "API / service",
+    "code": "C",
+    "devType": "G_API"
+   },
+   {
+    "value": "data",
+    "label": "Database table / data model",
+    "code": "C",
+    "devType": "G_DATA"
+   },
+   {
+    "value": "powerapp",
+    "label": "Power App",
+    "code": "C",
+    "devType": "G_POWERAPP"
+   },
+   {
+    "value": "flow",
+    "label": "Power Automate flow",
+    "code": "C",
+    "devType": "G_FLOW"
+   },
+   {
+    "value": "integration",
+    "label": "Integration / interface",
+    "code": "C",
+    "devType": "G_INTEG"
+   },
+   {
+    "value": "job",
+    "label": "Scheduled job",
+    "code": "C",
+    "devType": "G_JOB"
+   },
+   {
+    "value": "export",
+    "label": "Report / export",
+    "code": "C",
+    "devType": "G_WEB"
+   },
+   {
+    "value": "notification",
+    "label": "Notification (e-mail / Teams)",
+    "code": "C",
+    "devType": "G_FLOW"
+   }
+  ],
   "ricefw": [
    {
     "value": "",
@@ -9937,13 +10000,21 @@ window.APB_CONFIG = {
         "id": "type",
         "label": "RICEFW type",
         "kind": "select",
-        "optionsRef": "ricefw"
+        "optionsRef": "ricefw",
+        "generic": {
+         "label": "Component type",
+         "optionsRef": "genericComponents"
+        }
        },
        {
         "id": "name",
         "label": "Proposed object name",
         "kind": "text",
-        "placeholder": "e.g. ZFI_AP_AGEING"
+        "placeholder": "e.g. ZFI_AP_AGEING",
+        "generic": {
+         "label": "Proposed name",
+         "placeholder": "e.g. OpenOrdersApi"
+        }
        },
        {
         "id": "frs",
@@ -9978,17 +10049,30 @@ window.APB_CONFIG = {
         "id": "description",
         "label": "What it does",
         "kind": "textarea",
-        "placeholder": "e.g. Executable report with selection by company code, vendor and key date; ALV output per vendor with one column per bucket."
+        "placeholder": "e.g. Executable report with selection by company code, vendor and key date; ALV output per vendor with one column per bucket.",
+        "generic": {
+         "placeholder": "e.g. REST endpoint that returns open orders per sales organization for the portal; paging 50."
+        }
        },
        {
         "id": "existing",
         "label": "Existing objects / enhancement spots to use",
         "kind": "text",
         "list": "ds-obj",
-        "placeholder": "e.g. BSIK, LFA1, BAdI FI_ITEMS_CH_DATA"
+        "placeholder": "e.g. BSIK, LFA1, BAdI FI_ITEMS_CH_DATA",
+        "generic": {
+         "label": "Existing systems / components to use",
+         "placeholder": "e.g. Orders database, Customer API",
+         "list": ""
+        }
        }
       ],
-      "sapOnly": true
+      "hideTbd": true,
+      "generic": {
+       "label": "Solution components",
+       "itemLabel": "Component",
+       "hint": "One per piece to build: web screen, API, database table, Power App, flow, integration, job … – each becomes a Technical spec."
+      }
      },
      {
       "id": "roles",
@@ -12519,6 +12603,1438 @@ window.APB_CONFIG = {
     ]
    }
   ]
+ },
+ "generic": {
+  "version": 1,
+  "stacks": [
+   ".NET (C# / ASP.NET Core)",
+   "Java (Spring Boot)",
+   "Power Platform (Power Apps / Power Automate / Dataverse)",
+   "Azure Integration (Logic Apps / Functions / Service Bus)",
+   "MuleSoft",
+   "SAP BTP Integration Suite",
+   "Other"
+  ],
+  "devTypes": {
+   "G_WEB": {
+    "label": "Web application",
+    "hint": ".NET / Java screens",
+    "mainObject": [
+     "Web Screen",
+     "API Endpoint",
+     "Data Entity"
+    ],
+    "performance": true,
+    "platform": "generic"
+   },
+   "G_API": {
+    "label": "API / service",
+    "hint": "REST endpoints",
+    "mainObject": [
+     "API Endpoint"
+    ],
+    "performance": true,
+    "platform": "generic"
+   },
+   "G_DATA": {
+    "label": "Database",
+    "hint": "Tables / data model",
+    "mainObject": [
+     "Data Entity"
+    ],
+    "performance": true,
+    "platform": "generic"
+   },
+   "G_POWERAPP": {
+    "label": "Power App",
+    "hint": "Canvas / model-driven",
+    "mainObject": [
+     "Power App"
+    ],
+    "performance": false,
+    "platform": "generic"
+   },
+   "G_FLOW": {
+    "label": "Power Automate flow",
+    "hint": "Automation",
+    "mainObject": [
+     "Power Automate Flow"
+    ],
+    "performance": false,
+    "platform": "generic"
+   },
+   "G_INTEG": {
+    "label": "Integration",
+    "hint": "Interfaces / middleware",
+    "mainObject": [
+     "Integration Flow"
+    ],
+    "performance": true,
+    "platform": "generic"
+   },
+   "G_JOB": {
+    "label": "Scheduled job",
+    "hint": "Batch / timer",
+    "mainObject": [
+     "Scheduled Job"
+    ],
+    "performance": true,
+    "platform": "generic"
+   }
+  },
+  "objectTypes": {
+   "Web Screen": {
+    "group": "Application",
+    "tcode": "Web UI",
+    "abapNaming": false,
+    "usedHint": "Screen / page you reuse",
+    "fields": [
+     {
+      "id": "route",
+      "label": "Route / URL",
+      "kind": "text",
+      "placeholder": "e.g. /orders/open"
+     },
+     {
+      "id": "purpose",
+      "label": "Purpose",
+      "kind": "text",
+      "placeholder": "What the user does on this screen",
+      "ask": "Screen purpose"
+     },
+     {
+      "id": "screenType",
+      "label": "Screen type",
+      "kind": "select",
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "List / search",
+        "label": "List / search"
+       },
+       {
+        "value": "Detail / form",
+        "label": "Detail / form"
+       },
+       {
+        "value": "Create / edit form",
+        "label": "Create / edit form"
+       },
+       {
+        "value": "Dashboard",
+        "label": "Dashboard"
+       },
+       {
+        "value": "Wizard",
+        "label": "Wizard"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "fields",
+      "label": "Fields",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "field",
+        "label": "Field",
+        "kind": "text",
+        "w": 150
+       },
+       {
+        "id": "label",
+        "label": "Label",
+        "kind": "text",
+        "w": 140
+       },
+       {
+        "id": "type",
+        "label": "Type",
+        "kind": "select",
+        "w": 100,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "string",
+          "label": "string"
+         },
+         {
+          "value": "integer",
+          "label": "integer"
+         },
+         {
+          "value": "decimal",
+          "label": "decimal"
+         },
+         {
+          "value": "boolean",
+          "label": "boolean"
+         },
+         {
+          "value": "date",
+          "label": "date"
+         },
+         {
+          "value": "datetime",
+          "label": "datetime"
+         },
+         {
+          "value": "guid",
+          "label": "guid"
+         },
+         {
+          "value": "enum",
+          "label": "enum"
+         },
+         {
+          "value": "object",
+          "label": "object"
+         },
+         {
+          "value": "array",
+          "label": "array"
+         },
+         {
+          "value": "file",
+          "label": "file"
+         }
+        ]
+       },
+       {
+        "id": "mandatory",
+        "label": "Mandatory",
+        "kind": "check",
+        "w": 75
+       },
+       {
+        "id": "validation",
+        "label": "Validation / format",
+        "kind": "text",
+        "w": 180
+       },
+       {
+        "id": "source",
+        "label": "Source (entity.field / API)",
+        "kind": "text",
+        "w": 170
+       }
+      ],
+      "addLabel": "+ Field"
+     },
+     {
+      "id": "actions",
+      "label": "Actions",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "action",
+        "label": "Action / button",
+        "kind": "text",
+        "w": 150
+       },
+       {
+        "id": "does",
+        "label": "What happens",
+        "kind": "text",
+        "w": 280
+       },
+       {
+        "id": "confirm",
+        "label": "Confirm first",
+        "kind": "check",
+        "w": 75
+       },
+       {
+        "id": "roles",
+        "label": "Allowed roles",
+        "kind": "text",
+        "w": 140
+       }
+      ],
+      "addLabel": "+ Action"
+     },
+     {
+      "id": "navigation",
+      "label": "Navigation",
+      "kind": "lines",
+      "placeholder": "e.g. Row click → /orders/{id}"
+     },
+     {
+      "id": "messages",
+      "label": "Messages and empty states",
+      "kind": "lines",
+      "placeholder": "e.g. No open orders found"
+     }
+    ],
+    "platform": "generic"
+   },
+   "API Endpoint": {
+    "group": "Application",
+    "tcode": "API",
+    "abapNaming": false,
+    "usedHint": "Endpoint you call",
+    "fields": [
+     {
+      "id": "method",
+      "label": "HTTP method",
+      "kind": "select",
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "GET",
+        "label": "GET"
+       },
+       {
+        "value": "POST",
+        "label": "POST"
+       },
+       {
+        "value": "PUT",
+        "label": "PUT"
+       },
+       {
+        "value": "PATCH",
+        "label": "PATCH"
+       },
+       {
+        "value": "DELETE",
+        "label": "DELETE"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "path",
+      "label": "Path",
+      "kind": "text",
+      "placeholder": "e.g. /api/v1/orders/open",
+      "ask": "Endpoint path"
+     },
+     {
+      "id": "purpose",
+      "label": "Purpose",
+      "kind": "text",
+      "placeholder": "What it does"
+     },
+     {
+      "id": "request",
+      "label": "Request parameters / body",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "name",
+        "label": "Name",
+        "kind": "text",
+        "w": 140
+       },
+       {
+        "id": "in",
+        "label": "In",
+        "kind": "select",
+        "w": 90,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "path",
+          "label": "path"
+         },
+         {
+          "value": "query",
+          "label": "query"
+         },
+         {
+          "value": "header",
+          "label": "header"
+         },
+         {
+          "value": "body",
+          "label": "body"
+         }
+        ]
+       },
+       {
+        "id": "type",
+        "label": "Type",
+        "kind": "select",
+        "w": 100,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "string",
+          "label": "string"
+         },
+         {
+          "value": "integer",
+          "label": "integer"
+         },
+         {
+          "value": "decimal",
+          "label": "decimal"
+         },
+         {
+          "value": "boolean",
+          "label": "boolean"
+         },
+         {
+          "value": "date",
+          "label": "date"
+         },
+         {
+          "value": "datetime",
+          "label": "datetime"
+         },
+         {
+          "value": "guid",
+          "label": "guid"
+         },
+         {
+          "value": "enum",
+          "label": "enum"
+         },
+         {
+          "value": "object",
+          "label": "object"
+         },
+         {
+          "value": "array",
+          "label": "array"
+         },
+         {
+          "value": "file",
+          "label": "file"
+         }
+        ]
+       },
+       {
+        "id": "required",
+        "label": "Required",
+        "kind": "check",
+        "w": 70
+       },
+       {
+        "id": "validation",
+        "label": "Validation",
+        "kind": "text",
+        "w": 200
+       },
+       {
+        "id": "source",
+        "label": "Source (FS field)",
+        "kind": "text",
+        "w": 150
+       }
+      ],
+      "addLabel": "+ Parameter"
+     },
+     {
+      "id": "response",
+      "label": "Response fields",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "name",
+        "label": "Name",
+        "kind": "text",
+        "w": 150
+       },
+       {
+        "id": "type",
+        "label": "Type",
+        "kind": "select",
+        "w": 100,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "string",
+          "label": "string"
+         },
+         {
+          "value": "integer",
+          "label": "integer"
+         },
+         {
+          "value": "decimal",
+          "label": "decimal"
+         },
+         {
+          "value": "boolean",
+          "label": "boolean"
+         },
+         {
+          "value": "date",
+          "label": "date"
+         },
+         {
+          "value": "datetime",
+          "label": "datetime"
+         },
+         {
+          "value": "guid",
+          "label": "guid"
+         },
+         {
+          "value": "enum",
+          "label": "enum"
+         },
+         {
+          "value": "object",
+          "label": "object"
+         },
+         {
+          "value": "array",
+          "label": "array"
+         },
+         {
+          "value": "file",
+          "label": "file"
+         }
+        ]
+       },
+       {
+        "id": "description",
+        "label": "Description",
+        "kind": "text",
+        "w": 240
+       },
+       {
+        "id": "source",
+        "label": "Source (entity.field)",
+        "kind": "text",
+        "w": 170
+       }
+      ],
+      "addLabel": "+ Field"
+     },
+     {
+      "id": "errors",
+      "label": "Status / error codes",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "code",
+        "label": "Code",
+        "kind": "text",
+        "w": 70
+       },
+       {
+        "id": "when",
+        "label": "When",
+        "kind": "text",
+        "w": 260
+       },
+       {
+        "id": "body",
+        "label": "Response body / message",
+        "kind": "text",
+        "w": 220
+       }
+      ],
+      "addLabel": "+ Code"
+     },
+     {
+      "id": "auth",
+      "label": "Authentication",
+      "kind": "select",
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "Azure AD / Entra ID (OAuth 2.0)",
+        "label": "Azure AD / Entra ID (OAuth 2.0)"
+       },
+       {
+        "value": "API key (gateway)",
+        "label": "API key (gateway)"
+       },
+       {
+        "value": "Mutual TLS",
+        "label": "Mutual TLS"
+       },
+       {
+        "value": "Basic (internal only)",
+        "label": "Basic (internal only)"
+       },
+       {
+        "value": "None (public)",
+        "label": "None (public)"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "authorization",
+      "label": "Authorization (roles / scopes)",
+      "kind": "text",
+      "placeholder": "e.g. Orders.Read"
+     },
+     {
+      "id": "logic",
+      "label": "Processing logic",
+      "kind": "textarea",
+      "placeholder": "Steps in order"
+     },
+     {
+      "id": "paging",
+      "label": "Paging / limits",
+      "kind": "text",
+      "placeholder": "e.g. page size 50, max 500"
+     },
+     {
+      "id": "idempotency",
+      "label": "Idempotency",
+      "kind": "text",
+      "placeholder": "e.g. Idempotency-Key header for POST"
+     }
+    ],
+    "platform": "generic"
+   },
+   "Data Entity": {
+    "group": "Data",
+    "tcode": "Database",
+    "abapNaming": false,
+    "usedHint": "Table / entity you read",
+    "fields": [
+     {
+      "id": "table",
+      "label": "Table / entity name",
+      "kind": "text",
+      "placeholder": "e.g. dbo.SalesOrder",
+      "ask": "Table name"
+     },
+     {
+      "id": "description",
+      "label": "Description",
+      "kind": "text"
+     },
+     {
+      "id": "database",
+      "label": "Database",
+      "kind": "select",
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "SQL Server / Azure SQL",
+        "label": "SQL Server / Azure SQL"
+       },
+       {
+        "value": "Oracle",
+        "label": "Oracle"
+       },
+       {
+        "value": "PostgreSQL",
+        "label": "PostgreSQL"
+       },
+       {
+        "value": "Dataverse",
+        "label": "Dataverse"
+       },
+       {
+        "value": "Cosmos DB",
+        "label": "Cosmos DB"
+       },
+       {
+        "value": "Other",
+        "label": "Other"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "columns",
+      "label": "Columns",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "name",
+        "label": "Column",
+        "kind": "text",
+        "w": 140
+       },
+       {
+        "id": "type",
+        "label": "Type",
+        "kind": "text",
+        "w": 110
+       },
+       {
+        "id": "length",
+        "label": "Length",
+        "kind": "text",
+        "w": 60
+       },
+       {
+        "id": "nullable",
+        "label": "Nullable",
+        "kind": "check",
+        "w": 70
+       },
+       {
+        "id": "key",
+        "label": "Key",
+        "kind": "check",
+        "w": 50
+       },
+       {
+        "id": "default",
+        "label": "Default",
+        "kind": "text",
+        "w": 90
+       },
+       {
+        "id": "description",
+        "label": "Description",
+        "kind": "text",
+        "w": 200
+       }
+      ],
+      "addLabel": "+ Column"
+     },
+     {
+      "id": "indexes",
+      "label": "Indexes",
+      "kind": "lines",
+      "placeholder": "e.g. IX_SalesOrder_Org (SalesOrg, OrderDate)"
+     },
+     {
+      "id": "relations",
+      "label": "Relations",
+      "kind": "lines",
+      "placeholder": "e.g. SalesOrder.CustomerId → Customer.Id"
+     },
+     {
+      "id": "retention",
+      "label": "Retention / archiving",
+      "kind": "text",
+      "placeholder": "e.g. 7 years, then archive"
+     },
+     {
+      "id": "personalData",
+      "label": "Personal data",
+      "kind": "text",
+      "placeholder": "Which columns hold personal data"
+     }
+    ],
+    "platform": "generic"
+   },
+   "Service / Component": {
+    "group": "Application",
+    "tcode": "Code",
+    "abapNaming": false,
+    "usedHint": "Service / library you call",
+    "fields": [
+     {
+      "id": "purpose",
+      "label": "Purpose",
+      "kind": "text"
+     },
+     {
+      "id": "location",
+      "label": "Project / namespace",
+      "kind": "text",
+      "placeholder": "e.g. Dewa.Orders.Services"
+     },
+     {
+      "id": "operations",
+      "label": "Operations",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "name",
+        "label": "Operation",
+        "kind": "text",
+        "w": 150
+       },
+       {
+        "id": "input",
+        "label": "Input",
+        "kind": "text",
+        "w": 170
+       },
+       {
+        "id": "output",
+        "label": "Output",
+        "kind": "text",
+        "w": 170
+       },
+       {
+        "id": "logic",
+        "label": "Logic",
+        "kind": "text",
+        "w": 260
+       }
+      ],
+      "addLabel": "+ Operation"
+     },
+     {
+      "id": "dependencies",
+      "label": "Dependencies",
+      "kind": "lines",
+      "placeholder": "Other services, APIs, packages"
+     },
+     {
+      "id": "errorHandling",
+      "label": "Error handling",
+      "kind": "textarea"
+     }
+    ],
+    "platform": "generic"
+   },
+   "Power App": {
+    "group": "Power Platform",
+    "tcode": "Power Apps",
+    "abapNaming": false,
+    "usedHint": "App you reuse",
+    "fields": [
+     {
+      "id": "appType",
+      "label": "App type",
+      "kind": "select",
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "Canvas app",
+        "label": "Canvas app"
+       },
+       {
+        "value": "Model-driven app",
+        "label": "Model-driven app"
+       },
+       {
+        "value": "Power Pages site",
+        "label": "Power Pages site"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "environment",
+      "label": "Environment",
+      "kind": "text",
+      "placeholder": "e.g. DEWA-Prod / DEWA-Test"
+     },
+     {
+      "id": "screens",
+      "label": "Screens",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "name",
+        "label": "Screen",
+        "kind": "text",
+        "w": 140
+       },
+       {
+        "id": "purpose",
+        "label": "Purpose",
+        "kind": "text",
+        "w": 200
+       },
+       {
+        "id": "controls",
+        "label": "Main controls",
+        "kind": "text",
+        "w": 200
+       },
+       {
+        "id": "data",
+        "label": "Data source / filter",
+        "kind": "text",
+        "w": 200
+       }
+      ],
+      "addLabel": "+ Screen"
+     },
+     {
+      "id": "dataSources",
+      "label": "Data sources / connectors",
+      "kind": "lines",
+      "placeholder": "e.g. Dataverse: Orders; SharePoint list: Approvals"
+     },
+     {
+      "id": "formulas",
+      "label": "Key formulas / behaviour",
+      "kind": "lines",
+      "placeholder": "e.g. Submit: Patch(Orders, …)"
+     },
+     {
+      "id": "delegation",
+      "label": "Delegation limits",
+      "kind": "text",
+      "placeholder": "e.g. filter server-side; > 2000 rows"
+     },
+     {
+      "id": "securityRoles",
+      "label": "Security roles / sharing",
+      "kind": "text",
+      "placeholder": "e.g. Orders Approver"
+     }
+    ],
+    "platform": "generic"
+   },
+   "Power Automate Flow": {
+    "group": "Power Platform",
+    "tcode": "Power Automate",
+    "abapNaming": false,
+    "usedHint": "Flow you call",
+    "fields": [
+     {
+      "id": "flowType",
+      "label": "Flow type",
+      "kind": "select",
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "Automated (trigger)",
+        "label": "Automated (trigger)"
+       },
+       {
+        "value": "Instant (button / app)",
+        "label": "Instant (button / app)"
+       },
+       {
+        "value": "Scheduled",
+        "label": "Scheduled"
+       },
+       {
+        "value": "Desktop (RPA)",
+        "label": "Desktop (RPA)"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "trigger",
+      "label": "Trigger",
+      "kind": "text",
+      "placeholder": "e.g. When an item is created in Orders",
+      "ask": "Trigger"
+     },
+     {
+      "id": "steps",
+      "label": "Steps",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "step",
+        "label": "Step",
+        "kind": "text",
+        "w": 60
+       },
+       {
+        "id": "action",
+        "label": "Action",
+        "kind": "text",
+        "w": 200
+       },
+       {
+        "id": "connector",
+        "label": "Connector",
+        "kind": "text",
+        "w": 150
+       },
+       {
+        "id": "notes",
+        "label": "Notes / condition",
+        "kind": "text",
+        "w": 240
+       }
+      ],
+      "addLabel": "+ Step"
+     },
+     {
+      "id": "connections",
+      "label": "Connections",
+      "kind": "lines",
+      "placeholder": "Connector – account / connection reference"
+     },
+     {
+      "id": "runAs",
+      "label": "Runs as",
+      "kind": "text",
+      "placeholder": "e.g. service account svc-flow-orders"
+     },
+     {
+      "id": "errorHandling",
+      "label": "Error handling / retry",
+      "kind": "textarea",
+      "placeholder": "Scope try/catch, retry policy, notify on failure"
+     }
+    ],
+    "platform": "generic"
+   },
+   "Dataverse Table": {
+    "group": "Power Platform",
+    "tcode": "Dataverse",
+    "abapNaming": false,
+    "usedHint": "Table you read",
+    "fields": [
+     {
+      "id": "table",
+      "label": "Table (logical name)",
+      "kind": "text",
+      "placeholder": "e.g. dewa_order"
+     },
+     {
+      "id": "description",
+      "label": "Description",
+      "kind": "text"
+     },
+     {
+      "id": "columns",
+      "label": "Columns",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "name",
+        "label": "Column",
+        "kind": "text",
+        "w": 140
+       },
+       {
+        "id": "type",
+        "label": "Type",
+        "kind": "text",
+        "w": 120
+       },
+       {
+        "id": "required",
+        "label": "Required",
+        "kind": "check",
+        "w": 70
+       },
+       {
+        "id": "description",
+        "label": "Description",
+        "kind": "text",
+        "w": 240
+       }
+      ],
+      "addLabel": "+ Column"
+     },
+     {
+      "id": "relationships",
+      "label": "Relationships",
+      "kind": "lines",
+      "placeholder": "e.g. dewa_order → account (N:1)"
+     },
+     {
+      "id": "securityRoles",
+      "label": "Security roles",
+      "kind": "lines",
+      "placeholder": "Role – privileges"
+     }
+    ],
+    "platform": "generic"
+   },
+   "Integration Flow": {
+    "group": "Integration & jobs",
+    "tcode": "Integration",
+    "abapNaming": false,
+    "usedHint": "Interface you reuse",
+    "fields": [
+     {
+      "id": "source",
+      "label": "Source system",
+      "kind": "text",
+      "placeholder": "e.g. SAP S/4HANA (OData)",
+      "ask": "Source"
+     },
+     {
+      "id": "target",
+      "label": "Target system",
+      "kind": "text",
+      "placeholder": "e.g. Customer portal API",
+      "ask": "Target"
+     },
+     {
+      "id": "pattern",
+      "label": "Pattern",
+      "kind": "select",
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "Request / reply (sync)",
+        "label": "Request / reply (sync)"
+       },
+       {
+        "value": "Fire and forget (async)",
+        "label": "Fire and forget (async)"
+       },
+       {
+        "value": "Publish / subscribe",
+        "label": "Publish / subscribe"
+       },
+       {
+        "value": "Batch file",
+        "label": "Batch file"
+       },
+       {
+        "value": "Polling",
+        "label": "Polling"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "protocol",
+      "label": "Protocol",
+      "kind": "select",
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "HTTPS / REST",
+        "label": "HTTPS / REST"
+       },
+       {
+        "value": "SOAP",
+        "label": "SOAP"
+       },
+       {
+        "value": "SFTP",
+        "label": "SFTP"
+       },
+       {
+        "value": "AMQP / Service Bus",
+        "label": "AMQP / Service Bus"
+       },
+       {
+        "value": "Kafka",
+        "label": "Kafka"
+       },
+       {
+        "value": "Database",
+        "label": "Database"
+       },
+       {
+        "value": "Other",
+        "label": "Other"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "format",
+      "label": "Message format",
+      "kind": "text",
+      "placeholder": "e.g. JSON, schema OrderV1"
+     },
+     {
+      "id": "mapping",
+      "label": "Field mapping",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "source",
+        "label": "Source field",
+        "kind": "text",
+        "w": 170
+       },
+       {
+        "id": "target",
+        "label": "Target field",
+        "kind": "text",
+        "w": 170
+       },
+       {
+        "id": "rule",
+        "label": "Rule / transformation",
+        "kind": "text",
+        "w": 260
+       }
+      ],
+      "addLabel": "+ Mapping"
+     },
+     {
+      "id": "trigger",
+      "label": "Trigger / schedule",
+      "kind": "text",
+      "placeholder": "e.g. on event OrderCreated; every 15 min"
+     },
+     {
+      "id": "errorHandling",
+      "label": "Error handling / retry / dead-letter",
+      "kind": "textarea"
+     },
+     {
+      "id": "monitoring",
+      "label": "Monitoring / alerting",
+      "kind": "text"
+     },
+     {
+      "id": "idempotency",
+      "label": "Idempotency / duplicates",
+      "kind": "text"
+     },
+     {
+      "id": "volume",
+      "label": "Volume",
+      "kind": "text",
+      "placeholder": "e.g. 5 000 messages per day"
+     }
+    ],
+    "platform": "generic"
+   },
+   "Scheduled Job": {
+    "group": "Integration & jobs",
+    "tcode": "Job",
+    "abapNaming": false,
+    "usedHint": "Job you reuse",
+    "fields": [
+     {
+      "id": "schedule",
+      "label": "Schedule",
+      "kind": "text",
+      "placeholder": "e.g. daily 02:00 GST (cron 0 2 * * *)",
+      "ask": "Schedule"
+     },
+     {
+      "id": "host",
+      "label": "Runs on",
+      "kind": "text",
+      "placeholder": "e.g. Azure Function (timer), Windows service, Hangfire"
+     },
+     {
+      "id": "inputs",
+      "label": "Inputs",
+      "kind": "lines"
+     },
+     {
+      "id": "logic",
+      "label": "Processing logic",
+      "kind": "textarea",
+      "placeholder": "Steps in order"
+     },
+     {
+      "id": "outputs",
+      "label": "Outputs",
+      "kind": "lines"
+     },
+     {
+      "id": "errorHandling",
+      "label": "Error handling / restart",
+      "kind": "textarea"
+     }
+    ],
+    "platform": "generic"
+   },
+   "Notification": {
+    "group": "Integration & jobs",
+    "tcode": "Notify",
+    "abapNaming": false,
+    "usedHint": "",
+    "fields": [
+     {
+      "id": "channel",
+      "label": "Channel",
+      "kind": "select",
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "E-mail",
+        "label": "E-mail"
+       },
+       {
+        "value": "Microsoft Teams",
+        "label": "Microsoft Teams"
+       },
+       {
+        "value": "SMS",
+        "label": "SMS"
+       },
+       {
+        "value": "Push",
+        "label": "Push"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "trigger",
+      "label": "Trigger",
+      "kind": "text"
+     },
+     {
+      "id": "recipients",
+      "label": "Recipients",
+      "kind": "text"
+     },
+     {
+      "id": "subject",
+      "label": "Subject / title",
+      "kind": "text"
+     },
+     {
+      "id": "body",
+      "label": "Content",
+      "kind": "textarea",
+      "placeholder": "Text with placeholders, e.g. {OrderNo}"
+     }
+    ],
+    "platform": "generic"
+   },
+   "External System": {
+    "group": "Integration & jobs",
+    "tcode": "",
+    "abapNaming": false,
+    "usedHint": "What you use from it",
+    "fields": [],
+    "platform": "generic"
+   }
+  },
+  "objectGroups": [
+   "Application",
+   "Data",
+   "Power Platform",
+   "Integration & jobs"
+  ],
+  "components": [
+   {
+    "value": "",
+    "label": "— type —",
+    "code": "X"
+   },
+   {
+    "value": "screen",
+    "label": "Web screen / page",
+    "code": "C",
+    "devType": "G_WEB"
+   },
+   {
+    "value": "api",
+    "label": "API / service",
+    "code": "C",
+    "devType": "G_API"
+   },
+   {
+    "value": "data",
+    "label": "Database table / data model",
+    "code": "C",
+    "devType": "G_DATA"
+   },
+   {
+    "value": "powerapp",
+    "label": "Power App",
+    "code": "C",
+    "devType": "G_POWERAPP"
+   },
+   {
+    "value": "flow",
+    "label": "Power Automate flow",
+    "code": "C",
+    "devType": "G_FLOW"
+   },
+   {
+    "value": "integration",
+    "label": "Integration / interface",
+    "code": "C",
+    "devType": "G_INTEG"
+   },
+   {
+    "value": "job",
+    "label": "Scheduled job",
+    "code": "C",
+    "devType": "G_JOB"
+   },
+   {
+    "value": "export",
+    "label": "Report / export",
+    "code": "C",
+    "devType": "G_WEB"
+   },
+   {
+    "value": "notification",
+    "label": "Notification (e-mail / Teams)",
+    "code": "C",
+    "devType": "G_FLOW"
+   }
+  ],
+  "definitionOfDone": [
+   "Implementation completed in the repository (pull request merged)",
+   "Build and static analysis clean (linter / analyzers, no critical findings)",
+   "Security checks passed (input validation, no secrets in code, dependency scan)",
+   "Authorization implemented as specified",
+   "Error handling and logging implemented",
+   "Automated tests (unit / integration) completed and passing",
+   "Acceptance criteria passed",
+   "Deployed to the test environment through the pipeline",
+   "Technical documentation updated (README / API description)"
+  ],
+  "quality": {
+   "authChecks": {
+    "label": "Authorization (roles / scopes)"
+   },
+   "testTypes": {
+    "options": {
+     "Unit": "Unit test"
+    }
+   }
+  }
  }
 };
 
@@ -13318,6 +14834,12 @@ window.APB_CONFIG = {
 
   const defs = APB.config.definitions;
   const EMPTY = { group: 'Other', tcode: '', abapNaming: false, usedHint: '', fields: [] };
+  // non-SAP (generic) platform: its own dev types and object designers (config/generic-definitions.json). Lookups
+  // know both; every LIST is SAP unless 'generic' is asked for, so SAP screens and documents stay as they were.
+  const gen = APB.config.generic || { devTypes: {}, objectTypes: {}, objectGroups: [], stacks: [], components: [] };
+  const allTypes = Object.assign({}, defs.devTypes, gen.devTypes);
+  const allObjects = Object.assign({}, defs.objectTypes, gen.objectTypes);
+  function isGeneric(p) { return p === 'generic' || (p && typeof p === 'object' && p.platform === 'generic'); }
 
   /* showIf: { field, in:[...] } | { field, includes:value } evaluated against a values bag. */
   function isVisible(field, values) {
@@ -13333,17 +14855,35 @@ window.APB_CONFIG = {
     return o ? o.label : value;
   }
 
-  function objectDef(type) { return defs.objectTypes[type] || EMPTY; }
+  function objectDef(type) { return allObjects[type] || EMPTY; }
 
   /* New and changed objects get the full builder; reused / unconfirmed ones only "what you need from it". */
   function hasBuilder(o) { return (o.status === 'new' || o.status === 'change') && objectDef(o.type).fields.length > 0; }
 
+  // quality questions with the non-SAP labels (config generic.quality); SAP gets the shared list itself
+  const genQuality = defs.common.quality.map(function (f) {
+    const o = (gen.quality || {})[f.id];
+    if (!o) return f;
+    const c = Object.assign({}, f, o.label ? { label: o.label } : {});
+    if (o.options && f.options) c.options = f.options.map(function (x) { return o.options[x.value] ? Object.assign({}, x, { label: o.options[x.value] }) : x; });
+    return c;
+  });
+
   APB.defs = {
-    types: defs.devTypes,
-    typeKeys: function () { return Object.keys(defs.devTypes); },
+    qualityFor: function (platform) { return isGeneric(platform) ? genQuality : defs.common.quality; },
+    genericDod: gen.definitionOfDone || [],
+    types: allTypes,
+    // platform: 'sap' (default) | 'generic', or a spec state
+    typeKeys: function (platform) { return Object.keys(isGeneric(platform) ? gen.devTypes : defs.devTypes); },
+    isGeneric: isGeneric,
+    stacks: gen.stacks || [],
+    components: gen.components || [],
+    objectTypesFor: function (platform) { return Object.keys(isGeneric(platform) ? gen.objectTypes : defs.objectTypes); },
+    objectGroupsFor: function (platform) { return isGeneric(platform) ? gen.objectGroups : defs.objectGroups; },
+    allObjectTypes: Object.keys(allObjects),
     isVisible: isVisible,
     optionLabel: optionLabel,
-    performanceRelevant: function (types) { return types.some(function (t) { return defs.devTypes[t] && defs.devTypes[t].performance; }); },
+    performanceRelevant: function (types) { return types.some(function (t) { return allTypes[t] && allTypes[t].performance; }); },
     objectTypes: Object.keys(defs.objectTypes),
     objectGroups: defs.objectGroups,
     objectDef: objectDef,
@@ -13420,14 +14960,16 @@ window.APB_CONFIG = {
     const base = blank();
     if (!input || typeof input !== 'object') return base;
     const s = base;
-    const known = APB.config.definitions.devTypes;
+    const known = APB.defs ? APB.defs.types : APB.config.definitions.devTypes; // SAP + generic dev types
     s.id = typeof input.id === 'string' && input.id ? input.id : s.id;
     s.project.name = str(getPath(input, 'project.name'));
+    // non-SAP specs only (absent = SAP, so SAP specs keep exactly their shape)
+    if (input.platform === 'generic') { s.platform = 'generic'; s.stack = str(input.stack); if (!Array.isArray(input.dod)) s.dod = APB.defs.genericDod.map(function (text) { return { id: uid(), text: text, on: true }; }); }
     s.types = Array.isArray(input.types) ? input.types.filter(function (t) { return known[t]; }) : [];
     ['text', 'objective', 'users', 'expectedOutput'].forEach(function (k) { s.requirement[k] = str(getPath(input, 'requirement.' + k)); });
     s.objects = arr(input.objects).map(function (o) {
       return {
-        id: str(o.id) || uid(), type: APB.config.definitions.objectTypes[o.type] ? o.type : 'Other', name: str(o.name),
+        id: str(o.id) || uid(), type: (APB.defs ? APB.defs.allObjectTypes.indexOf(o.type) >= 0 : APB.config.definitions.objectTypes[o.type]) ? o.type : 'Other', name: str(o.name),
         status: ['existing', 'change', 'new', 'tbc'].indexOf(o.status) >= 0 ? o.status : 'tbc',
         purpose: str(o.purpose), parent: str(o.parent),
         detail: o.detail && typeof o.detail === 'object' ? clone(o.detail) : {},
@@ -13694,6 +15236,7 @@ window.APB_CONFIG = {
     const text = (state.requirement.text + ' ' + state.requirement.objective + ' ' + state.requirement.expectedOutput).toLowerCase();
     const have = haveTypes(state);
     const out = [];
+    if (D.isGeneric(state)) return out; // the suggestions name SAP objects
     D.suggestions.forEach(function (s) {
       if (have[s.type] || out.some(function (x) { return x.type === s.type; })) return;
       if (new RegExp(s.match, 'i').test(text)) out.push({ type: s.type, label: s.label, status: 'tbc' });
@@ -14473,6 +16016,38 @@ window.APB_CONFIG = {
         ]).filter(Boolean);
       },
       closing: 'Implement incrementally and explain significant assumptions or deviations.'
+    },
+    /* non-SAP platform (generic TS): GitHub Copilot agent mode in the project repository */
+    generic: {
+      id: 'generic',
+      label: 'GitHub Copilot (agent mode)',
+      instructionsTitle: 'Copilot Development Instructions',
+      instructions: function (s) {
+        const qa = s.quality;
+        const built = s.objects.filter(D.hasBuilder);
+        const hasAc = s.acceptance.some(function (a) { return a.text.trim(); });
+        const gate = APB.gov ? APB.gov.status(s).state : 'approved';
+        const types = built.map(function (o) { return o.type; });
+        return [
+          gate !== 'approved' && 'STOP: this specification is ' + (gate === 'changed' ? 'changed after its approval' : 'not approved') + ' (see Approval & Audit Trail). Do not create or change any code; ask for the approval of the technical specification first.',
+          'Read this entire specification.',
+          'Inspect the existing repository first and follow its architecture, conventions, libraries and folder structure' + (s.stack ? ' (tech stack: ' + s.stack + ')' : '') + '.',
+          'Do not invent endpoints, tables, columns, entities, connectors, integrations, roles or business rules beyond this specification. Anything unknown is marked ' + TBC + ': check the repository, otherwise ask – never replace it with an invented name.',
+          'Work one component at a time: show the plan (files to create or change) first, then implement it.',
+          built.length && 'Implement names, routes, request / response fields, columns and mappings exactly as given in Technical Design; report any deviation.',
+          (s.origin && s.origin.copilot && s.origin.copilot.length) && 'Some design values were proposed by Copilot and accepted by the developer (see Design Sources); values marked ' + TBC + ' are not confirmed.',
+          'Security: validate all input on the server, use parameterised queries / the ORM (no string-built SQL), encode output, keep secrets out of code and configuration (use the platform\'s secret store), log without personal data.',
+          qa.authorization !== 'no' ? 'Implement the authorization exactly as specified (roles / scopes) and enforce it on the server, not only in the UI.' : 'No authorization requirement is specified – do not add roles; ask if the component exposes data that needs protection.',
+          types.indexOf('API Endpoint') >= 0 && 'APIs: return the specified status codes, validate the request, page large results, and document the endpoint (OpenAPI).',
+          (types.indexOf('Data Entity') >= 0 || types.indexOf('Dataverse Table') >= 0) && 'Data model: create the tables / columns through migrations in dependency order; add the indexes and relations given.',
+          (types.indexOf('Power App') >= 0 || types.indexOf('Power Automate Flow') >= 0) && 'Power Platform: use solutions, connection references and environment variables (no hard-coded connections); respect delegation limits; handle errors in flows with scopes and retries.',
+          types.indexOf('Integration Flow') >= 0 && 'Integrations: implement the mapping as specified, make processing idempotent, retry transient errors, route failures to a dead-letter / error handling, and add monitoring.',
+          'Write automated tests for every acceptance criterion and the main error paths.',
+          'Identify assumptions instead of silently guessing.',
+          hasAc ? 'Validate the implementation against the acceptance criteria.' : 'Validate the implementation against the requirement.'
+        ].filter(Boolean);
+      },
+      closing: 'Implement incrementally and explain significant assumptions or deviations.'
     }
   };
 
@@ -14566,6 +16141,7 @@ window.APB_CONFIG = {
   }
 
   function commonSection(s, section) {
+    if (s.platform === 'generic') return renderFields(D.qualityFor(s).filter(function (f) { return f.section === section && f.id !== 'testScenarios'; }), s.quality, 4);
     return renderFields(D.quality.filter(function (f) { return f.section === section && f.id !== 'testScenarios'; }), s.quality, 4);
   }
 
@@ -14668,7 +16244,7 @@ window.APB_CONFIG = {
 
   /* ---------- document ---------- */
   function build(s, profileId) {
-    const profile = profiles[profileId || 'copilot'];
+    const profile = profiles[profileId || (s.platform === 'generic' ? 'generic' : 'copilot')];
     const sections = [];
     function add(title, body) { if (body && body.trim()) sections.push({ title: title, body: body.trim() }); }
 
@@ -14734,7 +16310,7 @@ window.APB_CONFIG = {
 
     add(profile.instructionsTitle, 'Before implementing:\n\n' + profile.instructions(s).map(function (t, i) { return (i + 1) + '. ' + t; }).join('\n') + '\n\n' + profile.closing);
 
-    const lines = ['# SAP Development Specification', ''];
+    const lines = [s.platform === 'generic' ? '# Development Specification' : '# SAP Development Specification', ''];
     if (s.project.name.trim()) lines.push('**Project:** ' + s.project.name.trim(), '');
     sections.forEach(function (sec, i) { lines.push('## ' + (i + 1) + '. ' + sec.title, '', sec.body, ''); });
     return lines.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd() + '\n';
@@ -14750,6 +16326,8 @@ window.APB_CONFIG = {
      dewa-abap-change, Fiori/UI5 apps (new or change) → dewa-fiori, after the backend. */
   function isUi(o) { return o.type === 'Fiori/UI5'; }
   function handoff(s) {
+    // non-SAP: the whole spec goes to Copilot's built-in agent mode (the DEWA agents are SAP-specific)
+    if (s.platform === 'generic') return { hasNew: false, hasChange: false, hasFiori: false, generic: true, agents: ['agent'] };
     const objs = (s.objects || []).filter(function (o) { return (o.name || '').trim() || o.type; });
     const backend = objs.filter(function (o) { return !isUi(o); });
     const hasFiori = objs.some(function (o) { return isUi(o) && (o.status === 'new' || o.status === 'change'); });
@@ -14761,9 +16339,14 @@ window.APB_CONFIG = {
   const CHANGE_MARKER = 'DEWA-ABAP-CHANGE v1';
   const FIORI_MARKER = 'DEWA-FIORI v1';
   const FIORI_REVIEW_MARKER = 'DEWA-FIORI-REVIEW v1';
+  const GENERIC_MARKER = 'DEWA-GENERIC v1';
 
   /* mode: undefined (whole spec) | 'new' (dewa-abap: new objects only) | 'change' (dewa-abap-change: changed objects only) */
   function chatPrompt(s, mode) {
+    if (s.platform === 'generic') {
+      return GENERIC_MARKER + '\nImplement the technical specification below in this repository' + (s.stack ? ' (' + s.stack + ')' : '') + '. Follow its "Copilot Development Instructions": inspect the repository first, work one component at a time and show the plan before writing code, ' +
+        'use only the names in the specification and ask me before guessing anything marked ' + TBC + '.\n\n' + build(s);
+    }
     const noUi = handoff(s).hasFiori ? ' Do not build or change the Fiori/UI5 apps – they are built afterwards with dewa-fiori.' : '';
     if (mode === 'fiori-review') {
       return FIORI_REVIEW_MARKER + '\nReview the Fiori/UI5 apps of the development specification below – only the objects of type Fiori/UI5, one app at a time – ' +
@@ -14859,7 +16442,7 @@ window.APB_CONFIG = {
   }
 
   APB.markdown = {
-    build: build, sapObjectMd: sapObjectMd, filename: filename, chatPrompt: chatPrompt, handoff: handoff, CHANGE_MARKER: CHANGE_MARKER, FIORI_MARKER: FIORI_MARKER, FIORI_REVIEW_MARKER: FIORI_REVIEW_MARKER, toHtml: toHtml, profiles: profiles,
+    build: build, sapObjectMd: sapObjectMd, filename: filename, chatPrompt: chatPrompt, handoff: handoff, CHANGE_MARKER: CHANGE_MARKER, FIORI_MARKER: FIORI_MARKER, FIORI_REVIEW_MARKER: FIORI_REVIEW_MARKER, GENERIC_MARKER: GENERIC_MARKER, toHtml: toHtml, profiles: profiles,
     // shared with the functional-spec generator (fs-generator.js)
     helpers: { table: table, gridMd: gridMd, renderFields: renderFields, clean: clean, cell: cell, splitLines: splitLines, slug: slug }
   };
@@ -15104,6 +16687,7 @@ window.APB_CONFIG = {
   (function resolveRefs(fields) {
     fields.forEach(function (f) {
       if (f.optionsRef) f.options = cfg[f.optionsRef];
+      if (f.generic && f.generic.optionsRef) f.generic.options = cfg[f.generic.optionsRef]; // non-SAP option list
       if (f.fields) resolveRefs(f.fields);
     });
   })(cfg.sections.reduce(function (all, s) { return all.concat(s.fields); }, []));
@@ -15142,7 +16726,8 @@ window.APB_CONFIG = {
     delete g.generic;
     if (f.columns) g.columns = f.columns.filter(function (c) { return !c.sapOnly; }).map(generic);
     if (f.fields) g.fields = f.fields.filter(function (c) { return !c.sapOnly; }).map(generic);
-    if (f.options) g.options = f.options.filter(function (o) { return !o.sapOnly; }).map(function (o) { return o.generic ? Object.assign({}, o, o.generic) : o; });
+    const opts = (f.generic && f.generic.options) || f.options; // a non-SAP option list replaces the SAP one
+    if (opts) g.options = opts.filter(function (o) { return !o.sapOnly; }).map(function (o) { return o.generic ? Object.assign({}, o, o.generic) : o; });
     genericCache.set(f, g);
     return g;
   }
@@ -15150,7 +16735,10 @@ window.APB_CONFIG = {
   function view(f, s) {
     if (!f) return null;
     if (isSap(s)) return f;
-    return f.sapOnly ? null : generic(f);
+    if (f.sapOnly) return null;
+    // hideTbd: SAP and "Other system" only (e.g. RICEFW items / solution components) – not while the system is open
+    if (f.hideTbd && !(s && s.context && s.context.system === 'other')) return null;
+    return generic(f);
   }
   function fieldsFor(sectionId, s) {
     return ((sections[sectionId] || {}).fields || []).map(function (f) { return view(f, s); }).filter(Boolean);
@@ -15171,7 +16759,8 @@ window.APB_CONFIG = {
     return 'To be decided';
   }
 
-  function ricefwType(value) { return cfg.ricefw.filter(function (r) { return r.value === value; })[0] || cfg.ricefw[0]; }
+  // SAP RICEFW types, then the non-SAP solution components (distinct values, code C)
+  function ricefwType(value) { return cfg.ricefw.filter(function (r) { return r.value === value; })[0] || (cfg.genericComponents || []).filter(function (r) { return r.value === value && value; })[0] || cfg.ricefw[0]; }
 
   /* ---------------------------------------------------------------- model */
   function uid() { return APB.state.uid(); }
@@ -15677,6 +17266,7 @@ window.APB_CONFIG = {
 
   let cur = null; // the spec being built: field labels follow its system (SAP or generic)
   function sap() { return F.isSap(cur); }
+  function other() { return !!(cur && cur.context && cur.context.system === 'other'); } // non-SAP: solution components
   function dash(v) { return clean(v) || '–'; }
   function opt(sectionId, fieldId, v, colId) {
     let f = F.view(F.field(sectionId, fieldId), cur);
@@ -15843,10 +17433,12 @@ window.APB_CONFIG = {
     rows(s.quality.uat).forEach(function (r, i) { F.parseFrRefs(r.fr).forEach(function (fr) { (tests[fr] = tests[fr] || []).push('UAT-' + (i < 9 ? '0' : '') + (i + 1)); }); });
     const l = (s.reqs.frs || []).map(function (f, i) { return { f: f, id: F.frId(i) }; }).filter(function (x) { return V.isFilled(x.f); });
     if (!l.length) return '';
-    return table(['FR', 'Requirement', 'Fit-gap', 'Solution'].concat(sap() ? ['RICEFW'] : []).concat(['UAT']), l.map(function (x) {
+    // non-SAP: a Component column, only once solution components exist (otherwise the document stays as it was)
+    const comp = !sap() && other() && (s.solution.ricefw || []).some(function (r) { return V.isFilled(r); });
+    return table(['FR', 'Requirement', 'Fit-gap', 'Solution'].concat(sap() ? ['RICEFW'] : comp ? ['Component'] : []).concat(['UAT']), l.map(function (x) {
       const std = x.f.fit === 'standard' || x.f.fit === 'config';
       const row = [x.id, cell(x.f.title), !x.f.fit || x.f.fit === 'tbc' ? TBC : clean(opt('reqs', 'frs', x.f.fit, 'fit')), dash((x.f.approach || '').trim())];
-      if (sap()) row.push((by[x.id] || []).join(', ') || (std ? 'n/a' : TBC));
+      if (sap() || comp) row.push((by[x.id] || []).join(', ') || (std ? 'n/a' : TBC));
       row.push((tests[x.id] || []).join(', ') || TBC);
       return row;
     }));
@@ -15877,9 +17469,10 @@ window.APB_CONFIG = {
       return join([
         '#### ' + x.id + ': ' + ((x.r.name || '').trim() || TBC) + (x.r.type ? ' (' + F.ricefwType(x.r.type).label + ')' : ''),
         (x.r.description || '').trim(),
-        (x.r.existing || '').trim() && '- **Existing objects / enhancement spots:** ' + clean(x.r.existing)
+        (x.r.existing || '').trim() && (sap() ? '- **Existing objects / enhancement spots:** ' : '- **Existing systems / components:** ') + clean(x.r.existing)
       ]);
     });
+    if (!sap()) return sub('Solution components', join([inv].concat(details)));
     return join([sub('RICEFW items', join([inv].concat(details))), sub('Configuration (SPRO)', bullets(s.solution.customizing))]);
   }
 
@@ -15912,7 +17505,7 @@ window.APB_CONFIG = {
       sub('Variants & exceptions', bullets(s.process.variants))]));
     add('Functional Requirements', join([frSection(s), sub('Business rules & validations', rulesTable(s)), sub('Data requirements', dataTable(s))]));
     add('Current System', join([sap() ? existingObjects(s) : '', programLogic(s), sap() ? sub('SAP system context', systemContext(s).replace(/^### /gm, '#### ')) : '']));
-    add('Solution', join([sub('Fit-gap & traceability', fitGap(s)), sap() ? solution(s) : '',
+    add('Solution', join([sub('Fit-gap & traceability', fitGap(s)), sap() ? solution(s) : other() ? solution(s) : '',
       sub(sap() ? 'Roles & authorizations' : 'Roles & access', simpleGrid('solution', 'roles', s.solution.roles)),
       sub('Interfaces', simpleGrid('solution', 'interfaces', s.solution.interfaces)),
       sub('Outputs & forms', simpleGrid('solution', 'outputs', s.solution.outputs))]));
@@ -16462,6 +18055,7 @@ window.APB_CONFIG = {
       '- 3 to 8 functional requirements, each one testable, with 1 to 3 acceptance criteria ("When …, then …"). Reference them as FR-01, FR-02 … in the order you list them.',
       '- Allowed values: priority must|should|could|wont' + (F.isSap(s) ? ' · fit standard|config|custom|tbc (SAP standard, configuration, custom development)' : '') + ' · change unchanged|changed|new|automated · rule type validation|derivation|calculation|authorization|approval · direction inbound|outbound|both · output type form|email|report|file|notification · test type positive|negative · risk type risk|assumption|open|dependency · data usage selection|output|both|input|stored|display (selection = the user enters or filters by it, output = shown in the result, both, input = comes from a file / upload, stored = saved in a table, display = shown only for information).',
       '- Fill every part that applies; leave a list empty when the requirement gives no basis for it.',
+      c.system === 'other' ? '- ricefw: the solution components to build (one per web screen, API, database table, Power App, flow, integration, job …) – type ' + (F.cfg.genericComponents || []).filter(function (o) { return o.value; }).map(function (o) { return o.value; }).join('|') + ', with the FRs each covers.' : '',
       '',
       'Answer with a one-line summary and then exactly one ```json block:',
       '```json',
@@ -16477,6 +18071,8 @@ window.APB_CONFIG = {
         outputs: [{ name: '', type: 'email', trigger: '' }],
         performance: '', volume: '', privacy: '',
         uat: [{ fr: 'FR-01', scenario: '', type: 'positive', expected: '' }],
+        // non-SAP: the solution components (key ricefw) – SAP drafts keep their shape
+        ricefw: c.system === 'other' ? [{ type: 'api', name: '', description: '', frs: 'FR-01', complexity: 'medium' }] : undefined,
         risks: [{ type: 'assumption', text: '' }]
       }, null, 2),
       '```'];
@@ -16782,7 +18378,9 @@ window.APB_CONFIG = {
       '   - data: the main fields (business name, table or infotype, field, validation) and what each is used for – usage selection | output | both | input | stored | display (selection = the user filters by it, output = shown in the result);',
       '   - objects: the SAP objects of step 2 (named or implied by the documents) with type (PROG, TRAN, CLAS, FUNC, RFC, DDLS, BDEF, SRVB, PROXY, TABL, BADI, IDOC, WAPA, JOB, OTHER) and a note ("exists in SAP", "not found", "to be built");',
       '   - currentLogic and programs: what the existing objects do today, from what you read in SAP;',
-      '   - ricefw: one item per development object – type (' + ricefwCodes + '), name (the existing object for "enhancement" and "asbuilt", otherwise a proposed name or a short description), description, frs (e.g. "FR-01, FR-03"), existing (the existing SAP objects it changes or uses), complexity low | medium | high;',
+      c.system === 'other'
+        ? '   - ricefw: the solution components to build, one per piece – type (' + (F.cfg.genericComponents || []).filter(function (o) { return o.value; }).map(function (o) { return o.value + ' = ' + o.label; }).join('; ') + '), name (a proposed name or a short description), description, frs (e.g. "FR-01, FR-03"), existing (the existing systems or components it uses), complexity low | medium | high;'
+        : '   - ricefw: one item per development object – type (' + ricefwCodes + '), name (the existing object for "enhancement" and "asbuilt", otherwise a proposed name or a short description), description, frs (e.g. "FR-01, FR-03"), existing (the existing SAP objects it changes or uses), complexity low | medium | high;',
       '   - roles (authorisations), interfaces (e.g. external APIs), outputs, performance, volume, privacy, uat (test scenarios with the FR they test), risks (assumptions, dependencies, risks, open points).',
       '5. Rules: READ ONLY – never create, change, activate, run or transport anything; do not read table contents. Only report what is in the documents or what a tool returned. Leave a field empty or write [TO BE CONFIRMED] instead of guessing. Write in business words; technical names only where they are SAP objects.',
       '',
@@ -16908,8 +18506,39 @@ window.APB_CONFIG = {
     return set;
   }
 
+  /* ---- non-SAP (generic platform) ---- */
+  function camel(t) { const w = str(t).replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[^A-Za-z0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean); return w.map(function (x, i) { x = x.toLowerCase(); return i ? x.charAt(0).toUpperCase() + x.slice(1) : x; }).join(''); }
+  function pascal(t) { const c = camel(t); return c.charAt(0).toUpperCase() + c.slice(1); }
+  function gref(r) { const t = str(r.table), f = str(r.sapField); return t && f ? t + '.' + f : f || t; }
+  function isGenericType(t) { return !!(APB.defs && APB.defs.objectDef(t).platform === 'generic'); }
+  function genericDesigner(fs, objType) {
+    const sel = rows(fs, IN), out = rows(fs, OUT), stored = rows(fs, { stored: 1 }), input = rows(fs, { input: 1 });
+    const d = {};
+    if (objType === 'Web Screen') {
+      d.fields = sel.concat(out.filter(function (r) { return sel.indexOf(r) < 0; })).map(function (r) { return { field: camel(r.field) || camel(r.sapField), label: str(r.field), type: '', mandatory: !!r.mandatory && sel.indexOf(r) >= 0, validation: str(r.validation), source: gref(r) }; });
+    } else if (objType === 'API Endpoint') {
+      d.request = sel.concat(input).map(function (r) { return { name: camel(r.field) || camel(r.sapField), in: 'query', type: '', required: !!r.mandatory, validation: str(r.validation), source: str(r.field) }; });
+      d.response = out.map(function (r) { return { name: camel(r.field) || camel(r.sapField), type: '', description: str(r.field), source: gref(r) }; });
+    } else if (objType === 'Data Entity' || objType === 'Dataverse Table') {
+      const cols = stored.map(function (r) { return objType === 'Data Entity'
+        ? { name: pascal(r.sapField || r.field), type: '', length: '', nullable: !r.mandatory, key: false, default: '', description: str(r.field) + (str(r.validation) ? ' – ' + str(r.validation) : '') }
+        : { name: camel(r.sapField || r.field), type: '', required: !!r.mandatory, description: str(r.field) + (str(r.validation) ? ' – ' + str(r.validation) : '') }; });
+      if (cols.length) d.columns = cols;
+    } else if (objType === 'Integration Flow') {
+      const itf = ((fs.solution && fs.solution.interfaces) || []).filter(function (x) { return x && str(x.name); })[0];
+      if (itf) { if (itf.direction === 'inbound') d.source = str(itf.partner); else if (itf.direction === 'outbound') d.target = str(itf.partner); }
+      d.mapping = input.concat(out).map(function (r) { return { source: str(r.field), target: '', rule: str(r.validation) }; });
+    } else if (objType === 'Power Automate Flow') {
+      const o = ((fs.solution && fs.solution.outputs) || []).filter(function (x) { return x && str(x.trigger); })[0];
+      if (o) d.trigger = str(o.trigger);
+    }
+    Object.keys(d).forEach(function (k) { if (Array.isArray(d[k]) && !d[k].length) delete d[k]; if (d[k] === '') delete d[k]; });
+    return d;
+  }
+
   /* designer detail of the main object, per object type; only what the FS says */
   function designer(fs, objType, item) {
+    if (isGenericType(objType)) return genericDesigner(fs, objType);
     const sel = rows(fs, IN), out = rows(fs, OUT);
     const d = {};
     if (objType === 'Report') {
@@ -16941,7 +18570,16 @@ window.APB_CONFIG = {
 
   /* Z<module prefix>_<KEYWORDS>; RICEFW id kept out of the name (it changes when items are re-ordered) */
   const STOP = /^(A|AN|THE|OF|FOR|TO|AND|OR|IN|ON|BY|WITH|PER|FROM|NEW|SIMPLE|REPORT|PROGRAM|LIST|ALL|SHOW|DISPLAY|CREATE|BUILD)$/;
+  const SUFFIX = { 'API Endpoint': 'Api', 'Web Screen': 'Page', 'Power App': 'App', 'Power Automate Flow': 'Flow', 'Integration Flow': 'Integration', 'Scheduled Job': 'Job', 'Service / Component': 'Service', 'Notification': 'Notification' };
   function proposeName(fs, item, objType) {
+    if (isGenericType(objType)) {
+      const desc = str(item && item.description);
+      // the component's own description first; the FS title only when it says too little
+      const words = str(desc.split(/\s+/).filter(Boolean).length >= 2 ? desc : [desc, str(fs.context && fs.context.title)].join(' ')).split(/[^A-Za-z0-9]+/).filter(function (w) { return w.length > 2 && !STOP.test(w.toUpperCase()) && !/^(api|page|screen|app|flow|job|service|integration|table|entity)$/i.test(w); })
+        .filter(function (w, i, all) { return all.map(function (x) { return x.toLowerCase(); }).indexOf(w.toLowerCase()) === i; });
+      const base = words.slice(0, 3).map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(); }).join('');
+      return base ? (base + (SUFFIX[objType] || '')).slice(0, 60) : '';
+    }
     const ns = APB.fsDraft && APB.fsDraft.namespaces ? APB.fsDraft.namespaces() : {};
     const mod = (fs.context && fs.context.module) || '';
     const prefix = ((ns[mod] || ns[''] || ['Z'])[0] || 'Z').toUpperCase();
@@ -17045,6 +18683,29 @@ window.APB_CONFIG = {
   const REF_RE = /(?:\/[A-Z0-9]{1,10}\/[A-Z0-9_]+|\b[A-Z][A-Z0-9_]{1,29}-[A-Z][A-Z0-9_]{0,29}\b|\b[ZY][A-Z0-9]*_[A-Z0-9_]{2,40}\b)/g;
   const ALWAYS = /^(SY-[A-Z0-9_]+|SELECT-OPTIONS|SELECTION-SCREEN|END-OF-SELECTION|START-OF-SELECTION|AT-SELECTION-SCREEN|TOP-OF-PAGE|LOAD-OF-PROGRAM|INITIALIZATION-.*|NON-UNIQUE|READ-ONLY|E-MAIL|CL_[A-Z0-9_]+|IF_[A-Z0-9_]+|BAPI_[A-Z0-9_]+|BAPIRET2.*)$/;
   function refs(text) { return (String(text || '').toUpperCase().match(REF_RE) || []).filter(function (n) { return !ALWAYS.test(n); }); }
+  // non-SAP: Entity.Field / Table.Column names (framework members such as DateTime.Now are fine)
+  const GREF_RE = /\b[A-Z][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*\b/g;
+  const G_ALWAYS = /^(SYSTEM|MATH|DATETIME|DATETIMEOFFSET|STRING|CONSOLE|JSON|OBJECT|ARRAY|LIST|OPTIONAL|LOCALDATE|LOCALDATETIME|INSTANT|GUID|UUID|HTTPSTATUS|HTTPSTATUSCODE|RESULTS|TASK|ENVIRONMENT|PROCESS|PATH|FILE|LOGGER|ILOGGER|CONFIGURATION|COLLECTORS|STREAM|INTEGER|LONG|DECIMAL|BIGDECIMAL|BOOLEAN|ENUM|PROMISE|WINDOW|DOCUMENT|DATE|NUMBER|POWER|PATCH|LOOKUP|FILTER|SORTBYCOLUMNS|USER|TODAY|NOW|NEXT|FIRST|LAST|COUNTROWS|THISITEM|SELF|PARENT|GALLERY\d*|FORM\d*|SCREEN\d*|APP|VARIABLES|TRIGGEROUTPUTS|OUTPUTS|BODY|ITEMS)\./;
+  function genericKnown(s) {
+    const k = {};
+    const add = function (n) { n = str(n, 120).toUpperCase(); if (n) k[n] = 1; };
+    ((s.origin && s.origin.names) || []).forEach(function (n) { add(n); if (n.indexOf('-') > 0) add(n.replace('-', '.')); });
+    s.objects.forEach(function (o) { add(o.name); walk(o.detail, function (t) { (String(t).match(GREF_RE) || []).forEach(add); }); });
+    // FS data rows "table.field" written in the FS extract
+    (String((s.origin && s.origin.fsText) || '').match(GREF_RE) || []).forEach(add);
+    return k;
+  }
+  function groundGeneric(text, known) {
+    let n = 0;
+    const out = String(text).replace(GREF_RE, function (m, off, all) {
+      const u = m.toUpperCase();
+      if (G_ALWAYS.test(u) || known[u] || (known[u.split('.')[0]] && known[u.split('.')[1]])) return m;
+      if (all.slice(Math.max(0, off - TBC.length - 1), off).indexOf(TBC) >= 0) return m;
+      n++;
+      return TBC + ' ' + m;
+    });
+    return [out, n];
+  }
   /* mark unknown names in a string → [text, count] */
   function ground(text, known) {
     let n = 0;
@@ -17058,7 +18719,7 @@ window.APB_CONFIG = {
     return [out, n];
   }
   function groundValue(v, known, count) {
-    if (typeof v === 'string') { const g = ground(v, known); count.n += g[1]; return g[0]; }
+    if (typeof v === 'string') { const g = known.__generic ? groundGeneric(v, known) : ground(v, known); count.n += g[1]; return g[0]; }
     if (Array.isArray(v)) return v.map(function (x) { return groundValue(x, known, count); });
     if (v && typeof v === 'object') { const o = {}; Object.keys(v).forEach(function (k) { o[k] = groundValue(v[k], known, count); }); return o; }
     return v;
@@ -17075,7 +18736,7 @@ window.APB_CONFIG = {
         (sub ? ': array of { ' + sub.map(function (c) { const o = c.options && optionText(c); return c.id + (o ? ' (' + o + ')' : c.kind === 'check' ? ' (true/false)' : ''); }).join(', ') + ' }' : '');
     }).join('\n');
   }
-  function quality() { return D().quality.filter(function (f) { return ['dataVolume', 'performanceReq', 'testScenarios', 'cleanCore', 'cleanCoreNote'].indexOf(f.id) >= 0; }); }
+  function quality(s) { return D().quality.filter(function (f) { return ['dataVolume', 'performanceReq', 'testScenarios', 'cleanCore', 'cleanCoreNote'].indexOf(f.id) >= 0 && !(s && D().isGeneric(s) && /^cleanCore/.test(f.id)); }); }
 
   function tsView(s) {
     return {
@@ -17092,7 +18753,48 @@ window.APB_CONFIG = {
     };
   }
 
+  /* non-SAP platform: the same completion without SAP wording, sources or naming rules */
+  function genericPrompt(s) {
+    const targets = s.objects.filter(function (o) { return o.status === 'new' || o.status === 'change'; });
+    const types = [];
+    targets.forEach(function (o) { if (types.indexOf(o.type) < 0 && (D().objectDef(o.type).fields || []).length) types.push(o.type); });
+    const q = quality(s);
+    const fsText = (s.origin && s.origin.fsText) || '';
+    return [MARK,
+      'Complete the technical specification below for GitHub Copilot (agent mode), which will implement it in the project repository' + (s.stack ? ' (' + s.stack + ')' : '') + '. Fill ONLY the parts that are still EMPTY. You have no tools in this step.',
+      '',
+      'Sources you may use – nothing else:',
+      '1. the functional specification extract (FS) below' + (fsText ? '' : ' (none – use the business requirement)') + ';',
+      '2. the technical specification as it is now (TS JSON) – its requirement, rules, acceptance criteria and components.',
+      '',
+      'Rules:',
+      '- Fill every EMPTY designer field of the components with status new or change that these sources support: processing logic step by step, request / response, columns, screen fields, mapping, error handling, schedule – in the shape given below. Never change a field that already has a value.',
+      '- Use only tables, columns, entities, endpoints, systems and connectors that appear in the sources. A name you need but cannot find in them: write "' + TBC + '" in front of it (e.g. "' + TBC + ' Order.DeliveryDate"). Never invent table, column or endpoint names.',
+      '- No new business rules: derive the logic from the FS requirements, rules, data and TO-BE steps. Anything the sources do not answer goes to openQuestions.',
+      '- Authorization: do not change it (it stays "' + (s.quality.authorization || 'no') + '").',
+      '- Use the option values exactly as listed. Field references as Entity.Field.',
+      '- testScenarios: one per line, "scenario => expected result", covering every acceptance criterion; dataVolume one of ' + optionText(q.filter(function (f) { return f.id === 'dataVolume'; })[0] || {}) + '.',
+      '',
+      'Designer fields per component type (use only these ids):',
+      types.map(function (t) { return t + ':\n' + schemaLine(t); }).join('\n') || '(no component to complete)',
+      '',
+      fsText ? (APB.guard ? APB.guard.fence('FS EXTRACT', fsText) : '=== FS EXTRACT ===\n' + fsText + '\n=== END FS EXTRACT ===') : '',
+      '',
+      'TS JSON (as it is now):',
+      '```json',
+      JSON.stringify(Object.assign(tsView(s), { platform: 'other platform', stack: s.stack || '', sapCheck: undefined }), null, 1),
+      '```',
+      '',
+      'Answer with a short summary and then exactly one ```json block:',
+      '```json',
+      JSON.stringify({ kind: KIND, version: 1, objects: targets.map(function (o) { return { name: o.name, type: o.type, detail: {} }; }), expectedOutput: '',
+        quality: { dataVolume: '', performanceReq: '', testScenarios: '' }, openQuestions: [''] }, null, 1),
+      '```'
+    ].join('\n').replace(/\n{3,}/g, '\n\n');
+  }
+
   function prompt(s) {
+    if (D().isGeneric(s)) return genericPrompt(s);
     const targets = s.objects.filter(function (o) { return o.status === 'new' || o.status === 'change'; });
     const types = [];
     targets.forEach(function (o) { if (types.indexOf(o.type) < 0 && (D().objectDef(o.type).fields || []).length) types.push(o.type); });
@@ -17139,7 +18841,7 @@ window.APB_CONFIG = {
 
   /* ------------------------------------------------------ parse & ground */
   function normalize(raw, s) {
-    const known = knownNames(s);
+    const known = D().isGeneric(s) ? Object.assign(genericKnown(s), { __generic: 1 }) : knownNames(s);
     const count = { n: 0 };
     const objects = [];
     (Array.isArray(raw.objects) ? raw.objects : []).slice(0, 30).forEach(function (r) {
@@ -17153,7 +18855,7 @@ window.APB_CONFIG = {
     });
     const q = {};
     const qraw = raw.quality && typeof raw.quality === 'object' ? raw.quality : {};
-    const qs = APB.devSap.sanitize(quality(), qraw);
+    const qs = APB.devSap.sanitize(quality(s), qraw);
     Object.keys(qs).forEach(function (k) { q[k] = groundValue(qs[k], known, count); });
     return {
       kind: KIND, version: 1, objects: objects, quality: q,
@@ -17206,7 +18908,9 @@ window.APB_CONFIG = {
     });
     if (d.expectedOutput && !filled(s.requirement.expectedOutput)) parts.push({ id: 'output', label: 'Expected output', items: [shortVal(d.expectedOutput)], checked: true, source: 'Copilot proposal' });
     if (d.openQuestions.length) parts.push({ id: 'questions', label: 'Open questions (added to Assumptions & open points)', items: d.openQuestions, checked: true, source: 'Copilot' });
-    if (d.unconfirmed) parts.push({ id: 'grounding', label: d.unconfirmed + ' SAP name' + (d.unconfirmed > 1 ? 's' : '') + ' not found in the FS, the TS or SAP – marked ' + TBC, items: ['Confirm them (Check & read in SAP) before Copilot implements them.'], checked: true, info: true });
+    if (d.unconfirmed) parts.push(D().isGeneric(s)
+      ? { id: 'grounding', label: d.unconfirmed + ' name' + (d.unconfirmed > 1 ? 's' : '') + ' not found in the FS or the TS – marked ' + TBC, items: ['Confirm them (repository, data model, interface owner) before Copilot implements them.'], checked: true, info: true }
+      : { id: 'grounding', label: d.unconfirmed + ' SAP name' + (d.unconfirmed > 1 ? 's' : '') + ' not found in the FS, the TS or SAP – marked ' + TBC, items: ['Confirm them (Check & read in SAP) before Copilot implements them.'], checked: true, info: true });
     return parts;
   }
 
@@ -17814,7 +19518,7 @@ window.APB_CONFIG = {
       return { state: state, mode: 'exact', edited: edited, originId: state.id };
     }
     if (/^#\s+Functional Specification/m.test(text)) return { state: APB.state.migrate(partialFs(text)), mode: 'partial', edited: false };
-    if (/^#\s+SAP Development Specification/m.test(text)) return { state: APB.state.migrate(partialDev(text)), mode: 'partial', edited: false };
+    if (/^#\s+(SAP )?Development Specification/m.test(text)) return { state: APB.state.migrate(partialDev(text)), mode: 'partial', edited: false };
     throw new Error('This is not a specification generated by the builder (expected FUNCTIONAL_SPECIFICATION.md or BUSINESS_REQUIREMENTS.md).');
   }
 
@@ -18647,9 +20351,12 @@ window.APB_CONFIG = {
     const ids = F.ricefwIds(list);
     const items = list.map(function (r, i) { return { r: r, i: i, id: ids[i] }; }).filter(function (x) { return V.isFilled(x.r) && x.r.type; });
     if (!items.length) return '';
-    return '<div class="suggest fs-handoff"><p class="muted small" id="ho-h">Hand a RICEFW item to the developer as a <strong>Development Specification</strong> for <code class="agent-name">dewa-abap</code> (opens the Technical builder pre-filled; this FS stays in Drafts):</p><div class="chips" aria-labelledby="ho-h">' +
+    const sapSys = F.isSap(s);
+    return '<div class="suggest fs-handoff"><p class="muted small" id="ho-h">' + (sapSys
+      ? 'Hand a RICEFW item to the developer as a <strong>Development Specification</strong> for <code class="agent-name">dewa-abap</code> (opens the Technical builder pre-filled; this FS stays in Drafts):'
+      : 'Hand a solution component to the developer as a <strong>Technical Specification</strong> for GitHub Copilot (agent mode, in the project repository) – it opens pre-filled on the non-SAP platform; this FS stays in Drafts:') + '</p><div class="chips" aria-labelledby="ho-h">' +
       items.map(function (x) { return '<button type="button" class="chip" data-action="fs-handoff" data-i="' + x.i + '">→ ' + esc(x.id) + ' ' + esc(x.r.name || F.ricefwType(x.r.type).label) + '</button>'; }).join('') + '</div>' +
-      (items.length > 1 ? '<p><button type="button" class="btn btn-primary btn-sm" data-action="fs-handoff-all">→ Create Technical specs for all ' + items.length + ' RICEFW items</button></p>' : '') +
+      (items.length > 1 ? '<p><button type="button" class="btn btn-primary btn-sm" data-action="fs-handoff-all">→ Create Technical specs for all ' + items.length + (sapSys ? ' RICEFW items' : ' components') + '</button></p>' : '') +
       (s.context.changeType ? '<p class="muted small">Type of change: <strong>' + esc(F.field('context', 'changeType').options.filter(function (o) { return o.value === s.context.changeType; })[0].label) + '</strong> – the main object of each Technical spec is ' + ({ enhancement: '<em>Existing – change</em>', asbuilt: '<em>Existing</em> (documented with Check &amp; read in SAP)' }[s.context.changeType] || '<em>New</em>') + '.</p>' : '') + '</div>';
   }
 
@@ -18680,7 +20387,9 @@ window.APB_CONFIG = {
         (gaps.length ? '<div class="refs" role="note"><strong>Gaps without a RICEFW item:</strong> ' + gaps.map(esc).join(', ') + ' — add an item and list the FR under “Covers FRs”.</div>' : '') +
         block('solution', ['ricefw']) + U().approvalCardHtml(s) + handoffHtml(s) + programHandoffHtml(s) + linkedHtml(s) +
         more('fs-more-sol', 'More details – roles & authorizations, interfaces, outputs, configuration', blockAll('solution', null, ['ricefw']), ['roles', 'interfaces', 'outputs', 'customizing'].some(function (k) { return V.isFilled(s.solution[k]); }))
-      : block('solution');
+      : s.context.system === 'other'
+        ? block('solution') + handoffHtml(s) + linkedHtml(s) // non-SAP: solution components → Technical specs
+        : block('solution');
     const q = s.quality, ctl = s.control;
     const moreFilled = ['performance', 'volume', 'availability', 'audit', 'privacy', 'risks'].some(function (k) { return V.isFilled(q[k]); }) || V.isFilled(ctl.docId) || V.isFilled(ctl.author) || V.isFilled(ctl.history);
     return header(3) + U().statusHtml(ev, true) +
@@ -18706,7 +20415,7 @@ window.APB_CONFIG = {
 
   function generatedView(s, ui) {
     const md = FM.build(s);
-    const ho = F.isSap(s) ? handoffHtml(s) : '';
+    const ho = F.isSap(s) || s.context.system === 'other' ? handoffHtml(s) : '';
     const qn = FC.openQuestions(s).length;
     return '<div class="gen-head"><h2 class="step-title">Your functional specification is ready</h2>' +
       '<p class="muted">Download it as <strong>Word</strong> for review and sign-off, or as Markdown (<code>' + esc(FM.filename()) + '</code>) for the project repository. ' +
@@ -18716,7 +20425,7 @@ window.APB_CONFIG = {
       '<button type="button" class="btn btn-ghost btn-lg" data-action="download">Download Markdown</button>' +
       '<button type="button" class="btn btn-ghost" data-action="copy">Copy Markdown</button>' +
       (H.isVscode ? '<button type="button" class="btn btn-ghost" data-action="fs-chat-review">Open in Copilot Chat</button>' : '<button type="button" class="btn btn-ghost" data-action="share">Copy share link</button>') +
-      '<button type="button" class="btn btn-ghost" data-action="edit">Review Details</button></div>' + U().approvalCardHtml(s) + ho + (F.isSap(s) ? programHandoffHtml(s) + linkedHtml(s) : '') +
+      '<button type="button" class="btn btn-ghost" data-action="edit">Review Details</button></div>' + U().approvalCardHtml(s) + ho + (F.isSap(s) ? programHandoffHtml(s) + linkedHtml(s) : s.context.system === 'other' ? linkedHtml(s) : '') +
       '<div class="seg gen-seg" role="group" aria-label="Format"><button type="button" data-action="view-rendered" aria-pressed="' + !ui.raw + '">Preview</button><button type="button" data-action="view-raw" aria-pressed="' + ui.raw + '">Markdown</button></div>' +
       '<div class="gen-doc md" tabindex="0" aria-label="Generated specification">' + (ui.raw ? '<pre>' + esc(md) + '</pre>' : APB.markdown.toHtml(md)) + '</div>';
   }
@@ -18726,6 +20435,7 @@ window.APB_CONFIG = {
 
   /* One RICEFW item → a development-spec state (technical builder), traceable to this FS. */
   function toDevSpec(s, i) {
+    if (!F.isSap(s)) return toGenericSpec(s, i);
     const r = s.solution.ricefw[i] || {};
     const id = F.ricefwIds(s.solution.ricefw)[i];
     const rt = F.ricefwType(r.type);
@@ -18782,6 +20492,58 @@ window.APB_CONFIG = {
     });
   }
 
+  /* Non-SAP FS ("Other system"): a solution component becomes a Technical spec on the generic platform – same
+     FS → TS idea (data "Used for" → designer, rules, acceptance, tests, authorization No without roles), no SAP. */
+  const STACK_HINTS = [[/\.net|c#|asp/i, 0], [/java|spring/i, 1], [/power ?(apps|automate|platform)|dataverse|sharepoint/i, 2], [/azure|logic app|function app|service bus/i, 3], [/mulesoft/i, 4], [/btp|integration suite|cpi/i, 5]];
+  function toGenericSpec(s, i) {
+    const r = s.solution.ricefw[i] || {};
+    const id = F.ricefwIds(s.solution.ricefw)[i];
+    const rt = F.ricefwType(r.type);
+    const devType = rt.devType && APB.defs.types[rt.devType] ? rt.devType : 'G_WEB';
+    const mainType = APB.defs.types[devType].mainObject[0];
+    const frRefs = F.parseFrRefs(r.frs);
+    const frs = (s.reqs.frs || []).map(function (f, k) { return { f: f, id: F.frId(k) }; }).filter(function (x) { return frRefs.indexOf(x.id) >= 0 && V.isFilled(x.f); });
+    const ct = s.context.changeType;
+    const mainStatus = { enhancement: 'change', asbuilt: 'existing' }[ct] || 'new';
+    const proposed = !(r.name || '').trim() && mainStatus === 'new' ? APB.fsToTs.proposeName(s, r, mainType) : '';
+    const objects = [{ type: mainType, name: (r.name || '').trim() || proposed, status: mainStatus,
+      purpose: 'Main component (' + id + ')' + (proposed ? ' – proposed name, confirm' : ''), detail: APB.fsToTs.designer(s, mainType, r) }];
+    // a web application also gets its API and data entity when the FS data says so
+    if (devType === 'G_WEB') {
+      ['API Endpoint', 'Data Entity'].forEach(function (t) {
+        const d = APB.fsToTs.designer(s, t, r);
+        if (Object.keys(d).length) objects.push({ type: t, name: '', status: 'new', purpose: 'Supports ' + id, detail: d });
+      });
+    }
+    String(r.existing || '').split(/[,;\n]+/).map(function (x) { return x.trim(); }).filter(Boolean).slice(0, 10).forEach(function (n) {
+      objects.push({ type: 'External System', name: n, status: 'existing', purpose: 'Existing system / component named in the FS' });
+    });
+    const sys = (s.context.systemName || '') + ' ' + (r.description || '');
+    const hint = STACK_HINTS.filter(function (h) { return h[0].test(sys); })[0];
+    const roles = (s.solution.roles || []).filter(V.isFilled);
+    const tests = (s.quality.uat || []).filter(function (u) { return V.isFilled(u) && F.parseFrRefs(u.fr).some(function (x) { return frRefs.indexOf(x) >= 0; }); })
+      .map(function (u) { return (u.scenario || '').trim() + ((u.expected || '').trim() ? ' => ' + u.expected.trim() : ''); });
+    const acceptance = [];
+    frs.forEach(function (x) { APB.markdown.helpers.splitLines(x.f.acceptance).forEach(function (a) { acceptance.push({ text: a }); }); });
+    const rules = (s.reqs.rules || []).filter(function (b) { return V.isFilled(b) && (!b.fr || F.parseFrRefs(b.fr).some(function (x) { return frRefs.indexOf(x) >= 0; })); })
+      .map(function (b) { return { condition: (b.rule || '').trim(), behavior: (b.outcome || '').trim() }; });
+    return APB.state.migrate({
+      platform: 'generic', stack: hint ? APB.defs.stacks[hint[1]] : '',
+      project: { name: [s.control.docId, id, (r.name || '').trim()].filter(Boolean).join(' · ') },
+      types: [devType],
+      requirement: { text: [(r.description || '').trim() || (s.context.requirement || '').trim()].concat(frs.map(function (x) { return x.id + ' ' + (x.f.title || '').trim() + ((x.f.description || '').trim() ? ': ' + x.f.description.trim() : ''); })).filter(Boolean).join('\n\n'),
+        objective: APB.markdown.helpers.splitLines(s.context.objectives).join('; '), users: roles.map(function (x) { return (x.role || '').trim(); }).filter(Boolean).join(', '), expectedOutput: '' },
+      objects: objects.map(function (o) { o.id = S.uid(); o.detail = o.detail || {}; return o; }),
+      origin: { fsText: APB.fsToTs.fsText(s, frRefs), names: APB.fsToTs.fsNames(s) },
+      rules: rules.map(function (b) { b.id = S.uid(); return b; }),
+      acceptance: acceptance.map(function (a) { a.id = S.uid(); return a; }),
+      assumptions: 'Source: functional specification ' + ([s.control.docId, s.control.version && 'v' + s.control.version].filter(Boolean).join(' ') || '"' + F.model.name(s) + '"') + ', component ' + id + (frRefs.length ? ' (' + frRefs.join(', ') + ')' : '') + '. System: ' + F.systemLabel(s) + '.',
+      processToBe: s.process.toBe || [],
+      // no roles in the FS → authorization No (as for SAP)
+      quality: { authorization: roles.length ? 'yes' : 'no', authChecks: roles.map(function (x) { return { object: (x.role || '').trim(), fields: (x.scope || '').trim(), where: (x.tx || '').trim() }; }), dataVolume: '', performanceReq: (s.quality.performance || '').trim(), testTypes: ['Unit', 'Functional', 'Integration'], testScenarios: tests.join('\n'), cleanCore: '', cleanCoreNote: '' }
+    });
+  }
+
   function handoffOne(el) { actions['fs-handoff-one'](el); }
   function handoffAll() { actions['fs-handoff-all-go'](); }
   function handoffProgram() { actions['fs-dev-from-program-go'](); }
@@ -18796,7 +20558,7 @@ window.APB_CONFIG = {
     const named = (dev.objects || []).some(function (o) { return (o.name || '').trim(); });
     if (H.isVscode && copilotReady() && U().startSapCheck) {
       // read-only SAP check first (facts), then Copilot completes the empty parts of the TS from the FS extract
-      if (named) {
+      if (named && dev.platform !== 'generic') {
         U().ui.step = 3;
         U().renderMain();
         if (U().startTsComplete) U().startTsComplete(true);
@@ -19630,7 +21392,15 @@ window.APB_CONFIG = {
     ENH: '<path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/>',
     ODATA: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3z"/>',
     FIORI: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>',
-    FORM: '<path d="M6 9V3h12v6M6 18H4v-7h16v7h-2M7 14h10v7H7z"/>'
+    FORM: '<path d="M6 9V3h12v6M6 18H4v-7h16v7h-2M7 14h10v7H7z"/>',
+    // non-SAP (generic) platform
+    G_WEB: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 6.5h.01M10 6.5h.01"/>',
+    G_API: '<path d="M8 7 3 12l5 5M16 7l5 5-5 5M14 4l-4 16"/>',
+    G_DATA: '<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+    G_POWERAPP: '<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M10 18h4"/>',
+    G_FLOW: '<circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="12" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M8.5 6H12a3 3 0 0 1 3 3v.5M8.5 18H12a3 3 0 0 0 3-3v-.5"/>',
+    G_INTEG: '<path d="M4 8h13l-3-3M20 16H7l3 3"/>',
+    G_JOB: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/>'
   };
   function icon(k) { return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[k] || ICONS.REPORT) + '</svg>'; }
 
@@ -19807,9 +21577,19 @@ window.APB_CONFIG = {
       '<button type="button" class="btn btn-primary" data-action="next">' + nextLabel + ' <span aria-hidden="true">→</span></button></div>';
   }
 
+  /* SAP (default) or a non-SAP platform: decides the development objects, designers and the Copilot hand-off */
+  function platformHtml(s) {
+    const gen = D.isGeneric(s);
+    return '<div class="ts-platform"><span class="small"><strong>Platform</strong></span> <span class="seg" role="group" aria-label="Platform">' +
+      '<button type="button" aria-pressed="' + !gen + '" data-action="ts-platform" data-platform="sap">SAP</button>' +
+      '<button type="button" aria-pressed="' + gen + '" data-action="ts-platform" data-platform="generic">Other platform</button></span>' +
+      (gen ? ' <label class="small" for="ts-stack"><strong>Tech stack</strong></label> <select id="ts-stack" data-bind="stack">' +
+        ['<option value="">— select —</option>'].concat(D.stacks.map(function (x) { return '<option' + (s.stack === x ? ' selected' : '') + '>' + esc(x) + '</option>'; })).join('') + '</select>' : '') + '</div>';
+  }
+
   function step1(s) {
     const missing = ui.showErrors ? V.checkMandatory(s).map(function (r) { return r.id; }) : [];
-    const cards = D.typeKeys().map(function (k) {
+    const cards = D.typeKeys(s).map(function (k) {
       const on = s.types.indexOf(k) >= 0;
       return '<button type="button" class="type-card" data-action="toggle-type" data-type="' + k + '" aria-pressed="' + on + '">' +
         '<span class="type-ico">' + icon(k) + '</span><span class="type-name">' + esc(D.types[k].label) + '</span><span class="type-hint">' + esc(D.types[k].hint) + '</span></button>';
@@ -19819,6 +21599,7 @@ window.APB_CONFIG = {
     }).join('');
     return '<h2 class="step-title">' + STEPS[0].title + '</h2>' +
       '<p class="muted">Pick one or more. The main object is added for you; everything after this adapts to your choice.</p>' +
+      platformHtml(s) +
       '<div class="type-grid" role="group" aria-label="Development object">' + cards + '</div>' +
       (missing.indexOf('developmentObject') >= 0 ? '<p class="field-error" role="alert">Pick at least one development object.</p>' : '') +
       '<div class="field"><label for="req">Business requirement <span class="req">required</span></label>' +
@@ -19826,7 +21607,7 @@ window.APB_CONFIG = {
       (missing.indexOf('businessRequirement') >= 0 ? '<p id="req-err" class="field-error" role="alert">Describe what needs to be built (a sentence or two is enough).</p>' : '') + '</div>' +
       '<div class="field narrow"><label for="proj">Project / requirement name <span class="hint">optional · used for the file name</span></label>' +
       '<input id="proj" type="text" data-bind="project.name" value="' + esc(s.project.name) + '" placeholder="e.g. FI AP Vendor Ageing / SD Billing Block Rules"></div>' +
-      '<details class="more"' + detailsAttrs('templates', false) + '><summary>Start from a template</summary><p class="muted small">Templates add object structure only — no made-up business details. Not sure? Use <button type="button" class="link" data-action="examples">Try Example</button>.</p><div class="chips">' + tpls + '</div></details>' +
+      (D.isGeneric(s) ? '' : '<details class="more"' + detailsAttrs('templates', false) + '><summary>Start from a template</summary><p class="muted small">Templates add object structure only — no made-up business details. Not sure? Use <button type="button" class="link" data-action="examples">Try Example</button>.</p><div class="chips">' + tpls + '</div></details>') +
       nav(false, 'Continue');
   }
 
@@ -19855,8 +21636,9 @@ window.APB_CONFIG = {
   }
 
   function typeOptions(selected) {
-    return D.objectGroups.map(function (g) {
-      const items = D.objectTypes.filter(function (t) { return D.objectDef(t).group === g; });
+    const s = S.get();
+    return D.objectGroupsFor(s).map(function (g) {
+      const items = D.objectTypesFor(s).filter(function (t) { return D.objectDef(t).group === g; });
       return '<optgroup label="' + esc(g) + '">' + items.map(function (t) { return '<option' + (t === selected ? ' selected' : '') + '>' + esc(t) + '</option>'; }).join('') + '</optgroup>';
     }).join('');
   }
@@ -19869,7 +21651,7 @@ window.APB_CONFIG = {
   function objectRow(o, i, n) {
     return '<div class="obj-row" role="group" aria-label="Object ' + (i + 1) + '">' +
       '<div class="field"><label for="ot' + i + '">Type</label><select id="ot' + i + '" data-bind="objects.' + i + '.type" data-rerender>' + typeOptions(o.type) + '</select></div>' +
-      '<div class="field"><label for="on' + i + '">Name</label><input id="on' + i + '" type="text" data-bind="objects.' + i + '.name" data-name-check="' + i + '" value="' + esc(o.name) + '" placeholder="e.g. ZSD_BILL_BLOCK" spellcheck="false">' +
+      '<div class="field"><label for="on' + i + '">Name</label><input id="on' + i + '" type="text" data-bind="objects.' + i + '.name" data-name-check="' + i + '" value="' + esc(o.name) + '" placeholder="' + (D.isGeneric(S.get()) ? 'e.g. OpenOrdersApi' : 'e.g. ZSD_BILL_BLOCK') + '" spellcheck="false">' +
       '<span class="name-warn" id="nw' + i + '"' + (namingWarning(o) ? '' : ' hidden') + '>Customer objects normally start with Z, Y or /NAMESPACE/.</span>' + sapBadgeHtml(o) + '</div>' +
       '<div class="field"><label for="os' + i + '">Status</label><select id="os' + i + '" class="status-select" data-status="' + o.status + '" data-status-sel data-bind="objects.' + i + '.status">' + optionsHtml(D.statuses, o.status) + '</select></div>' +
       '<div class="field"><label for="op' + i + '">Purpose</label><input id="op' + i + '" type="text" data-bind="objects.' + i + '.purpose" value="' + esc(o.purpose) + '" placeholder="Short purpose"></div>' +
@@ -19962,7 +21744,10 @@ window.APB_CONFIG = {
 
   /* Key designer fields per object type that dewa-abap needs; empty or [TO BE CONFIRMED] → named in a hint */
   const KEY_FIELDS = { Report: ['selection', 'columns', 'logic'], RFC: ['importing', 'exporting', 'logic'], 'Function Module': ['importing', 'exporting', 'logic'],
-    CDS: ['source', 'elements'], 'Fiori/UI5': ['appType', 'service'], Class: ['methods'], Table: ['fields'], 'BAdI / Enhancement': ['spot', 'logic'], RAP: ['implementation', 'entities'] };
+    CDS: ['source', 'elements'], 'Fiori/UI5': ['appType', 'service'], Class: ['methods'], Table: ['fields'], 'BAdI / Enhancement': ['spot', 'logic'], RAP: ['implementation', 'entities'],
+    // non-SAP components
+    'API Endpoint': ['method', 'path', 'response'], 'Web Screen': ['fields'], 'Data Entity': ['columns'], 'Integration Flow': ['source', 'target', 'mapping'],
+    'Power Automate Flow': ['trigger', 'steps'], 'Power App': ['screens'], 'Scheduled Job': ['schedule', 'logic'], 'Dataverse Table': ['columns'] };
   function readinessGaps(s) {
     const out = [];
     s.objects.filter(function (o) { return (o.status === 'new' || o.status === 'change') && KEY_FIELDS[o.type]; }).forEach(function (o) {
@@ -19991,6 +21776,15 @@ window.APB_CONFIG = {
           '<button type="button" class="btn btn-ghost" data-action="tsd-chat"' + (can ? '' : ' disabled') + '>In Copilot Chat</button>')
       : '<button type="button" class="btn btn-primary" data-action="tsd-copy"' + (n ? '' : ' disabled') + '>✦ Copy prompt</button>';
     const src = s.origin && s.origin.fsText ? 'the functional spec it was made from, ' : '';
+    if (D.isGeneric(s)) {
+      return '<section class="card tsd-card" id="tsd-card" aria-labelledby="h-tsd"><h3 id="h-tsd">Complete the TS with Copilot <span class="hint">empty fields only</span></h3>' +
+        '<p class="muted small">Copilot fills the <strong>empty</strong> designer fields of the new and changed components – logic, request / response, columns, screen fields, mapping, error handling, tests – from ' + src + 'the requirement. It never changes what is filled or the authorization, and table, column and endpoint names it cannot find there are marked <mark>[TO BE CONFIRMED]</mark>. You review it first.</p>' +
+        '<div class="gen-actions">' + run + (n ? '' : '<span class="muted small">No new or changed component with a designer.</span>') + '</div>' +
+        (tsd.error ? '<p class="field-error" role="alert">' + esc(tsd.error) + '</p>' : '') +
+        '<details class="paste"' + detailsAttrs('tsd-paste', false) + '><summary>' + (H.isVscode ? 'Paste an answer instead' : 'Paste the answer') + '</summary>' +
+        '<textarea id="tsd-answer" rows="4" spellcheck="false" aria-label="Answer with the TS completion"></textarea>' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-action="tsd-review">Review the answer</button></details></section>';
+    }
     return '<section class="card tsd-card" id="tsd-card" aria-labelledby="h-tsd"><h3 id="h-tsd">Complete the TS with Copilot <span class="hint">empty fields only</span></h3>' +
       '<p class="muted small">Copilot fills the <strong>empty</strong> designer fields of the new and changed objects – processing logic, output, selection screen, parameters, error handling, tests – from ' + src + 'the requirement and what was read in SAP. It never changes what is filled, never changes the authorization, and SAP names it cannot find in those sources are marked <mark>[TO BE CONFIRMED]</mark>. You review it first.</p>' +
       '<div class="gen-actions">' + run + (n ? '' : '<span class="muted small">No new or changed object with a designer.</span>') + '</div>' +
@@ -20007,7 +21801,7 @@ window.APB_CONFIG = {
     if (tsd.running || sap.running) return;
     const prompt = APB.tsDraft.prompt(s);
     tsd.running = true; tsd.mode = mode; tsd.error = ''; tsd.t0 = Date.now();
-    tsd.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Copilot is completing the TS from ' + (s.origin && s.origin.fsText ? 'the FS, ' : '') + 'the requirement and the SAP facts…';
+    tsd.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Copilot is completing the TS from ' + (s.origin && s.origin.fsText ? 'the FS, ' : '') + (D.isGeneric(s) ? 'and the requirement…' : 'the requirement and the SAP facts…');
     APB.busy.start('tsdraft', mode, function () { actions['tsd-stop'](); });
     auditAdd('ai-input', { job: 'tsdraft', objects: tsdTargets(s).map(function (o) { return o.name || o.type; }).join(', '), fsExtract: s.origin && s.origin.fsText ? s.origin.fsText.length + ' chars' : 'none', promptChars: prompt.length });
     H.post({ type: 'ts-draft', mode: mode, prompt: prompt });
@@ -20099,7 +21893,7 @@ window.APB_CONFIG = {
       '<div id="obj-rows">' + s.objects.map(function (o, i) { return objectRow(o, i, s.objects.length); }).join('') + '</div>' +
       (s.objects.length ? '' : '<p class="empty">No objects yet. Add the tables, CDS views, classes, function modules… Copilot should reuse or create.</p>') +
       '<button type="button" class="btn btn-ghost" data-action="add-object">+ Add Object</button>' +
-      sapCardHtml(s) +
+      (D.isGeneric(s) ? '' : sapCardHtml(s)) +
       '<div id="suggest">' + suggestionsHtml(s) + '</div>' +
       '<h3>Dependency map</h3><p class="muted small">Built from the objects above. Use “used by” to nest an object under the one that uses it.</p>' +
       '<div id="depmap" class="depmap"></div>' +
@@ -20147,27 +21941,28 @@ window.APB_CONFIG = {
     const refs = C.unlistedReferences(s);
     const perfRelevant = D.performanceRelevant(s.types);
     // performance questions only where they matter (or when already answered)
-    const quality = D.quality.filter(function (f) { return !f.perfOnly || perfRelevant || V.isFilled(s.quality[f.id]); });
+    // non-SAP: no SAP clean-core questions
+    const quality = D.qualityFor(s).filter(function (f) { return (!f.perfOnly || perfRelevant || V.isFilled(s.quality[f.id])) && !(D.isGeneric(s) && /^cleanCore/.test(f.id)); });
     const index = s.objects.length ? '<nav class="obj-index" aria-label="Objects">' + s.objects.map(function (o) {
       const done = APB.rap.isDraftTable(s, o) || (D.hasBuilder(o) ? C.detailFilled(o) : true);
       return '<a href="#obj-' + o.id + '" data-action="jump" data-id="' + o.id + '" class="' + (done ? 'ok' : 'todo') + '">' + esc(o.name || o.type) + '</a>';
     }).join('') + '</nav>' : '';
     return '<h2 class="step-title">' + STEPS[3].title + '</h2>' +
-      '<p class="muted">New and changed objects get a full designer (SE11 fields, SE37 parameters, SE24 methods, CDS elements, RAP behavior, CAP model…). For reused objects, just note what you need. Leave anything unknown empty — it becomes an open question, not an invention.</p>' +
+      '<p class="muted">' + (D.isGeneric(s) ? 'New and changed components get a full designer (screen fields, API request / response, table columns, flow steps, integration mapping…).' : 'New and changed objects get a full designer (SE11 fields, SE37 parameters, SE24 methods, CDS elements, RAP behavior, CAP model…).') + ' For reused objects, just note what you need. Leave anything unknown empty — it becomes an open question, not an invention.</p>' +
       index + tsdCardHtml(s) +
       (refs.length ? '<div class="refs" role="note"><strong>Referenced but not in your object list:</strong> ' + refs.map(function (r) {
         return '<button type="button" class="chip" data-action="add-ref" data-type="' + esc(r.type) + '" data-name="' + esc(r.name) + '">+ ' + esc(r.type) + ' ' + esc(r.name) + '</button>';
       }).join(' ') + '</div>' : '') +
       (s.objects.length ? s.objects.map(artifactCard).join('') : '<p class="empty">No objects yet. Add them in <button type="button" class="link" data-action="goto" data-step="3">step 3</button>.</p>') +
-      '<section class="card" aria-labelledby="h-q"><h3 id="h-q">Authorization, testing &amp; clean core</h3>' + fieldsBlock(quality, s.quality, 'quality', { noAdvanced: true }) + '</section>' +
+      '<section class="card" aria-labelledby="h-q"><h3 id="h-q">' + (D.isGeneric(s) ? 'Authorization &amp; testing' : 'Authorization, testing &amp; clean core') + '</h3>' + fieldsBlock(quality, s.quality, 'quality', { noAdvanced: true }) + '</section>' +
       nav(true, 'Continue');
   }
 
   /* Hand the Technical spec to a Copilot agent. mode: all | new (dewa-abap) | change (dewa-abap-change) | fiori (dewa-fiori) | fiori-review (dewa-fiori-review) */
   function handOver(mode) {
     const s = S.get();
-    const agent = { change: 'dewa-abap-change', fiori: 'dewa-fiori', 'fiori-review': 'dewa-fiori-review' }[mode] || 'dewa-abap';
-    const prompt = M.chatPrompt(s, mode === 'all' ? undefined : mode);
+    const agent = { change: 'dewa-abap-change', fiori: 'dewa-fiori', 'fiori-review': 'dewa-fiori-review', generic: 'agent' }[mode] || 'dewa-abap';
+    const prompt = M.chatPrompt(s, mode === 'all' || mode === 'generic' ? undefined : mode);
     auditAdd('export', { to: H.isVscode ? 'Copilot Chat (' + agent + ')' : 'clipboard + VS Code (' + agent + ')', approval: APB.gov.status(s).state });
     if (H.isVscode) {
       H.post({ type: 'open-chat', agent: agent, prompt: prompt });
@@ -20643,6 +22438,21 @@ window.APB_CONFIG = {
       renderMain();
       toast(r.applied.length ? 'Taken over: ' + r.applied.join(', ') + (r.state.objects.some(function (o) { return o.sap; }) ? ' – the current state is shown in step 4' : '') : 'Nothing taken over', 7000);
     },
+    'ts-platform': function (el) {
+      const p = el.dataset.platform === 'generic' ? 'generic' : 'sap';
+      S.update(function (s) {
+        if (p === 'generic') { s.platform = 'generic'; s.stack = s.stack || ''; } else { delete s.platform; delete s.stack; }
+        // an untouched Definition of Done follows the platform
+        const texts = s.dod.map(function (d) { return d.text; }).join('\n');
+        const sapDod = APB.config.definitions.definitionOfDone, genDod = D.genericDod;
+        if (texts === (p === 'generic' ? sapDod : genDod).join('\n')) s.dod = (p === 'generic' ? genDod : sapDod).map(function (t) { return { id: S.uid(), text: t, on: true }; });
+        // development objects of the other platform go; objects already entered stay (step 3)
+        const keep = D.typeKeys(p);
+        s.types = s.types.filter(function (t) { return keep.indexOf(t) >= 0; });
+      });
+      renderMain();
+      toast(p === 'generic' ? 'Other platform – web apps, APIs, databases, Power Platform, integrations and jobs; Copilot agent mode builds it' : 'SAP – ABAP, CDS, RAP, Fiori …');
+    },
     'toggle-type': function (el) {
       const t = el.dataset.type;
       const main = D.types[t].mainObject;
@@ -20710,7 +22520,7 @@ window.APB_CONFIG = {
       }, function () { toast('Could not create a share link – use Copy Markdown instead'); });
     },
     tab: function (el) { setTab(el.dataset.tab); },
-    'add-object': function () { addObject('Table', 'existing'); },
+    'add-object': function () { addObject(D.isGeneric(S.get()) ? 'Data Entity' : 'Table', 'existing'); },
     'add-chip': function (el) { addObject(el.dataset.type, el.dataset.status); },
     'add-ref': function (el) { addObject(el.dataset.type, 'new', el.dataset.name); toast(el.dataset.type + ' ' + el.dataset.name + ' added as new object'); },
     jump: function (el, e) {
@@ -20875,6 +22685,7 @@ window.APB_CONFIG = {
       const gaps = readinessGaps(s);
       if (gaps.length) toast('Before Copilot builds it – still open: ' + gaps.slice(0, 4).join(' · ') + (gaps.length > 4 ? ' …' : '') + '. Copilot will ask about these instead of guessing.', 9000);
       const h = M.handoff(s);
+      if (h.generic) { handOver('generic'); return; }
       // a Fiori app always gets the choice: build it (dewa-fiori) or review it (dewa-fiori-review)
       if (h.agents.length > 1 || h.hasFiori) {
         let n = 0;
@@ -21047,11 +22858,11 @@ window.APB_CONFIG = {
       { g: 'View', i: '◐', t: 'Toggle light / dark theme', run: actions.theme }
     ];
     T.examples().forEach(function (e) { list.push({ g: 'Example', i: e.module, t: e.label, run: function () { loadState(T.example(e.id), 'Example loaded'); } }); });
-    D.typeKeys().forEach(function (k) {
+    D.typeKeys(S.get()).forEach(function (k) {
       const on = S.get().types.indexOf(k) >= 0;
       list.push({ g: 'Build', i: '◇', t: (on ? 'Remove ' : 'Add ') + D.types[k].label, run: function () { actions['toggle-type']({ dataset: { type: k } }); } });
     });
-    D.objectTypes.forEach(function (t) { list.push({ g: 'Object', i: '+', t: 'Add object: ' + t, run: function () { setStep(3); addObject(t, 'new'); } }); });
+    D.objectTypesFor(S.get()).forEach(function (t) { list.push({ g: 'Object', i: '+', t: 'Add object: ' + t, run: function () { setStep(3); addObject(t, 'new'); } }); });
     return list;
   }
 

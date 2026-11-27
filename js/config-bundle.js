@@ -8067,6 +8067,67 @@ window.APB_CONFIG = {
     "label": "Cross-module"
    }
   ],
+  "genericComponents": [
+   {
+    "value": "",
+    "label": "— type —",
+    "code": "X"
+   },
+   {
+    "value": "screen",
+    "label": "Web screen / page",
+    "code": "C",
+    "devType": "G_WEB"
+   },
+   {
+    "value": "api",
+    "label": "API / service",
+    "code": "C",
+    "devType": "G_API"
+   },
+   {
+    "value": "data",
+    "label": "Database table / data model",
+    "code": "C",
+    "devType": "G_DATA"
+   },
+   {
+    "value": "powerapp",
+    "label": "Power App",
+    "code": "C",
+    "devType": "G_POWERAPP"
+   },
+   {
+    "value": "flow",
+    "label": "Power Automate flow",
+    "code": "C",
+    "devType": "G_FLOW"
+   },
+   {
+    "value": "integration",
+    "label": "Integration / interface",
+    "code": "C",
+    "devType": "G_INTEG"
+   },
+   {
+    "value": "job",
+    "label": "Scheduled job",
+    "code": "C",
+    "devType": "G_JOB"
+   },
+   {
+    "value": "export",
+    "label": "Report / export",
+    "code": "C",
+    "devType": "G_WEB"
+   },
+   {
+    "value": "notification",
+    "label": "Notification (e-mail / Teams)",
+    "code": "C",
+    "devType": "G_FLOW"
+   }
+  ],
   "ricefw": [
    {
     "value": "",
@@ -9009,13 +9070,21 @@ window.APB_CONFIG = {
         "id": "type",
         "label": "RICEFW type",
         "kind": "select",
-        "optionsRef": "ricefw"
+        "optionsRef": "ricefw",
+        "generic": {
+         "label": "Component type",
+         "optionsRef": "genericComponents"
+        }
        },
        {
         "id": "name",
         "label": "Proposed object name",
         "kind": "text",
-        "placeholder": "e.g. ZFI_AP_AGEING"
+        "placeholder": "e.g. ZFI_AP_AGEING",
+        "generic": {
+         "label": "Proposed name",
+         "placeholder": "e.g. OpenOrdersApi"
+        }
        },
        {
         "id": "frs",
@@ -9050,17 +9119,30 @@ window.APB_CONFIG = {
         "id": "description",
         "label": "What it does",
         "kind": "textarea",
-        "placeholder": "e.g. Executable report with selection by company code, vendor and key date; ALV output per vendor with one column per bucket."
+        "placeholder": "e.g. Executable report with selection by company code, vendor and key date; ALV output per vendor with one column per bucket.",
+        "generic": {
+         "placeholder": "e.g. REST endpoint that returns open orders per sales organization for the portal; paging 50."
+        }
        },
        {
         "id": "existing",
         "label": "Existing objects / enhancement spots to use",
         "kind": "text",
         "list": "ds-obj",
-        "placeholder": "e.g. BSIK, LFA1, BAdI FI_ITEMS_CH_DATA"
+        "placeholder": "e.g. BSIK, LFA1, BAdI FI_ITEMS_CH_DATA",
+        "generic": {
+         "label": "Existing systems / components to use",
+         "placeholder": "e.g. Orders database, Customer API",
+         "list": ""
+        }
        }
       ],
-      "sapOnly": true
+      "hideTbd": true,
+      "generic": {
+       "label": "Solution components",
+       "itemLabel": "Component",
+       "hint": "One per piece to build: web screen, API, database table, Power App, flow, integration, job … – each becomes a Technical spec."
+      }
      },
      {
       "id": "roles",
@@ -11591,5 +11673,1437 @@ window.APB_CONFIG = {
     ]
    }
   ]
+ },
+ "generic": {
+  "version": 1,
+  "stacks": [
+   ".NET (C# / ASP.NET Core)",
+   "Java (Spring Boot)",
+   "Power Platform (Power Apps / Power Automate / Dataverse)",
+   "Azure Integration (Logic Apps / Functions / Service Bus)",
+   "MuleSoft",
+   "SAP BTP Integration Suite",
+   "Other"
+  ],
+  "devTypes": {
+   "G_WEB": {
+    "label": "Web application",
+    "hint": ".NET / Java screens",
+    "mainObject": [
+     "Web Screen",
+     "API Endpoint",
+     "Data Entity"
+    ],
+    "performance": true,
+    "platform": "generic"
+   },
+   "G_API": {
+    "label": "API / service",
+    "hint": "REST endpoints",
+    "mainObject": [
+     "API Endpoint"
+    ],
+    "performance": true,
+    "platform": "generic"
+   },
+   "G_DATA": {
+    "label": "Database",
+    "hint": "Tables / data model",
+    "mainObject": [
+     "Data Entity"
+    ],
+    "performance": true,
+    "platform": "generic"
+   },
+   "G_POWERAPP": {
+    "label": "Power App",
+    "hint": "Canvas / model-driven",
+    "mainObject": [
+     "Power App"
+    ],
+    "performance": false,
+    "platform": "generic"
+   },
+   "G_FLOW": {
+    "label": "Power Automate flow",
+    "hint": "Automation",
+    "mainObject": [
+     "Power Automate Flow"
+    ],
+    "performance": false,
+    "platform": "generic"
+   },
+   "G_INTEG": {
+    "label": "Integration",
+    "hint": "Interfaces / middleware",
+    "mainObject": [
+     "Integration Flow"
+    ],
+    "performance": true,
+    "platform": "generic"
+   },
+   "G_JOB": {
+    "label": "Scheduled job",
+    "hint": "Batch / timer",
+    "mainObject": [
+     "Scheduled Job"
+    ],
+    "performance": true,
+    "platform": "generic"
+   }
+  },
+  "objectTypes": {
+   "Web Screen": {
+    "group": "Application",
+    "tcode": "Web UI",
+    "abapNaming": false,
+    "usedHint": "Screen / page you reuse",
+    "fields": [
+     {
+      "id": "route",
+      "label": "Route / URL",
+      "kind": "text",
+      "placeholder": "e.g. /orders/open"
+     },
+     {
+      "id": "purpose",
+      "label": "Purpose",
+      "kind": "text",
+      "placeholder": "What the user does on this screen",
+      "ask": "Screen purpose"
+     },
+     {
+      "id": "screenType",
+      "label": "Screen type",
+      "kind": "select",
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "List / search",
+        "label": "List / search"
+       },
+       {
+        "value": "Detail / form",
+        "label": "Detail / form"
+       },
+       {
+        "value": "Create / edit form",
+        "label": "Create / edit form"
+       },
+       {
+        "value": "Dashboard",
+        "label": "Dashboard"
+       },
+       {
+        "value": "Wizard",
+        "label": "Wizard"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "fields",
+      "label": "Fields",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "field",
+        "label": "Field",
+        "kind": "text",
+        "w": 150
+       },
+       {
+        "id": "label",
+        "label": "Label",
+        "kind": "text",
+        "w": 140
+       },
+       {
+        "id": "type",
+        "label": "Type",
+        "kind": "select",
+        "w": 100,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "string",
+          "label": "string"
+         },
+         {
+          "value": "integer",
+          "label": "integer"
+         },
+         {
+          "value": "decimal",
+          "label": "decimal"
+         },
+         {
+          "value": "boolean",
+          "label": "boolean"
+         },
+         {
+          "value": "date",
+          "label": "date"
+         },
+         {
+          "value": "datetime",
+          "label": "datetime"
+         },
+         {
+          "value": "guid",
+          "label": "guid"
+         },
+         {
+          "value": "enum",
+          "label": "enum"
+         },
+         {
+          "value": "object",
+          "label": "object"
+         },
+         {
+          "value": "array",
+          "label": "array"
+         },
+         {
+          "value": "file",
+          "label": "file"
+         }
+        ]
+       },
+       {
+        "id": "mandatory",
+        "label": "Mandatory",
+        "kind": "check",
+        "w": 75
+       },
+       {
+        "id": "validation",
+        "label": "Validation / format",
+        "kind": "text",
+        "w": 180
+       },
+       {
+        "id": "source",
+        "label": "Source (entity.field / API)",
+        "kind": "text",
+        "w": 170
+       }
+      ],
+      "addLabel": "+ Field"
+     },
+     {
+      "id": "actions",
+      "label": "Actions",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "action",
+        "label": "Action / button",
+        "kind": "text",
+        "w": 150
+       },
+       {
+        "id": "does",
+        "label": "What happens",
+        "kind": "text",
+        "w": 280
+       },
+       {
+        "id": "confirm",
+        "label": "Confirm first",
+        "kind": "check",
+        "w": 75
+       },
+       {
+        "id": "roles",
+        "label": "Allowed roles",
+        "kind": "text",
+        "w": 140
+       }
+      ],
+      "addLabel": "+ Action"
+     },
+     {
+      "id": "navigation",
+      "label": "Navigation",
+      "kind": "lines",
+      "placeholder": "e.g. Row click → /orders/{id}"
+     },
+     {
+      "id": "messages",
+      "label": "Messages and empty states",
+      "kind": "lines",
+      "placeholder": "e.g. No open orders found"
+     }
+    ],
+    "platform": "generic"
+   },
+   "API Endpoint": {
+    "group": "Application",
+    "tcode": "API",
+    "abapNaming": false,
+    "usedHint": "Endpoint you call",
+    "fields": [
+     {
+      "id": "method",
+      "label": "HTTP method",
+      "kind": "select",
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "GET",
+        "label": "GET"
+       },
+       {
+        "value": "POST",
+        "label": "POST"
+       },
+       {
+        "value": "PUT",
+        "label": "PUT"
+       },
+       {
+        "value": "PATCH",
+        "label": "PATCH"
+       },
+       {
+        "value": "DELETE",
+        "label": "DELETE"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "path",
+      "label": "Path",
+      "kind": "text",
+      "placeholder": "e.g. /api/v1/orders/open",
+      "ask": "Endpoint path"
+     },
+     {
+      "id": "purpose",
+      "label": "Purpose",
+      "kind": "text",
+      "placeholder": "What it does"
+     },
+     {
+      "id": "request",
+      "label": "Request parameters / body",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "name",
+        "label": "Name",
+        "kind": "text",
+        "w": 140
+       },
+       {
+        "id": "in",
+        "label": "In",
+        "kind": "select",
+        "w": 90,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "path",
+          "label": "path"
+         },
+         {
+          "value": "query",
+          "label": "query"
+         },
+         {
+          "value": "header",
+          "label": "header"
+         },
+         {
+          "value": "body",
+          "label": "body"
+         }
+        ]
+       },
+       {
+        "id": "type",
+        "label": "Type",
+        "kind": "select",
+        "w": 100,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "string",
+          "label": "string"
+         },
+         {
+          "value": "integer",
+          "label": "integer"
+         },
+         {
+          "value": "decimal",
+          "label": "decimal"
+         },
+         {
+          "value": "boolean",
+          "label": "boolean"
+         },
+         {
+          "value": "date",
+          "label": "date"
+         },
+         {
+          "value": "datetime",
+          "label": "datetime"
+         },
+         {
+          "value": "guid",
+          "label": "guid"
+         },
+         {
+          "value": "enum",
+          "label": "enum"
+         },
+         {
+          "value": "object",
+          "label": "object"
+         },
+         {
+          "value": "array",
+          "label": "array"
+         },
+         {
+          "value": "file",
+          "label": "file"
+         }
+        ]
+       },
+       {
+        "id": "required",
+        "label": "Required",
+        "kind": "check",
+        "w": 70
+       },
+       {
+        "id": "validation",
+        "label": "Validation",
+        "kind": "text",
+        "w": 200
+       },
+       {
+        "id": "source",
+        "label": "Source (FS field)",
+        "kind": "text",
+        "w": 150
+       }
+      ],
+      "addLabel": "+ Parameter"
+     },
+     {
+      "id": "response",
+      "label": "Response fields",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "name",
+        "label": "Name",
+        "kind": "text",
+        "w": 150
+       },
+       {
+        "id": "type",
+        "label": "Type",
+        "kind": "select",
+        "w": 100,
+        "options": [
+         {
+          "value": "",
+          "label": ""
+         },
+         {
+          "value": "string",
+          "label": "string"
+         },
+         {
+          "value": "integer",
+          "label": "integer"
+         },
+         {
+          "value": "decimal",
+          "label": "decimal"
+         },
+         {
+          "value": "boolean",
+          "label": "boolean"
+         },
+         {
+          "value": "date",
+          "label": "date"
+         },
+         {
+          "value": "datetime",
+          "label": "datetime"
+         },
+         {
+          "value": "guid",
+          "label": "guid"
+         },
+         {
+          "value": "enum",
+          "label": "enum"
+         },
+         {
+          "value": "object",
+          "label": "object"
+         },
+         {
+          "value": "array",
+          "label": "array"
+         },
+         {
+          "value": "file",
+          "label": "file"
+         }
+        ]
+       },
+       {
+        "id": "description",
+        "label": "Description",
+        "kind": "text",
+        "w": 240
+       },
+       {
+        "id": "source",
+        "label": "Source (entity.field)",
+        "kind": "text",
+        "w": 170
+       }
+      ],
+      "addLabel": "+ Field"
+     },
+     {
+      "id": "errors",
+      "label": "Status / error codes",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "code",
+        "label": "Code",
+        "kind": "text",
+        "w": 70
+       },
+       {
+        "id": "when",
+        "label": "When",
+        "kind": "text",
+        "w": 260
+       },
+       {
+        "id": "body",
+        "label": "Response body / message",
+        "kind": "text",
+        "w": 220
+       }
+      ],
+      "addLabel": "+ Code"
+     },
+     {
+      "id": "auth",
+      "label": "Authentication",
+      "kind": "select",
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "Azure AD / Entra ID (OAuth 2.0)",
+        "label": "Azure AD / Entra ID (OAuth 2.0)"
+       },
+       {
+        "value": "API key (gateway)",
+        "label": "API key (gateway)"
+       },
+       {
+        "value": "Mutual TLS",
+        "label": "Mutual TLS"
+       },
+       {
+        "value": "Basic (internal only)",
+        "label": "Basic (internal only)"
+       },
+       {
+        "value": "None (public)",
+        "label": "None (public)"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "authorization",
+      "label": "Authorization (roles / scopes)",
+      "kind": "text",
+      "placeholder": "e.g. Orders.Read"
+     },
+     {
+      "id": "logic",
+      "label": "Processing logic",
+      "kind": "textarea",
+      "placeholder": "Steps in order"
+     },
+     {
+      "id": "paging",
+      "label": "Paging / limits",
+      "kind": "text",
+      "placeholder": "e.g. page size 50, max 500"
+     },
+     {
+      "id": "idempotency",
+      "label": "Idempotency",
+      "kind": "text",
+      "placeholder": "e.g. Idempotency-Key header for POST"
+     }
+    ],
+    "platform": "generic"
+   },
+   "Data Entity": {
+    "group": "Data",
+    "tcode": "Database",
+    "abapNaming": false,
+    "usedHint": "Table / entity you read",
+    "fields": [
+     {
+      "id": "table",
+      "label": "Table / entity name",
+      "kind": "text",
+      "placeholder": "e.g. dbo.SalesOrder",
+      "ask": "Table name"
+     },
+     {
+      "id": "description",
+      "label": "Description",
+      "kind": "text"
+     },
+     {
+      "id": "database",
+      "label": "Database",
+      "kind": "select",
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "SQL Server / Azure SQL",
+        "label": "SQL Server / Azure SQL"
+       },
+       {
+        "value": "Oracle",
+        "label": "Oracle"
+       },
+       {
+        "value": "PostgreSQL",
+        "label": "PostgreSQL"
+       },
+       {
+        "value": "Dataverse",
+        "label": "Dataverse"
+       },
+       {
+        "value": "Cosmos DB",
+        "label": "Cosmos DB"
+       },
+       {
+        "value": "Other",
+        "label": "Other"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "columns",
+      "label": "Columns",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "name",
+        "label": "Column",
+        "kind": "text",
+        "w": 140
+       },
+       {
+        "id": "type",
+        "label": "Type",
+        "kind": "text",
+        "w": 110
+       },
+       {
+        "id": "length",
+        "label": "Length",
+        "kind": "text",
+        "w": 60
+       },
+       {
+        "id": "nullable",
+        "label": "Nullable",
+        "kind": "check",
+        "w": 70
+       },
+       {
+        "id": "key",
+        "label": "Key",
+        "kind": "check",
+        "w": 50
+       },
+       {
+        "id": "default",
+        "label": "Default",
+        "kind": "text",
+        "w": 90
+       },
+       {
+        "id": "description",
+        "label": "Description",
+        "kind": "text",
+        "w": 200
+       }
+      ],
+      "addLabel": "+ Column"
+     },
+     {
+      "id": "indexes",
+      "label": "Indexes",
+      "kind": "lines",
+      "placeholder": "e.g. IX_SalesOrder_Org (SalesOrg, OrderDate)"
+     },
+     {
+      "id": "relations",
+      "label": "Relations",
+      "kind": "lines",
+      "placeholder": "e.g. SalesOrder.CustomerId → Customer.Id"
+     },
+     {
+      "id": "retention",
+      "label": "Retention / archiving",
+      "kind": "text",
+      "placeholder": "e.g. 7 years, then archive"
+     },
+     {
+      "id": "personalData",
+      "label": "Personal data",
+      "kind": "text",
+      "placeholder": "Which columns hold personal data"
+     }
+    ],
+    "platform": "generic"
+   },
+   "Service / Component": {
+    "group": "Application",
+    "tcode": "Code",
+    "abapNaming": false,
+    "usedHint": "Service / library you call",
+    "fields": [
+     {
+      "id": "purpose",
+      "label": "Purpose",
+      "kind": "text"
+     },
+     {
+      "id": "location",
+      "label": "Project / namespace",
+      "kind": "text",
+      "placeholder": "e.g. Dewa.Orders.Services"
+     },
+     {
+      "id": "operations",
+      "label": "Operations",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "name",
+        "label": "Operation",
+        "kind": "text",
+        "w": 150
+       },
+       {
+        "id": "input",
+        "label": "Input",
+        "kind": "text",
+        "w": 170
+       },
+       {
+        "id": "output",
+        "label": "Output",
+        "kind": "text",
+        "w": 170
+       },
+       {
+        "id": "logic",
+        "label": "Logic",
+        "kind": "text",
+        "w": 260
+       }
+      ],
+      "addLabel": "+ Operation"
+     },
+     {
+      "id": "dependencies",
+      "label": "Dependencies",
+      "kind": "lines",
+      "placeholder": "Other services, APIs, packages"
+     },
+     {
+      "id": "errorHandling",
+      "label": "Error handling",
+      "kind": "textarea"
+     }
+    ],
+    "platform": "generic"
+   },
+   "Power App": {
+    "group": "Power Platform",
+    "tcode": "Power Apps",
+    "abapNaming": false,
+    "usedHint": "App you reuse",
+    "fields": [
+     {
+      "id": "appType",
+      "label": "App type",
+      "kind": "select",
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "Canvas app",
+        "label": "Canvas app"
+       },
+       {
+        "value": "Model-driven app",
+        "label": "Model-driven app"
+       },
+       {
+        "value": "Power Pages site",
+        "label": "Power Pages site"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "environment",
+      "label": "Environment",
+      "kind": "text",
+      "placeholder": "e.g. DEWA-Prod / DEWA-Test"
+     },
+     {
+      "id": "screens",
+      "label": "Screens",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "name",
+        "label": "Screen",
+        "kind": "text",
+        "w": 140
+       },
+       {
+        "id": "purpose",
+        "label": "Purpose",
+        "kind": "text",
+        "w": 200
+       },
+       {
+        "id": "controls",
+        "label": "Main controls",
+        "kind": "text",
+        "w": 200
+       },
+       {
+        "id": "data",
+        "label": "Data source / filter",
+        "kind": "text",
+        "w": 200
+       }
+      ],
+      "addLabel": "+ Screen"
+     },
+     {
+      "id": "dataSources",
+      "label": "Data sources / connectors",
+      "kind": "lines",
+      "placeholder": "e.g. Dataverse: Orders; SharePoint list: Approvals"
+     },
+     {
+      "id": "formulas",
+      "label": "Key formulas / behaviour",
+      "kind": "lines",
+      "placeholder": "e.g. Submit: Patch(Orders, …)"
+     },
+     {
+      "id": "delegation",
+      "label": "Delegation limits",
+      "kind": "text",
+      "placeholder": "e.g. filter server-side; > 2000 rows"
+     },
+     {
+      "id": "securityRoles",
+      "label": "Security roles / sharing",
+      "kind": "text",
+      "placeholder": "e.g. Orders Approver"
+     }
+    ],
+    "platform": "generic"
+   },
+   "Power Automate Flow": {
+    "group": "Power Platform",
+    "tcode": "Power Automate",
+    "abapNaming": false,
+    "usedHint": "Flow you call",
+    "fields": [
+     {
+      "id": "flowType",
+      "label": "Flow type",
+      "kind": "select",
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "Automated (trigger)",
+        "label": "Automated (trigger)"
+       },
+       {
+        "value": "Instant (button / app)",
+        "label": "Instant (button / app)"
+       },
+       {
+        "value": "Scheduled",
+        "label": "Scheduled"
+       },
+       {
+        "value": "Desktop (RPA)",
+        "label": "Desktop (RPA)"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "trigger",
+      "label": "Trigger",
+      "kind": "text",
+      "placeholder": "e.g. When an item is created in Orders",
+      "ask": "Trigger"
+     },
+     {
+      "id": "steps",
+      "label": "Steps",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "step",
+        "label": "Step",
+        "kind": "text",
+        "w": 60
+       },
+       {
+        "id": "action",
+        "label": "Action",
+        "kind": "text",
+        "w": 200
+       },
+       {
+        "id": "connector",
+        "label": "Connector",
+        "kind": "text",
+        "w": 150
+       },
+       {
+        "id": "notes",
+        "label": "Notes / condition",
+        "kind": "text",
+        "w": 240
+       }
+      ],
+      "addLabel": "+ Step"
+     },
+     {
+      "id": "connections",
+      "label": "Connections",
+      "kind": "lines",
+      "placeholder": "Connector – account / connection reference"
+     },
+     {
+      "id": "runAs",
+      "label": "Runs as",
+      "kind": "text",
+      "placeholder": "e.g. service account svc-flow-orders"
+     },
+     {
+      "id": "errorHandling",
+      "label": "Error handling / retry",
+      "kind": "textarea",
+      "placeholder": "Scope try/catch, retry policy, notify on failure"
+     }
+    ],
+    "platform": "generic"
+   },
+   "Dataverse Table": {
+    "group": "Power Platform",
+    "tcode": "Dataverse",
+    "abapNaming": false,
+    "usedHint": "Table you read",
+    "fields": [
+     {
+      "id": "table",
+      "label": "Table (logical name)",
+      "kind": "text",
+      "placeholder": "e.g. dewa_order"
+     },
+     {
+      "id": "description",
+      "label": "Description",
+      "kind": "text"
+     },
+     {
+      "id": "columns",
+      "label": "Columns",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "name",
+        "label": "Column",
+        "kind": "text",
+        "w": 140
+       },
+       {
+        "id": "type",
+        "label": "Type",
+        "kind": "text",
+        "w": 120
+       },
+       {
+        "id": "required",
+        "label": "Required",
+        "kind": "check",
+        "w": 70
+       },
+       {
+        "id": "description",
+        "label": "Description",
+        "kind": "text",
+        "w": 240
+       }
+      ],
+      "addLabel": "+ Column"
+     },
+     {
+      "id": "relationships",
+      "label": "Relationships",
+      "kind": "lines",
+      "placeholder": "e.g. dewa_order → account (N:1)"
+     },
+     {
+      "id": "securityRoles",
+      "label": "Security roles",
+      "kind": "lines",
+      "placeholder": "Role – privileges"
+     }
+    ],
+    "platform": "generic"
+   },
+   "Integration Flow": {
+    "group": "Integration & jobs",
+    "tcode": "Integration",
+    "abapNaming": false,
+    "usedHint": "Interface you reuse",
+    "fields": [
+     {
+      "id": "source",
+      "label": "Source system",
+      "kind": "text",
+      "placeholder": "e.g. SAP S/4HANA (OData)",
+      "ask": "Source"
+     },
+     {
+      "id": "target",
+      "label": "Target system",
+      "kind": "text",
+      "placeholder": "e.g. Customer portal API",
+      "ask": "Target"
+     },
+     {
+      "id": "pattern",
+      "label": "Pattern",
+      "kind": "select",
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "Request / reply (sync)",
+        "label": "Request / reply (sync)"
+       },
+       {
+        "value": "Fire and forget (async)",
+        "label": "Fire and forget (async)"
+       },
+       {
+        "value": "Publish / subscribe",
+        "label": "Publish / subscribe"
+       },
+       {
+        "value": "Batch file",
+        "label": "Batch file"
+       },
+       {
+        "value": "Polling",
+        "label": "Polling"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "protocol",
+      "label": "Protocol",
+      "kind": "select",
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "HTTPS / REST",
+        "label": "HTTPS / REST"
+       },
+       {
+        "value": "SOAP",
+        "label": "SOAP"
+       },
+       {
+        "value": "SFTP",
+        "label": "SFTP"
+       },
+       {
+        "value": "AMQP / Service Bus",
+        "label": "AMQP / Service Bus"
+       },
+       {
+        "value": "Kafka",
+        "label": "Kafka"
+       },
+       {
+        "value": "Database",
+        "label": "Database"
+       },
+       {
+        "value": "Other",
+        "label": "Other"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "format",
+      "label": "Message format",
+      "kind": "text",
+      "placeholder": "e.g. JSON, schema OrderV1"
+     },
+     {
+      "id": "mapping",
+      "label": "Field mapping",
+      "kind": "grid",
+      "columns": [
+       {
+        "id": "source",
+        "label": "Source field",
+        "kind": "text",
+        "w": 170
+       },
+       {
+        "id": "target",
+        "label": "Target field",
+        "kind": "text",
+        "w": 170
+       },
+       {
+        "id": "rule",
+        "label": "Rule / transformation",
+        "kind": "text",
+        "w": 260
+       }
+      ],
+      "addLabel": "+ Mapping"
+     },
+     {
+      "id": "trigger",
+      "label": "Trigger / schedule",
+      "kind": "text",
+      "placeholder": "e.g. on event OrderCreated; every 15 min"
+     },
+     {
+      "id": "errorHandling",
+      "label": "Error handling / retry / dead-letter",
+      "kind": "textarea"
+     },
+     {
+      "id": "monitoring",
+      "label": "Monitoring / alerting",
+      "kind": "text"
+     },
+     {
+      "id": "idempotency",
+      "label": "Idempotency / duplicates",
+      "kind": "text"
+     },
+     {
+      "id": "volume",
+      "label": "Volume",
+      "kind": "text",
+      "placeholder": "e.g. 5 000 messages per day"
+     }
+    ],
+    "platform": "generic"
+   },
+   "Scheduled Job": {
+    "group": "Integration & jobs",
+    "tcode": "Job",
+    "abapNaming": false,
+    "usedHint": "Job you reuse",
+    "fields": [
+     {
+      "id": "schedule",
+      "label": "Schedule",
+      "kind": "text",
+      "placeholder": "e.g. daily 02:00 GST (cron 0 2 * * *)",
+      "ask": "Schedule"
+     },
+     {
+      "id": "host",
+      "label": "Runs on",
+      "kind": "text",
+      "placeholder": "e.g. Azure Function (timer), Windows service, Hangfire"
+     },
+     {
+      "id": "inputs",
+      "label": "Inputs",
+      "kind": "lines"
+     },
+     {
+      "id": "logic",
+      "label": "Processing logic",
+      "kind": "textarea",
+      "placeholder": "Steps in order"
+     },
+     {
+      "id": "outputs",
+      "label": "Outputs",
+      "kind": "lines"
+     },
+     {
+      "id": "errorHandling",
+      "label": "Error handling / restart",
+      "kind": "textarea"
+     }
+    ],
+    "platform": "generic"
+   },
+   "Notification": {
+    "group": "Integration & jobs",
+    "tcode": "Notify",
+    "abapNaming": false,
+    "usedHint": "",
+    "fields": [
+     {
+      "id": "channel",
+      "label": "Channel",
+      "kind": "select",
+      "options": [
+       {
+        "value": "",
+        "label": "— select —"
+       },
+       {
+        "value": "E-mail",
+        "label": "E-mail"
+       },
+       {
+        "value": "Microsoft Teams",
+        "label": "Microsoft Teams"
+       },
+       {
+        "value": "SMS",
+        "label": "SMS"
+       },
+       {
+        "value": "Push",
+        "label": "Push"
+       },
+       {
+        "value": "tbc",
+        "label": "To Be Confirmed"
+       }
+      ]
+     },
+     {
+      "id": "trigger",
+      "label": "Trigger",
+      "kind": "text"
+     },
+     {
+      "id": "recipients",
+      "label": "Recipients",
+      "kind": "text"
+     },
+     {
+      "id": "subject",
+      "label": "Subject / title",
+      "kind": "text"
+     },
+     {
+      "id": "body",
+      "label": "Content",
+      "kind": "textarea",
+      "placeholder": "Text with placeholders, e.g. {OrderNo}"
+     }
+    ],
+    "platform": "generic"
+   },
+   "External System": {
+    "group": "Integration & jobs",
+    "tcode": "",
+    "abapNaming": false,
+    "usedHint": "What you use from it",
+    "fields": [],
+    "platform": "generic"
+   }
+  },
+  "objectGroups": [
+   "Application",
+   "Data",
+   "Power Platform",
+   "Integration & jobs"
+  ],
+  "components": [
+   {
+    "value": "",
+    "label": "— type —",
+    "code": "X"
+   },
+   {
+    "value": "screen",
+    "label": "Web screen / page",
+    "code": "C",
+    "devType": "G_WEB"
+   },
+   {
+    "value": "api",
+    "label": "API / service",
+    "code": "C",
+    "devType": "G_API"
+   },
+   {
+    "value": "data",
+    "label": "Database table / data model",
+    "code": "C",
+    "devType": "G_DATA"
+   },
+   {
+    "value": "powerapp",
+    "label": "Power App",
+    "code": "C",
+    "devType": "G_POWERAPP"
+   },
+   {
+    "value": "flow",
+    "label": "Power Automate flow",
+    "code": "C",
+    "devType": "G_FLOW"
+   },
+   {
+    "value": "integration",
+    "label": "Integration / interface",
+    "code": "C",
+    "devType": "G_INTEG"
+   },
+   {
+    "value": "job",
+    "label": "Scheduled job",
+    "code": "C",
+    "devType": "G_JOB"
+   },
+   {
+    "value": "export",
+    "label": "Report / export",
+    "code": "C",
+    "devType": "G_WEB"
+   },
+   {
+    "value": "notification",
+    "label": "Notification (e-mail / Teams)",
+    "code": "C",
+    "devType": "G_FLOW"
+   }
+  ],
+  "definitionOfDone": [
+   "Implementation completed in the repository (pull request merged)",
+   "Build and static analysis clean (linter / analyzers, no critical findings)",
+   "Security checks passed (input validation, no secrets in code, dependency scan)",
+   "Authorization implemented as specified",
+   "Error handling and logging implemented",
+   "Automated tests (unit / integration) completed and passing",
+   "Acceptance criteria passed",
+   "Deployed to the test environment through the pipeline",
+   "Technical documentation updated (README / API description)"
+  ],
+  "quality": {
+   "authChecks": {
+    "label": "Authorization (roles / scopes)"
+   },
+   "testTypes": {
+    "options": {
+     "Unit": "Unit test"
+    }
+   }
+  }
  }
 };

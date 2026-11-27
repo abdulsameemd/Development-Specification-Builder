@@ -36,7 +36,15 @@
     ENH: '<path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/>',
     ODATA: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3z"/>',
     FIORI: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>',
-    FORM: '<path d="M6 9V3h12v6M6 18H4v-7h16v7h-2M7 14h10v7H7z"/>'
+    FORM: '<path d="M6 9V3h12v6M6 18H4v-7h16v7h-2M7 14h10v7H7z"/>',
+    // non-SAP (generic) platform
+    G_WEB: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 6.5h.01M10 6.5h.01"/>',
+    G_API: '<path d="M8 7 3 12l5 5M16 7l5 5-5 5M14 4l-4 16"/>',
+    G_DATA: '<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+    G_POWERAPP: '<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M10 18h4"/>',
+    G_FLOW: '<circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="12" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M8.5 6H12a3 3 0 0 1 3 3v.5M8.5 18H12a3 3 0 0 0 3-3v-.5"/>',
+    G_INTEG: '<path d="M4 8h13l-3-3M20 16H7l3 3"/>',
+    G_JOB: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/>'
   };
   function icon(k) { return '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[k] || ICONS.REPORT) + '</svg>'; }
 
@@ -213,9 +221,19 @@
       '<button type="button" class="btn btn-primary" data-action="next">' + nextLabel + ' <span aria-hidden="true">→</span></button></div>';
   }
 
+  /* SAP (default) or a non-SAP platform: decides the development objects, designers and the Copilot hand-off */
+  function platformHtml(s) {
+    const gen = D.isGeneric(s);
+    return '<div class="ts-platform"><span class="small"><strong>Platform</strong></span> <span class="seg" role="group" aria-label="Platform">' +
+      '<button type="button" aria-pressed="' + !gen + '" data-action="ts-platform" data-platform="sap">SAP</button>' +
+      '<button type="button" aria-pressed="' + gen + '" data-action="ts-platform" data-platform="generic">Other platform</button></span>' +
+      (gen ? ' <label class="small" for="ts-stack"><strong>Tech stack</strong></label> <select id="ts-stack" data-bind="stack">' +
+        ['<option value="">— select —</option>'].concat(D.stacks.map(function (x) { return '<option' + (s.stack === x ? ' selected' : '') + '>' + esc(x) + '</option>'; })).join('') + '</select>' : '') + '</div>';
+  }
+
   function step1(s) {
     const missing = ui.showErrors ? V.checkMandatory(s).map(function (r) { return r.id; }) : [];
-    const cards = D.typeKeys().map(function (k) {
+    const cards = D.typeKeys(s).map(function (k) {
       const on = s.types.indexOf(k) >= 0;
       return '<button type="button" class="type-card" data-action="toggle-type" data-type="' + k + '" aria-pressed="' + on + '">' +
         '<span class="type-ico">' + icon(k) + '</span><span class="type-name">' + esc(D.types[k].label) + '</span><span class="type-hint">' + esc(D.types[k].hint) + '</span></button>';
@@ -225,6 +243,7 @@
     }).join('');
     return '<h2 class="step-title">' + STEPS[0].title + '</h2>' +
       '<p class="muted">Pick one or more. The main object is added for you; everything after this adapts to your choice.</p>' +
+      platformHtml(s) +
       '<div class="type-grid" role="group" aria-label="Development object">' + cards + '</div>' +
       (missing.indexOf('developmentObject') >= 0 ? '<p class="field-error" role="alert">Pick at least one development object.</p>' : '') +
       '<div class="field"><label for="req">Business requirement <span class="req">required</span></label>' +
@@ -232,7 +251,7 @@
       (missing.indexOf('businessRequirement') >= 0 ? '<p id="req-err" class="field-error" role="alert">Describe what needs to be built (a sentence or two is enough).</p>' : '') + '</div>' +
       '<div class="field narrow"><label for="proj">Project / requirement name <span class="hint">optional · used for the file name</span></label>' +
       '<input id="proj" type="text" data-bind="project.name" value="' + esc(s.project.name) + '" placeholder="e.g. FI AP Vendor Ageing / SD Billing Block Rules"></div>' +
-      '<details class="more"' + detailsAttrs('templates', false) + '><summary>Start from a template</summary><p class="muted small">Templates add object structure only — no made-up business details. Not sure? Use <button type="button" class="link" data-action="examples">Try Example</button>.</p><div class="chips">' + tpls + '</div></details>' +
+      (D.isGeneric(s) ? '' : '<details class="more"' + detailsAttrs('templates', false) + '><summary>Start from a template</summary><p class="muted small">Templates add object structure only — no made-up business details. Not sure? Use <button type="button" class="link" data-action="examples">Try Example</button>.</p><div class="chips">' + tpls + '</div></details>') +
       nav(false, 'Continue');
   }
 
@@ -261,8 +280,9 @@
   }
 
   function typeOptions(selected) {
-    return D.objectGroups.map(function (g) {
-      const items = D.objectTypes.filter(function (t) { return D.objectDef(t).group === g; });
+    const s = S.get();
+    return D.objectGroupsFor(s).map(function (g) {
+      const items = D.objectTypesFor(s).filter(function (t) { return D.objectDef(t).group === g; });
       return '<optgroup label="' + esc(g) + '">' + items.map(function (t) { return '<option' + (t === selected ? ' selected' : '') + '>' + esc(t) + '</option>'; }).join('') + '</optgroup>';
     }).join('');
   }
@@ -275,7 +295,7 @@
   function objectRow(o, i, n) {
     return '<div class="obj-row" role="group" aria-label="Object ' + (i + 1) + '">' +
       '<div class="field"><label for="ot' + i + '">Type</label><select id="ot' + i + '" data-bind="objects.' + i + '.type" data-rerender>' + typeOptions(o.type) + '</select></div>' +
-      '<div class="field"><label for="on' + i + '">Name</label><input id="on' + i + '" type="text" data-bind="objects.' + i + '.name" data-name-check="' + i + '" value="' + esc(o.name) + '" placeholder="e.g. ZSD_BILL_BLOCK" spellcheck="false">' +
+      '<div class="field"><label for="on' + i + '">Name</label><input id="on' + i + '" type="text" data-bind="objects.' + i + '.name" data-name-check="' + i + '" value="' + esc(o.name) + '" placeholder="' + (D.isGeneric(S.get()) ? 'e.g. OpenOrdersApi' : 'e.g. ZSD_BILL_BLOCK') + '" spellcheck="false">' +
       '<span class="name-warn" id="nw' + i + '"' + (namingWarning(o) ? '' : ' hidden') + '>Customer objects normally start with Z, Y or /NAMESPACE/.</span>' + sapBadgeHtml(o) + '</div>' +
       '<div class="field"><label for="os' + i + '">Status</label><select id="os' + i + '" class="status-select" data-status="' + o.status + '" data-status-sel data-bind="objects.' + i + '.status">' + optionsHtml(D.statuses, o.status) + '</select></div>' +
       '<div class="field"><label for="op' + i + '">Purpose</label><input id="op' + i + '" type="text" data-bind="objects.' + i + '.purpose" value="' + esc(o.purpose) + '" placeholder="Short purpose"></div>' +
@@ -368,7 +388,10 @@
 
   /* Key designer fields per object type that dewa-abap needs; empty or [TO BE CONFIRMED] → named in a hint */
   const KEY_FIELDS = { Report: ['selection', 'columns', 'logic'], RFC: ['importing', 'exporting', 'logic'], 'Function Module': ['importing', 'exporting', 'logic'],
-    CDS: ['source', 'elements'], 'Fiori/UI5': ['appType', 'service'], Class: ['methods'], Table: ['fields'], 'BAdI / Enhancement': ['spot', 'logic'], RAP: ['implementation', 'entities'] };
+    CDS: ['source', 'elements'], 'Fiori/UI5': ['appType', 'service'], Class: ['methods'], Table: ['fields'], 'BAdI / Enhancement': ['spot', 'logic'], RAP: ['implementation', 'entities'],
+    // non-SAP components
+    'API Endpoint': ['method', 'path', 'response'], 'Web Screen': ['fields'], 'Data Entity': ['columns'], 'Integration Flow': ['source', 'target', 'mapping'],
+    'Power Automate Flow': ['trigger', 'steps'], 'Power App': ['screens'], 'Scheduled Job': ['schedule', 'logic'], 'Dataverse Table': ['columns'] };
   function readinessGaps(s) {
     const out = [];
     s.objects.filter(function (o) { return (o.status === 'new' || o.status === 'change') && KEY_FIELDS[o.type]; }).forEach(function (o) {
@@ -397,6 +420,15 @@
           '<button type="button" class="btn btn-ghost" data-action="tsd-chat"' + (can ? '' : ' disabled') + '>In Copilot Chat</button>')
       : '<button type="button" class="btn btn-primary" data-action="tsd-copy"' + (n ? '' : ' disabled') + '>✦ Copy prompt</button>';
     const src = s.origin && s.origin.fsText ? 'the functional spec it was made from, ' : '';
+    if (D.isGeneric(s)) {
+      return '<section class="card tsd-card" id="tsd-card" aria-labelledby="h-tsd"><h3 id="h-tsd">Complete the TS with Copilot <span class="hint">empty fields only</span></h3>' +
+        '<p class="muted small">Copilot fills the <strong>empty</strong> designer fields of the new and changed components – logic, request / response, columns, screen fields, mapping, error handling, tests – from ' + src + 'the requirement. It never changes what is filled or the authorization, and table, column and endpoint names it cannot find there are marked <mark>[TO BE CONFIRMED]</mark>. You review it first.</p>' +
+        '<div class="gen-actions">' + run + (n ? '' : '<span class="muted small">No new or changed component with a designer.</span>') + '</div>' +
+        (tsd.error ? '<p class="field-error" role="alert">' + esc(tsd.error) + '</p>' : '') +
+        '<details class="paste"' + detailsAttrs('tsd-paste', false) + '><summary>' + (H.isVscode ? 'Paste an answer instead' : 'Paste the answer') + '</summary>' +
+        '<textarea id="tsd-answer" rows="4" spellcheck="false" aria-label="Answer with the TS completion"></textarea>' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-action="tsd-review">Review the answer</button></details></section>';
+    }
     return '<section class="card tsd-card" id="tsd-card" aria-labelledby="h-tsd"><h3 id="h-tsd">Complete the TS with Copilot <span class="hint">empty fields only</span></h3>' +
       '<p class="muted small">Copilot fills the <strong>empty</strong> designer fields of the new and changed objects – processing logic, output, selection screen, parameters, error handling, tests – from ' + src + 'the requirement and what was read in SAP. It never changes what is filled, never changes the authorization, and SAP names it cannot find in those sources are marked <mark>[TO BE CONFIRMED]</mark>. You review it first.</p>' +
       '<div class="gen-actions">' + run + (n ? '' : '<span class="muted small">No new or changed object with a designer.</span>') + '</div>' +
@@ -413,7 +445,7 @@
     if (tsd.running || sap.running) return;
     const prompt = APB.tsDraft.prompt(s);
     tsd.running = true; tsd.mode = mode; tsd.error = ''; tsd.t0 = Date.now();
-    tsd.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Copilot is completing the TS from ' + (s.origin && s.origin.fsText ? 'the FS, ' : '') + 'the requirement and the SAP facts…';
+    tsd.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Copilot is completing the TS from ' + (s.origin && s.origin.fsText ? 'the FS, ' : '') + (D.isGeneric(s) ? 'and the requirement…' : 'the requirement and the SAP facts…');
     APB.busy.start('tsdraft', mode, function () { actions['tsd-stop'](); });
     auditAdd('ai-input', { job: 'tsdraft', objects: tsdTargets(s).map(function (o) { return o.name || o.type; }).join(', '), fsExtract: s.origin && s.origin.fsText ? s.origin.fsText.length + ' chars' : 'none', promptChars: prompt.length });
     H.post({ type: 'ts-draft', mode: mode, prompt: prompt });
@@ -505,7 +537,7 @@
       '<div id="obj-rows">' + s.objects.map(function (o, i) { return objectRow(o, i, s.objects.length); }).join('') + '</div>' +
       (s.objects.length ? '' : '<p class="empty">No objects yet. Add the tables, CDS views, classes, function modules… Copilot should reuse or create.</p>') +
       '<button type="button" class="btn btn-ghost" data-action="add-object">+ Add Object</button>' +
-      sapCardHtml(s) +
+      (D.isGeneric(s) ? '' : sapCardHtml(s)) +
       '<div id="suggest">' + suggestionsHtml(s) + '</div>' +
       '<h3>Dependency map</h3><p class="muted small">Built from the objects above. Use “used by” to nest an object under the one that uses it.</p>' +
       '<div id="depmap" class="depmap"></div>' +
@@ -553,27 +585,28 @@
     const refs = C.unlistedReferences(s);
     const perfRelevant = D.performanceRelevant(s.types);
     // performance questions only where they matter (or when already answered)
-    const quality = D.quality.filter(function (f) { return !f.perfOnly || perfRelevant || V.isFilled(s.quality[f.id]); });
+    // non-SAP: no SAP clean-core questions
+    const quality = D.qualityFor(s).filter(function (f) { return (!f.perfOnly || perfRelevant || V.isFilled(s.quality[f.id])) && !(D.isGeneric(s) && /^cleanCore/.test(f.id)); });
     const index = s.objects.length ? '<nav class="obj-index" aria-label="Objects">' + s.objects.map(function (o) {
       const done = APB.rap.isDraftTable(s, o) || (D.hasBuilder(o) ? C.detailFilled(o) : true);
       return '<a href="#obj-' + o.id + '" data-action="jump" data-id="' + o.id + '" class="' + (done ? 'ok' : 'todo') + '">' + esc(o.name || o.type) + '</a>';
     }).join('') + '</nav>' : '';
     return '<h2 class="step-title">' + STEPS[3].title + '</h2>' +
-      '<p class="muted">New and changed objects get a full designer (SE11 fields, SE37 parameters, SE24 methods, CDS elements, RAP behavior, CAP model…). For reused objects, just note what you need. Leave anything unknown empty — it becomes an open question, not an invention.</p>' +
+      '<p class="muted">' + (D.isGeneric(s) ? 'New and changed components get a full designer (screen fields, API request / response, table columns, flow steps, integration mapping…).' : 'New and changed objects get a full designer (SE11 fields, SE37 parameters, SE24 methods, CDS elements, RAP behavior, CAP model…).') + ' For reused objects, just note what you need. Leave anything unknown empty — it becomes an open question, not an invention.</p>' +
       index + tsdCardHtml(s) +
       (refs.length ? '<div class="refs" role="note"><strong>Referenced but not in your object list:</strong> ' + refs.map(function (r) {
         return '<button type="button" class="chip" data-action="add-ref" data-type="' + esc(r.type) + '" data-name="' + esc(r.name) + '">+ ' + esc(r.type) + ' ' + esc(r.name) + '</button>';
       }).join(' ') + '</div>' : '') +
       (s.objects.length ? s.objects.map(artifactCard).join('') : '<p class="empty">No objects yet. Add them in <button type="button" class="link" data-action="goto" data-step="3">step 3</button>.</p>') +
-      '<section class="card" aria-labelledby="h-q"><h3 id="h-q">Authorization, testing &amp; clean core</h3>' + fieldsBlock(quality, s.quality, 'quality', { noAdvanced: true }) + '</section>' +
+      '<section class="card" aria-labelledby="h-q"><h3 id="h-q">' + (D.isGeneric(s) ? 'Authorization &amp; testing' : 'Authorization, testing &amp; clean core') + '</h3>' + fieldsBlock(quality, s.quality, 'quality', { noAdvanced: true }) + '</section>' +
       nav(true, 'Continue');
   }
 
   /* Hand the Technical spec to a Copilot agent. mode: all | new (dewa-abap) | change (dewa-abap-change) | fiori (dewa-fiori) | fiori-review (dewa-fiori-review) */
   function handOver(mode) {
     const s = S.get();
-    const agent = { change: 'dewa-abap-change', fiori: 'dewa-fiori', 'fiori-review': 'dewa-fiori-review' }[mode] || 'dewa-abap';
-    const prompt = M.chatPrompt(s, mode === 'all' ? undefined : mode);
+    const agent = { change: 'dewa-abap-change', fiori: 'dewa-fiori', 'fiori-review': 'dewa-fiori-review', generic: 'agent' }[mode] || 'dewa-abap';
+    const prompt = M.chatPrompt(s, mode === 'all' || mode === 'generic' ? undefined : mode);
     auditAdd('export', { to: H.isVscode ? 'Copilot Chat (' + agent + ')' : 'clipboard + VS Code (' + agent + ')', approval: APB.gov.status(s).state });
     if (H.isVscode) {
       H.post({ type: 'open-chat', agent: agent, prompt: prompt });
@@ -1049,6 +1082,21 @@
       renderMain();
       toast(r.applied.length ? 'Taken over: ' + r.applied.join(', ') + (r.state.objects.some(function (o) { return o.sap; }) ? ' – the current state is shown in step 4' : '') : 'Nothing taken over', 7000);
     },
+    'ts-platform': function (el) {
+      const p = el.dataset.platform === 'generic' ? 'generic' : 'sap';
+      S.update(function (s) {
+        if (p === 'generic') { s.platform = 'generic'; s.stack = s.stack || ''; } else { delete s.platform; delete s.stack; }
+        // an untouched Definition of Done follows the platform
+        const texts = s.dod.map(function (d) { return d.text; }).join('\n');
+        const sapDod = APB.config.definitions.definitionOfDone, genDod = D.genericDod;
+        if (texts === (p === 'generic' ? sapDod : genDod).join('\n')) s.dod = (p === 'generic' ? genDod : sapDod).map(function (t) { return { id: S.uid(), text: t, on: true }; });
+        // development objects of the other platform go; objects already entered stay (step 3)
+        const keep = D.typeKeys(p);
+        s.types = s.types.filter(function (t) { return keep.indexOf(t) >= 0; });
+      });
+      renderMain();
+      toast(p === 'generic' ? 'Other platform – web apps, APIs, databases, Power Platform, integrations and jobs; Copilot agent mode builds it' : 'SAP – ABAP, CDS, RAP, Fiori …');
+    },
     'toggle-type': function (el) {
       const t = el.dataset.type;
       const main = D.types[t].mainObject;
@@ -1116,7 +1164,7 @@
       }, function () { toast('Could not create a share link – use Copy Markdown instead'); });
     },
     tab: function (el) { setTab(el.dataset.tab); },
-    'add-object': function () { addObject('Table', 'existing'); },
+    'add-object': function () { addObject(D.isGeneric(S.get()) ? 'Data Entity' : 'Table', 'existing'); },
     'add-chip': function (el) { addObject(el.dataset.type, el.dataset.status); },
     'add-ref': function (el) { addObject(el.dataset.type, 'new', el.dataset.name); toast(el.dataset.type + ' ' + el.dataset.name + ' added as new object'); },
     jump: function (el, e) {
@@ -1281,6 +1329,7 @@
       const gaps = readinessGaps(s);
       if (gaps.length) toast('Before Copilot builds it – still open: ' + gaps.slice(0, 4).join(' · ') + (gaps.length > 4 ? ' …' : '') + '. Copilot will ask about these instead of guessing.', 9000);
       const h = M.handoff(s);
+      if (h.generic) { handOver('generic'); return; }
       // a Fiori app always gets the choice: build it (dewa-fiori) or review it (dewa-fiori-review)
       if (h.agents.length > 1 || h.hasFiori) {
         let n = 0;
@@ -1453,11 +1502,11 @@
       { g: 'View', i: '◐', t: 'Toggle light / dark theme', run: actions.theme }
     ];
     T.examples().forEach(function (e) { list.push({ g: 'Example', i: e.module, t: e.label, run: function () { loadState(T.example(e.id), 'Example loaded'); } }); });
-    D.typeKeys().forEach(function (k) {
+    D.typeKeys(S.get()).forEach(function (k) {
       const on = S.get().types.indexOf(k) >= 0;
       list.push({ g: 'Build', i: '◇', t: (on ? 'Remove ' : 'Add ') + D.types[k].label, run: function () { actions['toggle-type']({ dataset: { type: k } }); } });
     });
-    D.objectTypes.forEach(function (t) { list.push({ g: 'Object', i: '+', t: 'Add object: ' + t, run: function () { setStep(3); addObject(t, 'new'); } }); });
+    D.objectTypesFor(S.get()).forEach(function (t) { list.push({ g: 'Object', i: '+', t: 'Add object: ' + t, run: function () { setStep(3); addObject(t, 'new'); } }); });
     return list;
   }
 

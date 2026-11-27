@@ -192,6 +192,33 @@ The TS document lists its **Design Sources** (FS, SAP, Copilot proposals you acc
 Instructions tell dewa-abap never to replace a [TO BE CONFIRMED] value with an invented name. Before the hand-off to
 Copilot, a hint names the key designer fields that are still empty or unconfirmed.
 
+### Non-SAP specifications (other platforms)
+
+Choose **Other system** in the FS (or **Other platform** in step 1 of a Technical spec). The FS stays business-first
+and gets **Solution components** instead of RICEFW items (C-01, C-02 …): web screen / page, API / service, database
+table, Power App, Power Automate flow, integration / interface, scheduled job, report / export, notification. Copilot
+proposes them when it drafts the FS.
+
+**Create Technical spec** on a component opens a Technical spec on the non-SAP platform:
+- **tech stack** taken from the FS system name when it says so (.NET, Java / Spring Boot, Power Platform, Azure
+  Integration, MuleSoft, SAP BTP Integration Suite, other);
+- **designers** per component: Web Screen (fields, actions, navigation), API Endpoint (method, path, request /
+  response, status codes, auth, paging, idempotency), Data Entity (columns, indexes, relations, retention), Power App,
+  Power Automate Flow, Dataverse Table, Integration Flow (source, target, pattern, mapping, retry, monitoring),
+  Scheduled Job, Notification, Service / Component;
+- **filled from the FS** through "Used for": selection → request / screen inputs, output → response / screen
+  fields, stored → table columns, input file → integration mapping; authorization **No** without roles;
+- **Complete the TS with Copilot** as for SAP (empty fields only; `Entity.Field` names not in the FS or TS marked
+  [TO BE CONFIRMED]); no SAP check;
+- the document has **repository-first Copilot instructions** (follow the repo's architecture, the stack, OWASP
+  basics, migrations, OpenAPI, Power Platform solutions / connection references, idempotent integrations) and a
+  non-SAP Definition of Done;
+- the hand-off goes to **Copilot's built-in agent mode** (`DEWA-GENERIC v1`) in the project repository – the DEWA
+  agents are for SAP.
+
+SAP specifications are unchanged: `tests/e2e/sap-snapshot.test.js` compares every SAP output (examples, templates,
+FS → TS hand-offs, prompts) byte for byte with the version before this feature.
+
 ### Functional ↔ Technical
 
 A Technical spec created from an FS (a RICEFW item, or *→ Technical spec: change …* after reading a program) stays
@@ -233,7 +260,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.33.vsix`](dist/dewa-sap-spec-builder-1.0.33.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.33.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.34.vsix`](dist/dewa-sap-spec-builder-1.0.34.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.34.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **If the .vsix download is blocked** (the downloaded file is only a few KB, and VS Code says *End of central directory record signature not found*): some company networks replace `.vsix` downloads with a web page. The repository also holds the extension **unpacked** in `dist/vscode-extension/dewa.dewa-sap-spec-builder-<version>/`, as plain files, so no `.vsix` is downloaded:
 

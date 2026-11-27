@@ -62,8 +62,11 @@ test('SAP outputs are unchanged (byte-identical to the recorded snapshot)', asyn
     return;
   }
   const was = JSON.parse(fs.readFileSync(FILE, 'utf8'));
+  // SAP only: the non-SAP FS example (system "Other") may change with the non-SAP features
+  const NON_SAP = ['fs-gen-complaints'];
   for (const group of Object.keys(was)) {
     for (const key of Object.keys(was[group])) {
+      if (NON_SAP.some((x) => key.indexOf(x) === 0)) continue;
       assert.deepStrictEqual(now[group][key], was[group][key], 'SAP output changed: ' + group + ' / ' + key);
     }
   }

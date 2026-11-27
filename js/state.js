@@ -60,14 +60,16 @@
     const base = blank();
     if (!input || typeof input !== 'object') return base;
     const s = base;
-    const known = APB.config.definitions.devTypes;
+    const known = APB.defs ? APB.defs.types : APB.config.definitions.devTypes; // SAP + generic dev types
     s.id = typeof input.id === 'string' && input.id ? input.id : s.id;
     s.project.name = str(getPath(input, 'project.name'));
+    // non-SAP specs only (absent = SAP, so SAP specs keep exactly their shape)
+    if (input.platform === 'generic') { s.platform = 'generic'; s.stack = str(input.stack); if (!Array.isArray(input.dod)) s.dod = APB.defs.genericDod.map(function (text) { return { id: uid(), text: text, on: true }; }); }
     s.types = Array.isArray(input.types) ? input.types.filter(function (t) { return known[t]; }) : [];
     ['text', 'objective', 'users', 'expectedOutput'].forEach(function (k) { s.requirement[k] = str(getPath(input, 'requirement.' + k)); });
     s.objects = arr(input.objects).map(function (o) {
       return {
-        id: str(o.id) || uid(), type: APB.config.definitions.objectTypes[o.type] ? o.type : 'Other', name: str(o.name),
+        id: str(o.id) || uid(), type: (APB.defs ? APB.defs.allObjectTypes.indexOf(o.type) >= 0 : APB.config.definitions.objectTypes[o.type]) ? o.type : 'Other', name: str(o.name),
         status: ['existing', 'change', 'new', 'tbc'].indexOf(o.status) >= 0 ? o.status : 'tbc',
         purpose: str(o.purpose), parent: str(o.parent),
         detail: o.detail && typeof o.detail === 'object' ? clone(o.detail) : {},

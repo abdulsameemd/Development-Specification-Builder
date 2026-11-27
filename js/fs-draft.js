@@ -138,6 +138,7 @@
       '- 3 to 8 functional requirements, each one testable, with 1 to 3 acceptance criteria ("When …, then …"). Reference them as FR-01, FR-02 … in the order you list them.',
       '- Allowed values: priority must|should|could|wont' + (F.isSap(s) ? ' · fit standard|config|custom|tbc (SAP standard, configuration, custom development)' : '') + ' · change unchanged|changed|new|automated · rule type validation|derivation|calculation|authorization|approval · direction inbound|outbound|both · output type form|email|report|file|notification · test type positive|negative · risk type risk|assumption|open|dependency · data usage selection|output|both|input|stored|display (selection = the user enters or filters by it, output = shown in the result, both, input = comes from a file / upload, stored = saved in a table, display = shown only for information).',
       '- Fill every part that applies; leave a list empty when the requirement gives no basis for it.',
+      c.system === 'other' ? '- ricefw: the solution components to build (one per web screen, API, database table, Power App, flow, integration, job …) – type ' + (F.cfg.genericComponents || []).filter(function (o) { return o.value; }).map(function (o) { return o.value; }).join('|') + ', with the FRs each covers.' : '',
       '',
       'Answer with a one-line summary and then exactly one ```json block:',
       '```json',
@@ -153,6 +154,8 @@
         outputs: [{ name: '', type: 'email', trigger: '' }],
         performance: '', volume: '', privacy: '',
         uat: [{ fr: 'FR-01', scenario: '', type: 'positive', expected: '' }],
+        // non-SAP: the solution components (key ricefw) – SAP drafts keep their shape
+        ricefw: c.system === 'other' ? [{ type: 'api', name: '', description: '', frs: 'FR-01', complexity: 'medium' }] : undefined,
         risks: [{ type: 'assumption', text: '' }]
       }, null, 2),
       '```'];
@@ -458,7 +461,9 @@
       '   - data: the main fields (business name, table or infotype, field, validation) and what each is used for – usage selection | output | both | input | stored | display (selection = the user filters by it, output = shown in the result);',
       '   - objects: the SAP objects of step 2 (named or implied by the documents) with type (PROG, TRAN, CLAS, FUNC, RFC, DDLS, BDEF, SRVB, PROXY, TABL, BADI, IDOC, WAPA, JOB, OTHER) and a note ("exists in SAP", "not found", "to be built");',
       '   - currentLogic and programs: what the existing objects do today, from what you read in SAP;',
-      '   - ricefw: one item per development object – type (' + ricefwCodes + '), name (the existing object for "enhancement" and "asbuilt", otherwise a proposed name or a short description), description, frs (e.g. "FR-01, FR-03"), existing (the existing SAP objects it changes or uses), complexity low | medium | high;',
+      c.system === 'other'
+        ? '   - ricefw: the solution components to build, one per piece – type (' + (F.cfg.genericComponents || []).filter(function (o) { return o.value; }).map(function (o) { return o.value + ' = ' + o.label; }).join('; ') + '), name (a proposed name or a short description), description, frs (e.g. "FR-01, FR-03"), existing (the existing systems or components it uses), complexity low | medium | high;'
+        : '   - ricefw: one item per development object – type (' + ricefwCodes + '), name (the existing object for "enhancement" and "asbuilt", otherwise a proposed name or a short description), description, frs (e.g. "FR-01, FR-03"), existing (the existing SAP objects it changes or uses), complexity low | medium | high;',
       '   - roles (authorisations), interfaces (e.g. external APIs), outputs, performance, volume, privacy, uat (test scenarios with the FR they test), risks (assumptions, dependencies, risks, open points).',
       '5. Rules: READ ONLY – never create, change, activate, run or transport anything; do not read table contents. Only report what is in the documents or what a tool returned. Leave a field empty or write [TO BE CONFIRMED] instead of guessing. Write in business words; technical names only where they are SAP objects.',
       '',
