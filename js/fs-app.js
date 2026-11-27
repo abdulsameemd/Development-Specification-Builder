@@ -179,7 +179,7 @@
       docsIntro(s) +
       '<div class="fs-doc-slots">' + DOC_ROLES.map(slot).join('') + '</div>' +
       (H.isVscode && list.length ? '<div class="chips fs-copilot">' + copilotStatus() + '</div>' : '') +
-      (H.isVscode && list.length ? depthHtml(s, list) : '') +
+      (H.isVscode && list.length && !noSapSystem(s) ? depthHtml(s, list) : '') +
       '<div class="gen-actions">' + run + (list.length ? '' : '<span class="muted small">Choose at least one document.</span>') + '</div>' +
       (drf.kind === 'docs' ? draftLogHtml() : '') +
       (drf.error && drf.kind === 'docs' ? '<p class="field-error" role="alert">' + esc(drf.error) + '</p>' : '') +
@@ -204,6 +204,8 @@
       DEPTHS.map(function (x) { return '<button type="button" aria-pressed="' + (docs.depth === x[0]) + '" data-action="fs-docs-depth" data-depth="' + x[0] + '" title="' + esc(x[0] === 'auto' ? 'Decide from the documents' : DEPTH_HELP[x[0]]) + '"' + (drf.running ? ' disabled' : '') + '>' + x[1] + '</button>'; }).join('') +
       '</span> <span class="muted small fs-depth-note">' + esc(note) + '</span></div>';
   }
+  // "Other system" / "Not decided yet": there is no SAP system to search
+  function noSapSystem(s) { const sys = s.context && s.context.system; return sys === 'other' || sys === 'tbd'; }
   function secs(t0) { return Math.max(1, Math.round((Date.now() - t0) / 1000)) + ' s'; }
 
   function setSource(role, d) {
@@ -938,14 +940,16 @@
     if (!list.length) { U().toast('Choose the BRD or the solution document first'); return; }
     drf.running = true; drf.kind = 'docs'; drf.mode = mode; drf.error = ''; drf.log = [];
     APB.busy.start('docs', mode, function () { actions['fs-draft-stop'](); });
-    const dp = H.isVscode ? depthOf(S.get(), list) : { depth: 'full', reason: '' };
+    const noSap = noSapSystem(S.get());
+    const dp = noSap ? { depth: 'skip', reason: 'no SAP system' } : H.isVscode ? depthOf(S.get(), list) : { depth: 'full', reason: '' };
     drf.depth = dp.depth; drf.t0 = Date.now(); drf.tJob = drf.t0;
     drf.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Copilot is reading ' + list.map(function (d) { return d.name; }).join(' and ') + (dp.depth === 'skip' ? '…' : ' and checking SAP (read-only)…');
+    if (noSap) APB.busy.progress('Reading the documents (no SAP system)…', 'info');
     // VS Code, automatic: phase 1 searches SAP with a small prompt (quick or full), phase 2 writes the FS from the full
     // documents without tools – the documents are processed twice instead of once per tool round. Skip: phase 2 only.
     drf.phase = mode === 'auto' && H.isVscode ? 'search' : '';
     drf.docs = list; drf.found = null; drf.ev1 = null; drf.answer1 = '';
-    const prompt = drf.phase ? APB.fsDraft.docsSearchPrompt(S.get(), list, dp.depth) : APB.fsDraft.docsPrompt(S.get(), list, { depth: dp.depth });
+    const prompt = drf.phase ? APB.fsDraft.docsSearchPrompt(S.get(), list, dp.depth) : APB.fsDraft.docsPrompt(S.get(), list, { depth: dp.depth, noSap: noSap });
     U().auditAdd('ai-input', { job: 'docs', searchDepth: dp.depth + (docs.depth === 'auto' && dp.reason ? ' (auto: ' + dp.reason + ')' : ''), documents: list.map(function (d) { return d.role + ': ' + d.name + ' (' + d.chars + ' chars, fp ' + APB.gov.fingerprint({ t: d.text }) + ')'; }), promptChars: prompt.length });
     if (drf.phase && dp.depth !== 'skip') {
       const what = dp.depth === 'quick' ? 'Quick SAP search (read-only, a few keyword searches)' : 'Full SAP search (read-only)';
@@ -956,8 +960,8 @@
     list.forEach(function (d) { APB.guard.injection(d.text).forEach(function (f) { drf.docFlags.push({ where: d.name, excerpt: f.excerpt }); }); });
     if (drf.docFlags.length) U().auditAdd('guard-flag', { job: 'docs', flags: drf.docFlags.length, where: 'uploaded documents', first: drf.docFlags[0].excerpt });
     if (drf.phase && dp.depth === 'skip') {
-      drf.log.push({ text: 'SAP search skipped', status: 'info' });
-      docsWritePhase({ text: '', evidence: null, skipped: true });
+      drf.log.push({ text: noSap ? 'No SAP system – writing the FS from the documents' : 'SAP search skipped', status: 'info' });
+      docsWritePhase({ text: '', evidence: null, skipped: true, noSap: noSap });
       return;
     }
     // phase 1 is a short search: fewer tool rounds, and the quick search also a short time budget (the extension caps both)
@@ -982,9 +986,10 @@
       if (APB.guard.blockedText(m.evidence)) drf.log.push({ text: APB.guard.blockedText(m.evidence), status: 'blocked' });
     }
     drf.t0 = Date.now();
-    drf.status = '2/2 Writing the FS from the documents…';
-    APB.busy.progress('2/2 Writing the functional spec from the documents and the SAP findings (no SAP access)…', 'info');
-    H.post({ type: 'draft', prompt: APB.fsDraft.docsPrompt(S.get(), drf.docs || [], { findings: m.skipped ? '- SAP search skipped (chosen by the consultant) – nothing was checked in SAP; mark SAP objects as "not checked".' : APB.fsDraft.findingsText(drf.found) }) });
+    drf.status = m.noSap ? 'Writing the FS from the documents…' : '2/2 Writing the FS from the documents…';
+    APB.busy.progress(m.noSap ? 'Writing the functional spec from the documents…' : '2/2 Writing the functional spec from the documents and the SAP findings (no SAP access)…', 'info');
+    H.post({ type: 'draft', prompt: APB.fsDraft.docsPrompt(S.get(), drf.docs || [], { noSap: m.noSap, findings: m.noSap ? '- Not an SAP system – nothing was checked in any system; name only the systems and components the documents mention.'
+      : m.skipped ? '- SAP search skipped (chosen by the consultant) – nothing was checked in SAP; mark SAP objects as "not checked".' : APB.fsDraft.findingsText(drf.found) }) });
     rerenderStep1();
   }
 
@@ -1016,7 +1021,8 @@
     'fs-docs-copy': function () {
       const list = docsList();
       if (!list.length) { U().toast('Choose the BRD or the solution document first'); return; }
-      Promise.resolve(APB.exporter.copy(APB.guard.outbound(APB.fsDraft.docsPrompt(S.get(), list), 'clipboard'))).then(function (ok) {
+      const noSap = noSapSystem(S.get());
+      Promise.resolve(APB.exporter.copy(APB.guard.outbound(APB.fsDraft.docsPrompt(S.get(), list, noSap ? { depth: 'skip', noSap: true } : undefined), 'clipboard'))).then(function (ok) {
         U().ui.open['fs-docs-paste'] = true;
         rerenderStep1();
         U().toast(ok ? 'Prompt copied ✓ Paste it into Copilot Chat in VS Code (' + DS.cfg.agent + '), then paste the answer here' : 'Copy failed – the documents may be too long for the clipboard', 8000);

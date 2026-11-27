@@ -10,7 +10,7 @@ const vm = require('vm');
 const ROOT = path.join(__dirname, '..', '..');
 const window = {};
 const ctx = vm.createContext({ window, console, Date, JSON, Math, TextEncoder, TextDecoder, Uint8Array });
-['config-bundle', 'object-definitions', 'state', 'validation', 'completeness', 'rap-blueprint', 'dev-sap', 'markdown-generator', 'fs-state', 'discovery',
+['config-bundle', 'host', 'governance', 'object-definitions', 'state', 'validation', 'completeness', 'rap-blueprint', 'dev-sap', 'markdown-generator', 'fs-state', 'discovery',
   'fs-completeness', 'fs-generator', 'fs-draft', 'fs-to-ts', 'ts-draft'].forEach((f) => vm.runInContext(fs.readFileSync(path.join(ROOT, 'js', f + '.js'), 'utf8'), ctx, { filename: f + '.js' }));
 const APB = window.APB;
 const D = APB.defs;
@@ -115,4 +115,30 @@ test('generic TS document and hand-off: agent mode, repository instructions, no 
   assert.match(APB.markdown.chatPrompt(s), /^DEWA-GENERIC v1\nImplement the technical specification below in this repository \(\.NET/);
   // SAP spec: unchanged hand-off
   assert.deepStrictEqual(plain(APB.markdown.handoff(APB.state.migrate({ types: ['REPORT'], objects: [{ type: 'Report', name: 'ZX', status: 'new' }] })).agents), ['dewa-abap']);
+});
+
+test('fixes from the end-to-end journeys: unnamed components kept, non-SAP types accepted, no SAP in non-SAP document prompts', () => {
+  const r = APB.fsDraft.parse('```json\n' + JSON.stringify({ kind: 'fs-draft', version: 1, ricefw: [
+    { type: 'api', name: '', description: 'Open orders service', frs: 'FR-01' }, { type: 'screen', description: 'Open orders page' },
+    { type: 'report', name: '', description: 'SAP ALV report' }, { type: 'bogus', name: 'X' }] }) + '\n```');
+  assert.deepStrictEqual(plain(r.draft.ricefw).map((x) => [x.type, x.name, x.description]),
+    [['api', '', 'Open orders service'], ['screen', '', 'Open orders page'], ['report', '', 'SAP ALV report'], ['', 'X', '']]);
+  const s = portalFs();
+  const docs = [{ role: 'brd', name: 'BRD.docx', text: 'Customers see their open orders.' }];
+  const p = APB.fsDraft.docsPrompt(s, docs, { depth: 'skip', noSap: true });
+  assert.match(p, /The solution is not on SAP; you have no tools/);
+  assert.match(p, /This is not an SAP system: do not use any tools/);
+  assert.match(p, /- ricefw: the solution components to build/);
+  assert.doesNotMatch(p, /module \(one of|READ ONLY|SEARCH THE SAP SYSTEM/);
+});
+
+test('governance for non-SAP: no SAP-check approval blocker, no SAP columns in the AI usage table', () => {
+  const g = genericTs();
+  assert.deepStrictEqual(plain(APB.gov.approvalBlockers(g)), []);
+  const sap = APB.state.migrate({ types: ['REPORT'], objects: [{ type: 'Report', name: 'ZX', status: 'new' }] });
+  assert.match(String(APB.gov.approvalBlockers(sap)[0] || ''), /Check & read in SAP/, 'SAP keeps the rule');
+  const ev = { type: 'ai-end', at: '2026-11-27T10:00:00Z', by: 'dev', data: { job: 'tsdraft', outcome: 'result', seconds: 12, modelCalls: 1, tokensIn: 100, tokensOut: 50 } };
+  g.audit = [ev]; sap.audit = [ev];
+  assert.match(APB.gov.audit.md(g), /\| AI job \| Runs \| Time \| Model calls \| Tokens \(in \/ out\) \|\n\|---\|---\|---\|---\|---\|\n/);
+  assert.match(APB.gov.audit.md(sap), /SAP searches \| ABAP artifacts read/);
 });

@@ -74,7 +74,8 @@
 
   /* TS only: what still blocks an approval (the SAP check must have run, without unresolved ✗). */
   function approvalBlockers(s) {
-    if (kindOf(s) !== 'technical' || !pol.requireSapCheck) return [];
+    // non-SAP specs (generic platform) have no SAP check to run
+    if (kindOf(s) !== 'technical' || !pol.requireSapCheck || s.platform === 'generic') return [];
     if (!s.sapCheck) return ['Run Check & read in SAP (step 3) first.'];
     const q = APB.devSap ? APB.devSap.questions(s) : [];
     return q.length ? ['Resolve the SAP check findings first: ' + q[0] + (q.length > 1 ? ' (+' + (q.length - 1) + ' more)' : '')] : [];
@@ -215,7 +216,8 @@
     return String(t).replace(/\|/g, '/').replace(/\s+/g, ' ').trim().slice(0, 400);
   }
   /* Totals of the AI jobs in this spec's trail (finished jobs only). */
-  function usageSummary(listE) {
+  /* sap: false → a non-SAP spec: no SAP search / ABAP columns */
+  function usageSummary(listE, sap) {
     const by = {}, order = [];
     listE.forEach(function (e) {
       if (e.type !== 'ai-end') return;
@@ -229,16 +231,19 @@
     if (!order.length) return '';
     const t = { runs: 0, ok: 0, seconds: 0, calls: 0, tin: 0, tout: 0, est: false, searches: 0, art: 0 };
     const row = function (name, b) {
-      return '| ' + name + ' | ' + b.runs + ' (' + b.ok + ' with result) | ' + num(b.seconds) + ' s | ' + num(b.calls) + ' | ' + (b.tin + b.tout ? (b.est ? '≈ ' : '') + num(b.tin + b.tout) + ' (' + num(b.tin) + ' / ' + num(b.tout) + ')' : '–') + ' | ' + num(b.searches) + ' | ' + num(b.art) + ' |';
+      return '| ' + name + ' | ' + b.runs + ' (' + b.ok + ' with result) | ' + num(b.seconds) + ' s | ' + num(b.calls) + ' | ' + (b.tin + b.tout ? (b.est ? '≈ ' : '') + num(b.tin + b.tout) + ' (' + num(b.tin) + ' / ' + num(b.tout) + ')' : '–') + ' |' + (sap === false ? '' : ' ' + num(b.searches) + ' | ' + num(b.art) + ' |');
     };
     const rows = order.map(function (k) { const b = by[k]; Object.keys(t).forEach(function (f) { t[f] = f === 'est' ? t.est || b.est : t[f] + b[f]; }); return row(JOBS[k] || k, b); });
     if (order.length > 1) rows.push(row('**Total**', t));
+    if (sap === false) return '**AI usage**\n\n| AI job | Runs | Time | Model calls | Tokens (in / out) |\n|---|---|---|---|---|\n' + rows.join('\n');
     return '**AI usage**\n\n| AI job | Runs | Time | Model calls | Tokens (in / out) | SAP searches | ABAP artifacts read |\n|---|---|---|---|---|---|---|\n' + rows.join('\n');
   }
   function auditMd(s) {
     const list = (s && s.audit) || [];
     if (!list.length) return '';
-    const sum = usageSummary(list);
+    // non-SAP specs (generic TS, FS for another system) have no SAP columns
+    const nonSap = s.platform === 'generic' || (s.kind === 'fs' && s.context && (s.context.system === 'other' || s.context.system === 'tbd'));
+    const sum = usageSummary(list, nonSap ? false : undefined);
     return (sum ? sum + '\n\n**Events**\n\n' : '') + '| Time (UTC) | By | Event | Details |\n|---|---|---|---|\n' + list.map(function (e) {
       return '| ' + e.at.replace('T', ' ').slice(0, 19) + ' | ' + (e.by || '–').replace(/\|/g, '/') + ' | ' + (LABELS[e.type] || e.type) + ' | ' + (detail(e) || '–') + ' |';
     }).join('\n');
