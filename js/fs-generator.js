@@ -10,6 +10,7 @@
 
   let cur = null; // the spec being built: field labels follow its system (SAP or generic)
   function sap() { return F.isSap(cur); }
+  function other() { return !!(cur && cur.context && cur.context.system === 'other'); } // non-SAP: solution components
   function dash(v) { return clean(v) || '–'; }
   function opt(sectionId, fieldId, v, colId) {
     let f = F.view(F.field(sectionId, fieldId), cur);
@@ -176,10 +177,12 @@
     rows(s.quality.uat).forEach(function (r, i) { F.parseFrRefs(r.fr).forEach(function (fr) { (tests[fr] = tests[fr] || []).push('UAT-' + (i < 9 ? '0' : '') + (i + 1)); }); });
     const l = (s.reqs.frs || []).map(function (f, i) { return { f: f, id: F.frId(i) }; }).filter(function (x) { return V.isFilled(x.f); });
     if (!l.length) return '';
-    return table(['FR', 'Requirement', 'Fit-gap', 'Solution'].concat(sap() ? ['RICEFW'] : []).concat(['UAT']), l.map(function (x) {
+    // non-SAP: a Component column, only once solution components exist (otherwise the document stays as it was)
+    const comp = !sap() && other() && (s.solution.ricefw || []).some(function (r) { return V.isFilled(r); });
+    return table(['FR', 'Requirement', 'Fit-gap', 'Solution'].concat(sap() ? ['RICEFW'] : comp ? ['Component'] : []).concat(['UAT']), l.map(function (x) {
       const std = x.f.fit === 'standard' || x.f.fit === 'config';
       const row = [x.id, cell(x.f.title), !x.f.fit || x.f.fit === 'tbc' ? TBC : clean(opt('reqs', 'frs', x.f.fit, 'fit')), dash((x.f.approach || '').trim())];
-      if (sap()) row.push((by[x.id] || []).join(', ') || (std ? 'n/a' : TBC));
+      if (sap() || comp) row.push((by[x.id] || []).join(', ') || (std ? 'n/a' : TBC));
       row.push((tests[x.id] || []).join(', ') || TBC);
       return row;
     }));
@@ -210,9 +213,10 @@
       return join([
         '#### ' + x.id + ': ' + ((x.r.name || '').trim() || TBC) + (x.r.type ? ' (' + F.ricefwType(x.r.type).label + ')' : ''),
         (x.r.description || '').trim(),
-        (x.r.existing || '').trim() && '- **Existing objects / enhancement spots:** ' + clean(x.r.existing)
+        (x.r.existing || '').trim() && (sap() ? '- **Existing objects / enhancement spots:** ' : '- **Existing systems / components:** ') + clean(x.r.existing)
       ]);
     });
+    if (!sap()) return sub('Solution components', join([inv].concat(details)));
     return join([sub('RICEFW items', join([inv].concat(details))), sub('Configuration (SPRO)', bullets(s.solution.customizing))]);
   }
 
@@ -245,7 +249,7 @@
       sub('Variants & exceptions', bullets(s.process.variants))]));
     add('Functional Requirements', join([frSection(s), sub('Business rules & validations', rulesTable(s)), sub('Data requirements', dataTable(s))]));
     add('Current System', join([sap() ? existingObjects(s) : '', programLogic(s), sap() ? sub('SAP system context', systemContext(s).replace(/^### /gm, '#### ')) : '']));
-    add('Solution', join([sub('Fit-gap & traceability', fitGap(s)), sap() ? solution(s) : '',
+    add('Solution', join([sub('Fit-gap & traceability', fitGap(s)), sap() ? solution(s) : other() ? solution(s) : '',
       sub(sap() ? 'Roles & authorizations' : 'Roles & access', simpleGrid('solution', 'roles', s.solution.roles)),
       sub('Interfaces', simpleGrid('solution', 'interfaces', s.solution.interfaces)),
       sub('Outputs & forms', simpleGrid('solution', 'outputs', s.solution.outputs))]));

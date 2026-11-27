@@ -319,6 +319,8 @@ details.more > summary { cursor: pointer; font-weight: 700; padding: 4px 0; colo
 .seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 8px; overflow: hidden; flex: none; }
 .seg button { font: inherit; font-size: .75rem; font-weight: 700; border: 0; background: transparent; color: var(--muted); padding: 5px 11px; cursor: pointer; }
 .seg button[aria-pressed="true"] { background: var(--grad-btn); color: #0a0e11; }
+.ts-platform { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 4px 0 14px; }
+.ts-platform select { max-width: 340px; }
 .fs-depth { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0 4px; }
 #pv-status { padding: 0 14px; }
 .preview-panel .status { margin: 12px 0 4px; padding: 10px 12px; }

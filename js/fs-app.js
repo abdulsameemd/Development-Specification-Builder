@@ -179,7 +179,7 @@
       docsIntro(s) +
       '<div class="fs-doc-slots">' + DOC_ROLES.map(slot).join('') + '</div>' +
       (H.isVscode && list.length ? '<div class="chips fs-copilot">' + copilotStatus() + '</div>' : '') +
-      (H.isVscode && list.length ? depthHtml(s, list) : '') +
+      (H.isVscode && list.length && !noSapSystem(s) ? depthHtml(s, list) : '') +
       '<div class="gen-actions">' + run + (list.length ? '' : '<span class="muted small">Choose at least one document.</span>') + '</div>' +
       (drf.kind === 'docs' ? draftLogHtml() : '') +
       (drf.error && drf.kind === 'docs' ? '<p class="field-error" role="alert">' + esc(drf.error) + '</p>' : '') +
@@ -204,6 +204,8 @@
       DEPTHS.map(function (x) { return '<button type="button" aria-pressed="' + (docs.depth === x[0]) + '" data-action="fs-docs-depth" data-depth="' + x[0] + '" title="' + esc(x[0] === 'auto' ? 'Decide from the documents' : DEPTH_HELP[x[0]]) + '"' + (drf.running ? ' disabled' : '') + '>' + x[1] + '</button>'; }).join('') +
       '</span> <span class="muted small fs-depth-note">' + esc(note) + '</span></div>';
   }
+  // "Other system" / "Not decided yet": there is no SAP system to search
+  function noSapSystem(s) { const sys = s.context && s.context.system; return sys === 'other' || sys === 'tbd'; }
   function secs(t0) { return Math.max(1, Math.round((Date.now() - t0) / 1000)) + ' s'; }
 
   function setSource(role, d) {
@@ -498,9 +500,12 @@
     const ids = F.ricefwIds(list);
     const items = list.map(function (r, i) { return { r: r, i: i, id: ids[i] }; }).filter(function (x) { return V.isFilled(x.r) && x.r.type; });
     if (!items.length) return '';
-    return '<div class="suggest fs-handoff"><p class="muted small" id="ho-h">Hand a RICEFW item to the developer as a <strong>Development Specification</strong> for <code class="agent-name">dewa-abap</code> (opens the Technical builder pre-filled; this FS stays in Drafts):</p><div class="chips" aria-labelledby="ho-h">' +
+    const sapSys = F.isSap(s);
+    return '<div class="suggest fs-handoff"><p class="muted small" id="ho-h">' + (sapSys
+      ? 'Hand a RICEFW item to the developer as a <strong>Development Specification</strong> for <code class="agent-name">dewa-abap</code> (opens the Technical builder pre-filled; this FS stays in Drafts):'
+      : 'Hand a solution component to the developer as a <strong>Technical Specification</strong> for GitHub Copilot (agent mode, in the project repository) – it opens pre-filled on the non-SAP platform; this FS stays in Drafts:') + '</p><div class="chips" aria-labelledby="ho-h">' +
       items.map(function (x) { return '<button type="button" class="chip" data-action="fs-handoff" data-i="' + x.i + '">→ ' + esc(x.id) + ' ' + esc(x.r.name || F.ricefwType(x.r.type).label) + '</button>'; }).join('') + '</div>' +
-      (items.length > 1 ? '<p><button type="button" class="btn btn-primary btn-sm" data-action="fs-handoff-all">→ Create Technical specs for all ' + items.length + ' RICEFW items</button></p>' : '') +
+      (items.length > 1 ? '<p><button type="button" class="btn btn-primary btn-sm" data-action="fs-handoff-all">→ Create Technical specs for all ' + items.length + (sapSys ? ' RICEFW items' : ' components') + '</button></p>' : '') +
       (s.context.changeType ? '<p class="muted small">Type of change: <strong>' + esc(F.field('context', 'changeType').options.filter(function (o) { return o.value === s.context.changeType; })[0].label) + '</strong> – the main object of each Technical spec is ' + ({ enhancement: '<em>Existing – change</em>', asbuilt: '<em>Existing</em> (documented with Check &amp; read in SAP)' }[s.context.changeType] || '<em>New</em>') + '.</p>' : '') + '</div>';
   }
 
@@ -531,7 +536,9 @@
         (gaps.length ? '<div class="refs" role="note"><strong>Gaps without a RICEFW item:</strong> ' + gaps.map(esc).join(', ') + ' — add an item and list the FR under “Covers FRs”.</div>' : '') +
         block('solution', ['ricefw']) + U().approvalCardHtml(s) + handoffHtml(s) + programHandoffHtml(s) + linkedHtml(s) +
         more('fs-more-sol', 'More details – roles & authorizations, interfaces, outputs, configuration', blockAll('solution', null, ['ricefw']), ['roles', 'interfaces', 'outputs', 'customizing'].some(function (k) { return V.isFilled(s.solution[k]); }))
-      : block('solution');
+      : s.context.system === 'other'
+        ? block('solution') + handoffHtml(s) + linkedHtml(s) // non-SAP: solution components → Technical specs
+        : block('solution');
     const q = s.quality, ctl = s.control;
     const moreFilled = ['performance', 'volume', 'availability', 'audit', 'privacy', 'risks'].some(function (k) { return V.isFilled(q[k]); }) || V.isFilled(ctl.docId) || V.isFilled(ctl.author) || V.isFilled(ctl.history);
     return header(3) + U().statusHtml(ev, true) +
@@ -557,7 +564,7 @@
 
   function generatedView(s, ui) {
     const md = FM.build(s);
-    const ho = F.isSap(s) ? handoffHtml(s) : '';
+    const ho = F.isSap(s) || s.context.system === 'other' ? handoffHtml(s) : '';
     const qn = FC.openQuestions(s).length;
     return '<div class="gen-head"><h2 class="step-title">Your functional specification is ready</h2>' +
       '<p class="muted">Download it as <strong>Word</strong> for review and sign-off, or as Markdown (<code>' + esc(FM.filename()) + '</code>) for the project repository. ' +
@@ -567,7 +574,7 @@
       '<button type="button" class="btn btn-ghost btn-lg" data-action="download">Download Markdown</button>' +
       '<button type="button" class="btn btn-ghost" data-action="copy">Copy Markdown</button>' +
       (H.isVscode ? '<button type="button" class="btn btn-ghost" data-action="fs-chat-review">Open in Copilot Chat</button>' : '<button type="button" class="btn btn-ghost" data-action="share">Copy share link</button>') +
-      '<button type="button" class="btn btn-ghost" data-action="edit">Review Details</button></div>' + U().approvalCardHtml(s) + ho + (F.isSap(s) ? programHandoffHtml(s) + linkedHtml(s) : '') +
+      '<button type="button" class="btn btn-ghost" data-action="edit">Review Details</button></div>' + U().approvalCardHtml(s) + ho + (F.isSap(s) ? programHandoffHtml(s) + linkedHtml(s) : s.context.system === 'other' ? linkedHtml(s) : '') +
       '<div class="seg gen-seg" role="group" aria-label="Format"><button type="button" data-action="view-rendered" aria-pressed="' + !ui.raw + '">Preview</button><button type="button" data-action="view-raw" aria-pressed="' + ui.raw + '">Markdown</button></div>' +
       '<div class="gen-doc md" tabindex="0" aria-label="Generated specification">' + (ui.raw ? '<pre>' + esc(md) + '</pre>' : APB.markdown.toHtml(md)) + '</div>';
   }
@@ -577,6 +584,7 @@
 
   /* One RICEFW item → a development-spec state (technical builder), traceable to this FS. */
   function toDevSpec(s, i) {
+    if (!F.isSap(s)) return toGenericSpec(s, i);
     const r = s.solution.ricefw[i] || {};
     const id = F.ricefwIds(s.solution.ricefw)[i];
     const rt = F.ricefwType(r.type);
@@ -633,6 +641,58 @@
     });
   }
 
+  /* Non-SAP FS ("Other system"): a solution component becomes a Technical spec on the generic platform – same
+     FS → TS idea (data "Used for" → designer, rules, acceptance, tests, authorization No without roles), no SAP. */
+  const STACK_HINTS = [[/\.net|c#|asp/i, 0], [/java|spring/i, 1], [/power ?(apps|automate|platform)|dataverse|sharepoint/i, 2], [/azure|logic app|function app|service bus/i, 3], [/mulesoft/i, 4], [/btp|integration suite|cpi/i, 5]];
+  function toGenericSpec(s, i) {
+    const r = s.solution.ricefw[i] || {};
+    const id = F.ricefwIds(s.solution.ricefw)[i];
+    const rt = F.ricefwType(r.type);
+    const devType = rt.devType && APB.defs.types[rt.devType] ? rt.devType : 'G_WEB';
+    const mainType = APB.defs.types[devType].mainObject[0];
+    const frRefs = F.parseFrRefs(r.frs);
+    const frs = (s.reqs.frs || []).map(function (f, k) { return { f: f, id: F.frId(k) }; }).filter(function (x) { return frRefs.indexOf(x.id) >= 0 && V.isFilled(x.f); });
+    const ct = s.context.changeType;
+    const mainStatus = { enhancement: 'change', asbuilt: 'existing' }[ct] || 'new';
+    const proposed = !(r.name || '').trim() && mainStatus === 'new' ? APB.fsToTs.proposeName(s, r, mainType) : '';
+    const objects = [{ type: mainType, name: (r.name || '').trim() || proposed, status: mainStatus,
+      purpose: 'Main component (' + id + ')' + (proposed ? ' – proposed name, confirm' : ''), detail: APB.fsToTs.designer(s, mainType, r) }];
+    // a web application also gets its API and data entity when the FS data says so
+    if (devType === 'G_WEB') {
+      ['API Endpoint', 'Data Entity'].forEach(function (t) {
+        const d = APB.fsToTs.designer(s, t, r);
+        if (Object.keys(d).length) objects.push({ type: t, name: '', status: 'new', purpose: 'Supports ' + id, detail: d });
+      });
+    }
+    String(r.existing || '').split(/[,;\n]+/).map(function (x) { return x.trim(); }).filter(Boolean).slice(0, 10).forEach(function (n) {
+      objects.push({ type: 'External System', name: n, status: 'existing', purpose: 'Existing system / component named in the FS' });
+    });
+    const sys = (s.context.systemName || '') + ' ' + (r.description || '');
+    const hint = STACK_HINTS.filter(function (h) { return h[0].test(sys); })[0];
+    const roles = (s.solution.roles || []).filter(V.isFilled);
+    const tests = (s.quality.uat || []).filter(function (u) { return V.isFilled(u) && F.parseFrRefs(u.fr).some(function (x) { return frRefs.indexOf(x) >= 0; }); })
+      .map(function (u) { return (u.scenario || '').trim() + ((u.expected || '').trim() ? ' => ' + u.expected.trim() : ''); });
+    const acceptance = [];
+    frs.forEach(function (x) { APB.markdown.helpers.splitLines(x.f.acceptance).forEach(function (a) { acceptance.push({ text: a }); }); });
+    const rules = (s.reqs.rules || []).filter(function (b) { return V.isFilled(b) && (!b.fr || F.parseFrRefs(b.fr).some(function (x) { return frRefs.indexOf(x) >= 0; })); })
+      .map(function (b) { return { condition: (b.rule || '').trim(), behavior: (b.outcome || '').trim() }; });
+    return APB.state.migrate({
+      platform: 'generic', stack: hint ? APB.defs.stacks[hint[1]] : '',
+      project: { name: [s.control.docId, id, (r.name || '').trim()].filter(Boolean).join(' · ') },
+      types: [devType],
+      requirement: { text: [(r.description || '').trim() || (s.context.requirement || '').trim()].concat(frs.map(function (x) { return x.id + ' ' + (x.f.title || '').trim() + ((x.f.description || '').trim() ? ': ' + x.f.description.trim() : ''); })).filter(Boolean).join('\n\n'),
+        objective: APB.markdown.helpers.splitLines(s.context.objectives).join('; '), users: roles.map(function (x) { return (x.role || '').trim(); }).filter(Boolean).join(', '), expectedOutput: '' },
+      objects: objects.map(function (o) { o.id = S.uid(); o.detail = o.detail || {}; return o; }),
+      origin: { fsText: APB.fsToTs.fsText(s, frRefs), names: APB.fsToTs.fsNames(s) },
+      rules: rules.map(function (b) { b.id = S.uid(); return b; }),
+      acceptance: acceptance.map(function (a) { a.id = S.uid(); return a; }),
+      assumptions: 'Source: functional specification ' + ([s.control.docId, s.control.version && 'v' + s.control.version].filter(Boolean).join(' ') || '"' + F.model.name(s) + '"') + ', component ' + id + (frRefs.length ? ' (' + frRefs.join(', ') + ')' : '') + '. System: ' + F.systemLabel(s) + '.',
+      processToBe: s.process.toBe || [],
+      // no roles in the FS → authorization No (as for SAP)
+      quality: { authorization: roles.length ? 'yes' : 'no', authChecks: roles.map(function (x) { return { object: (x.role || '').trim(), fields: (x.scope || '').trim(), where: (x.tx || '').trim() }; }), dataVolume: '', performanceReq: (s.quality.performance || '').trim(), testTypes: ['Unit', 'Functional', 'Integration'], testScenarios: tests.join('\n'), cleanCore: '', cleanCoreNote: '' }
+    });
+  }
+
   function handoffOne(el) { actions['fs-handoff-one'](el); }
   function handoffAll() { actions['fs-handoff-all-go'](); }
   function handoffProgram() { actions['fs-dev-from-program-go'](); }
@@ -647,7 +707,7 @@
     const named = (dev.objects || []).some(function (o) { return (o.name || '').trim(); });
     if (H.isVscode && copilotReady() && U().startSapCheck) {
       // read-only SAP check first (facts), then Copilot completes the empty parts of the TS from the FS extract
-      if (named) {
+      if (named && dev.platform !== 'generic') {
         U().ui.step = 3;
         U().renderMain();
         if (U().startTsComplete) U().startTsComplete(true);
@@ -880,14 +940,16 @@
     if (!list.length) { U().toast('Choose the BRD or the solution document first'); return; }
     drf.running = true; drf.kind = 'docs'; drf.mode = mode; drf.error = ''; drf.log = [];
     APB.busy.start('docs', mode, function () { actions['fs-draft-stop'](); });
-    const dp = H.isVscode ? depthOf(S.get(), list) : { depth: 'full', reason: '' };
+    const noSap = noSapSystem(S.get());
+    const dp = noSap ? { depth: 'skip', reason: 'no SAP system' } : H.isVscode ? depthOf(S.get(), list) : { depth: 'full', reason: '' };
     drf.depth = dp.depth; drf.t0 = Date.now(); drf.tJob = drf.t0;
     drf.status = mode === 'chat' ? 'Opening Copilot Chat…' : 'Copilot is reading ' + list.map(function (d) { return d.name; }).join(' and ') + (dp.depth === 'skip' ? '…' : ' and checking SAP (read-only)…');
+    if (noSap) APB.busy.progress('Reading the documents (no SAP system)…', 'info');
     // VS Code, automatic: phase 1 searches SAP with a small prompt (quick or full), phase 2 writes the FS from the full
     // documents without tools – the documents are processed twice instead of once per tool round. Skip: phase 2 only.
     drf.phase = mode === 'auto' && H.isVscode ? 'search' : '';
     drf.docs = list; drf.found = null; drf.ev1 = null; drf.answer1 = '';
-    const prompt = drf.phase ? APB.fsDraft.docsSearchPrompt(S.get(), list, dp.depth) : APB.fsDraft.docsPrompt(S.get(), list, { depth: dp.depth });
+    const prompt = drf.phase ? APB.fsDraft.docsSearchPrompt(S.get(), list, dp.depth) : APB.fsDraft.docsPrompt(S.get(), list, { depth: dp.depth, noSap: noSap });
     U().auditAdd('ai-input', { job: 'docs', searchDepth: dp.depth + (docs.depth === 'auto' && dp.reason ? ' (auto: ' + dp.reason + ')' : ''), documents: list.map(function (d) { return d.role + ': ' + d.name + ' (' + d.chars + ' chars, fp ' + APB.gov.fingerprint({ t: d.text }) + ')'; }), promptChars: prompt.length });
     if (drf.phase && dp.depth !== 'skip') {
       const what = dp.depth === 'quick' ? 'Quick SAP search (read-only, a few keyword searches)' : 'Full SAP search (read-only)';
@@ -898,8 +960,8 @@
     list.forEach(function (d) { APB.guard.injection(d.text).forEach(function (f) { drf.docFlags.push({ where: d.name, excerpt: f.excerpt }); }); });
     if (drf.docFlags.length) U().auditAdd('guard-flag', { job: 'docs', flags: drf.docFlags.length, where: 'uploaded documents', first: drf.docFlags[0].excerpt });
     if (drf.phase && dp.depth === 'skip') {
-      drf.log.push({ text: 'SAP search skipped', status: 'info' });
-      docsWritePhase({ text: '', evidence: null, skipped: true });
+      drf.log.push({ text: noSap ? 'No SAP system – writing the FS from the documents' : 'SAP search skipped', status: 'info' });
+      docsWritePhase({ text: '', evidence: null, skipped: true, noSap: noSap });
       return;
     }
     // phase 1 is a short search: fewer tool rounds, and the quick search also a short time budget (the extension caps both)
@@ -924,9 +986,10 @@
       if (APB.guard.blockedText(m.evidence)) drf.log.push({ text: APB.guard.blockedText(m.evidence), status: 'blocked' });
     }
     drf.t0 = Date.now();
-    drf.status = '2/2 Writing the FS from the documents…';
-    APB.busy.progress('2/2 Writing the functional spec from the documents and the SAP findings (no SAP access)…', 'info');
-    H.post({ type: 'draft', prompt: APB.fsDraft.docsPrompt(S.get(), drf.docs || [], { findings: m.skipped ? '- SAP search skipped (chosen by the consultant) – nothing was checked in SAP; mark SAP objects as "not checked".' : APB.fsDraft.findingsText(drf.found) }) });
+    drf.status = m.noSap ? 'Writing the FS from the documents…' : '2/2 Writing the FS from the documents…';
+    APB.busy.progress(m.noSap ? 'Writing the functional spec from the documents…' : '2/2 Writing the functional spec from the documents and the SAP findings (no SAP access)…', 'info');
+    H.post({ type: 'draft', prompt: APB.fsDraft.docsPrompt(S.get(), drf.docs || [], { noSap: m.noSap, findings: m.noSap ? '- Not an SAP system – nothing was checked in any system; name only the systems and components the documents mention.'
+      : m.skipped ? '- SAP search skipped (chosen by the consultant) – nothing was checked in SAP; mark SAP objects as "not checked".' : APB.fsDraft.findingsText(drf.found) }) });
     rerenderStep1();
   }
 
@@ -958,7 +1021,8 @@
     'fs-docs-copy': function () {
       const list = docsList();
       if (!list.length) { U().toast('Choose the BRD or the solution document first'); return; }
-      Promise.resolve(APB.exporter.copy(APB.guard.outbound(APB.fsDraft.docsPrompt(S.get(), list), 'clipboard'))).then(function (ok) {
+      const noSap = noSapSystem(S.get());
+      Promise.resolve(APB.exporter.copy(APB.guard.outbound(APB.fsDraft.docsPrompt(S.get(), list, noSap ? { depth: 'skip', noSap: true } : undefined), 'clipboard'))).then(function (ok) {
         U().ui.open['fs-docs-paste'] = true;
         rerenderStep1();
         U().toast(ok ? 'Prompt copied ✓ Paste it into Copilot Chat in VS Code (' + DS.cfg.agent + '), then paste the answer here' : 'Copy failed – the documents may be too long for the clipboard', 8000);

@@ -36,8 +36,39 @@
     return set;
   }
 
+  /* ---- non-SAP (generic platform) ---- */
+  function camel(t) { const w = str(t).replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[^A-Za-z0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean); return w.map(function (x, i) { x = x.toLowerCase(); return i ? x.charAt(0).toUpperCase() + x.slice(1) : x; }).join(''); }
+  function pascal(t) { const c = camel(t); return c.charAt(0).toUpperCase() + c.slice(1); }
+  function gref(r) { const t = str(r.table), f = str(r.sapField); return t && f ? t + '.' + f : f || t; }
+  function isGenericType(t) { return !!(APB.defs && APB.defs.objectDef(t).platform === 'generic'); }
+  function genericDesigner(fs, objType) {
+    const sel = rows(fs, IN), out = rows(fs, OUT), stored = rows(fs, { stored: 1 }), input = rows(fs, { input: 1 });
+    const d = {};
+    if (objType === 'Web Screen') {
+      d.fields = sel.concat(out.filter(function (r) { return sel.indexOf(r) < 0; })).map(function (r) { return { field: camel(r.field) || camel(r.sapField), label: str(r.field), type: '', mandatory: !!r.mandatory && sel.indexOf(r) >= 0, validation: str(r.validation), source: gref(r) }; });
+    } else if (objType === 'API Endpoint') {
+      d.request = sel.concat(input).map(function (r) { return { name: camel(r.field) || camel(r.sapField), in: 'query', type: '', required: !!r.mandatory, validation: str(r.validation), source: str(r.field) }; });
+      d.response = out.map(function (r) { return { name: camel(r.field) || camel(r.sapField), type: '', description: str(r.field), source: gref(r) }; });
+    } else if (objType === 'Data Entity' || objType === 'Dataverse Table') {
+      const cols = stored.map(function (r) { return objType === 'Data Entity'
+        ? { name: pascal(r.sapField || r.field), type: '', length: '', nullable: !r.mandatory, key: false, default: '', description: str(r.field) + (str(r.validation) ? ' – ' + str(r.validation) : '') }
+        : { name: camel(r.sapField || r.field), type: '', required: !!r.mandatory, description: str(r.field) + (str(r.validation) ? ' – ' + str(r.validation) : '') }; });
+      if (cols.length) d.columns = cols;
+    } else if (objType === 'Integration Flow') {
+      const itf = ((fs.solution && fs.solution.interfaces) || []).filter(function (x) { return x && str(x.name); })[0];
+      if (itf) { if (itf.direction === 'inbound') d.source = str(itf.partner); else if (itf.direction === 'outbound') d.target = str(itf.partner); }
+      d.mapping = input.concat(out).map(function (r) { return { source: str(r.field), target: '', rule: str(r.validation) }; });
+    } else if (objType === 'Power Automate Flow') {
+      const o = ((fs.solution && fs.solution.outputs) || []).filter(function (x) { return x && str(x.trigger); })[0];
+      if (o) d.trigger = str(o.trigger);
+    }
+    Object.keys(d).forEach(function (k) { if (Array.isArray(d[k]) && !d[k].length) delete d[k]; if (d[k] === '') delete d[k]; });
+    return d;
+  }
+
   /* designer detail of the main object, per object type; only what the FS says */
   function designer(fs, objType, item) {
+    if (isGenericType(objType)) return genericDesigner(fs, objType);
     const sel = rows(fs, IN), out = rows(fs, OUT);
     const d = {};
     if (objType === 'Report') {
@@ -69,7 +100,16 @@
 
   /* Z<module prefix>_<KEYWORDS>; RICEFW id kept out of the name (it changes when items are re-ordered) */
   const STOP = /^(A|AN|THE|OF|FOR|TO|AND|OR|IN|ON|BY|WITH|PER|FROM|NEW|SIMPLE|REPORT|PROGRAM|LIST|ALL|SHOW|DISPLAY|CREATE|BUILD)$/;
+  const SUFFIX = { 'API Endpoint': 'Api', 'Web Screen': 'Page', 'Power App': 'App', 'Power Automate Flow': 'Flow', 'Integration Flow': 'Integration', 'Scheduled Job': 'Job', 'Service / Component': 'Service', 'Notification': 'Notification' };
   function proposeName(fs, item, objType) {
+    if (isGenericType(objType)) {
+      const desc = str(item && item.description);
+      // the component's own description first; the FS title only when it says too little
+      const words = str(desc.split(/\s+/).filter(Boolean).length >= 2 ? desc : [desc, str(fs.context && fs.context.title)].join(' ')).split(/[^A-Za-z0-9]+/).filter(function (w) { return w.length > 2 && !STOP.test(w.toUpperCase()) && !/^(api|page|screen|app|flow|job|service|integration|table|entity)$/i.test(w); })
+        .filter(function (w, i, all) { return all.map(function (x) { return x.toLowerCase(); }).indexOf(w.toLowerCase()) === i; });
+      const base = words.slice(0, 3).map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(); }).join('');
+      return base ? (base + (SUFFIX[objType] || '')).slice(0, 60) : '';
+    }
     const ns = APB.fsDraft && APB.fsDraft.namespaces ? APB.fsDraft.namespaces() : {};
     const mod = (fs.context && fs.context.module) || '';
     const prefix = ((ns[mod] || ns[''] || ['Z'])[0] || 'Z').toUpperCase();

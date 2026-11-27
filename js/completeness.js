@@ -156,6 +156,7 @@
     const text = (state.requirement.text + ' ' + state.requirement.objective + ' ' + state.requirement.expectedOutput).toLowerCase();
     const have = haveTypes(state);
     const out = [];
+    if (D.isGeneric(state)) return out; // the suggestions name SAP objects
     D.suggestions.forEach(function (s) {
       if (have[s.type] || out.some(function (x) { return x.type === s.type; })) return;
       if (new RegExp(s.match, 'i').test(text)) out.push({ type: s.type, label: s.label, status: 'tbc' });

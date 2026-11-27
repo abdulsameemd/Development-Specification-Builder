@@ -53,6 +53,38 @@
         ]).filter(Boolean);
       },
       closing: 'Implement incrementally and explain significant assumptions or deviations.'
+    },
+    /* non-SAP platform (generic TS): GitHub Copilot agent mode in the project repository */
+    generic: {
+      id: 'generic',
+      label: 'GitHub Copilot (agent mode)',
+      instructionsTitle: 'Copilot Development Instructions',
+      instructions: function (s) {
+        const qa = s.quality;
+        const built = s.objects.filter(D.hasBuilder);
+        const hasAc = s.acceptance.some(function (a) { return a.text.trim(); });
+        const gate = APB.gov ? APB.gov.status(s).state : 'approved';
+        const types = built.map(function (o) { return o.type; });
+        return [
+          gate !== 'approved' && 'STOP: this specification is ' + (gate === 'changed' ? 'changed after its approval' : 'not approved') + ' (see Approval & Audit Trail). Do not create or change any code; ask for the approval of the technical specification first.',
+          'Read this entire specification.',
+          'Inspect the existing repository first and follow its architecture, conventions, libraries and folder structure' + (s.stack ? ' (tech stack: ' + s.stack + ')' : '') + '.',
+          'Do not invent endpoints, tables, columns, entities, connectors, integrations, roles or business rules beyond this specification. Anything unknown is marked ' + TBC + ': check the repository, otherwise ask – never replace it with an invented name.',
+          'Work one component at a time: show the plan (files to create or change) first, then implement it.',
+          built.length && 'Implement names, routes, request / response fields, columns and mappings exactly as given in Technical Design; report any deviation.',
+          (s.origin && s.origin.copilot && s.origin.copilot.length) && 'Some design values were proposed by Copilot and accepted by the developer (see Design Sources); values marked ' + TBC + ' are not confirmed.',
+          'Security: validate all input on the server, use parameterised queries / the ORM (no string-built SQL), encode output, keep secrets out of code and configuration (use the platform\'s secret store), log without personal data.',
+          qa.authorization !== 'no' ? 'Implement the authorization exactly as specified (roles / scopes) and enforce it on the server, not only in the UI.' : 'No authorization requirement is specified – do not add roles; ask if the component exposes data that needs protection.',
+          types.indexOf('API Endpoint') >= 0 && 'APIs: return the specified status codes, validate the request, page large results, and document the endpoint (OpenAPI).',
+          (types.indexOf('Data Entity') >= 0 || types.indexOf('Dataverse Table') >= 0) && 'Data model: create the tables / columns through migrations in dependency order; add the indexes and relations given.',
+          (types.indexOf('Power App') >= 0 || types.indexOf('Power Automate Flow') >= 0) && 'Power Platform: use solutions, connection references and environment variables (no hard-coded connections); respect delegation limits; handle errors in flows with scopes and retries.',
+          types.indexOf('Integration Flow') >= 0 && 'Integrations: implement the mapping as specified, make processing idempotent, retry transient errors, route failures to a dead-letter / error handling, and add monitoring.',
+          'Write automated tests for every acceptance criterion and the main error paths.',
+          'Identify assumptions instead of silently guessing.',
+          hasAc ? 'Validate the implementation against the acceptance criteria.' : 'Validate the implementation against the requirement.'
+        ].filter(Boolean);
+      },
+      closing: 'Implement incrementally and explain significant assumptions or deviations.'
     }
   };
 
@@ -146,6 +178,7 @@
   }
 
   function commonSection(s, section) {
+    if (s.platform === 'generic') return renderFields(D.qualityFor(s).filter(function (f) { return f.section === section && f.id !== 'testScenarios'; }), s.quality, 4);
     return renderFields(D.quality.filter(function (f) { return f.section === section && f.id !== 'testScenarios'; }), s.quality, 4);
   }
 
@@ -248,7 +281,7 @@
 
   /* ---------- document ---------- */
   function build(s, profileId) {
-    const profile = profiles[profileId || 'copilot'];
+    const profile = profiles[profileId || (s.platform === 'generic' ? 'generic' : 'copilot')];
     const sections = [];
     function add(title, body) { if (body && body.trim()) sections.push({ title: title, body: body.trim() }); }
 
@@ -314,7 +347,7 @@
 
     add(profile.instructionsTitle, 'Before implementing:\n\n' + profile.instructions(s).map(function (t, i) { return (i + 1) + '. ' + t; }).join('\n') + '\n\n' + profile.closing);
 
-    const lines = ['# SAP Development Specification', ''];
+    const lines = [s.platform === 'generic' ? '# Development Specification' : '# SAP Development Specification', ''];
     if (s.project.name.trim()) lines.push('**Project:** ' + s.project.name.trim(), '');
     sections.forEach(function (sec, i) { lines.push('## ' + (i + 1) + '. ' + sec.title, '', sec.body, ''); });
     return lines.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd() + '\n';
@@ -330,6 +363,8 @@
      dewa-abap-change, Fiori/UI5 apps (new or change) → dewa-fiori, after the backend. */
   function isUi(o) { return o.type === 'Fiori/UI5'; }
   function handoff(s) {
+    // non-SAP: the whole spec goes to Copilot's built-in agent mode (the DEWA agents are SAP-specific)
+    if (s.platform === 'generic') return { hasNew: false, hasChange: false, hasFiori: false, generic: true, agents: ['agent'] };
     const objs = (s.objects || []).filter(function (o) { return (o.name || '').trim() || o.type; });
     const backend = objs.filter(function (o) { return !isUi(o); });
     const hasFiori = objs.some(function (o) { return isUi(o) && (o.status === 'new' || o.status === 'change'); });
@@ -341,9 +376,14 @@
   const CHANGE_MARKER = 'DEWA-ABAP-CHANGE v1';
   const FIORI_MARKER = 'DEWA-FIORI v1';
   const FIORI_REVIEW_MARKER = 'DEWA-FIORI-REVIEW v1';
+  const GENERIC_MARKER = 'DEWA-GENERIC v1';
 
   /* mode: undefined (whole spec) | 'new' (dewa-abap: new objects only) | 'change' (dewa-abap-change: changed objects only) */
   function chatPrompt(s, mode) {
+    if (s.platform === 'generic') {
+      return GENERIC_MARKER + '\nImplement the technical specification below in this repository' + (s.stack ? ' (' + s.stack + ')' : '') + '. Follow its "Copilot Development Instructions": inspect the repository first, work one component at a time and show the plan before writing code, ' +
+        'use only the names in the specification and ask me before guessing anything marked ' + TBC + '.\n\n' + build(s);
+    }
     const noUi = handoff(s).hasFiori ? ' Do not build or change the Fiori/UI5 apps – they are built afterwards with dewa-fiori.' : '';
     if (mode === 'fiori-review') {
       return FIORI_REVIEW_MARKER + '\nReview the Fiori/UI5 apps of the development specification below – only the objects of type Fiori/UI5, one app at a time – ' +
@@ -439,7 +479,7 @@
   }
 
   APB.markdown = {
-    build: build, sapObjectMd: sapObjectMd, filename: filename, chatPrompt: chatPrompt, handoff: handoff, CHANGE_MARKER: CHANGE_MARKER, FIORI_MARKER: FIORI_MARKER, FIORI_REVIEW_MARKER: FIORI_REVIEW_MARKER, toHtml: toHtml, profiles: profiles,
+    build: build, sapObjectMd: sapObjectMd, filename: filename, chatPrompt: chatPrompt, handoff: handoff, CHANGE_MARKER: CHANGE_MARKER, FIORI_MARKER: FIORI_MARKER, FIORI_REVIEW_MARKER: FIORI_REVIEW_MARKER, GENERIC_MARKER: GENERIC_MARKER, toHtml: toHtml, profiles: profiles,
     // shared with the functional-spec generator (fs-generator.js)
     helpers: { table: table, gridMd: gridMd, renderFields: renderFields, clean: clean, cell: cell, splitLines: splitLines, slug: slug }
   };

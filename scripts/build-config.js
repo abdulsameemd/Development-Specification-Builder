@@ -12,7 +12,8 @@ const files = {
   templates: 'config/templates.json',
   fsDefinitions: 'config/fs-definitions.json',
   fsTemplates: 'config/fs-templates.json',
-  sapCatalog: 'config/sap-catalog.json'
+  sapCatalog: 'config/sap-catalog.json',
+  generic: 'config/generic-definitions.json' // non-SAP platform (generic TS) – kept apart from the SAP definitions
 };
 
 const bundle = {};

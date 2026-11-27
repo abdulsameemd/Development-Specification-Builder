@@ -25,7 +25,8 @@
   function colOptions(sectionId, fieldId, colId) {
     const f = F.field(sectionId, fieldId);
     const c = f && (f.columns || f.fields || []).filter(function (x) { return x.id === colId; })[0];
-    return c ? c.options : [];
+    // a column with a non-SAP option list (RICEFW type → solution components) accepts both; the values are distinct
+    return c ? (c.generic && c.generic.options ? (c.options || []).concat(c.generic.options.filter(function (o) { return o.value; })) : c.options) : [];
   }
 
   /* What a draft can contain, where it goes in the spec, and how it is shown in the review. */
@@ -51,7 +52,7 @@
     { id: 'frs', label: 'Functional requirements', path: 'reqs.frs', kind: 'rows', keys: ['title', 'priority', 'fit', 'description', 'acceptance'], enums: { priority: ['reqs', 'frs', 'priority'], fit: ['reqs', 'frs', 'fit'] }, show: 'title' },
     { id: 'rules', label: 'Business rules', path: 'reqs.rules', kind: 'rows', keys: ['rule', 'type', 'outcome', 'fr'], enums: { type: ['reqs', 'rules', 'type'] }, show: 'rule', frRefs: 'fr' },
     { id: 'data', label: 'Data requirements', path: 'reqs.data', kind: 'rows', keys: ['field', 'table', 'sapField', 'validation', 'usage'], enums: { usage: ['reqs', 'data', 'usage'] }, show: 'field' },
-    { id: 'ricefw', label: 'RICEFW items', path: 'solution.ricefw', kind: 'rows', keys: ['type', 'name', 'description', 'frs', 'existing', 'complexity'], enums: { type: ['solution', 'ricefw', 'type'], complexity: ['solution', 'ricefw', 'complexity'] }, show: 'name', frRefs: 'frs' },
+    { id: 'ricefw', label: 'RICEFW items', path: 'solution.ricefw', kind: 'rows', alt: 'description', keys: ['type', 'name', 'description', 'frs', 'existing', 'complexity'], enums: { type: ['solution', 'ricefw', 'type'], complexity: ['solution', 'ricefw', 'complexity'] }, show: 'name', frRefs: 'frs' },
     { id: 'roles', label: 'Roles', path: 'solution.roles', kind: 'rows', keys: ['role', 'tx', 'scope'], show: 'role' },
     { id: 'interfaces', label: 'Interfaces', path: 'solution.interfaces', kind: 'rows', keys: ['name', 'direction', 'partner'], enums: { direction: ['solution', 'interfaces', 'direction'] }, show: 'name' },
     { id: 'outputs', label: 'Outputs', path: 'solution.outputs', kind: 'rows', keys: ['name', 'type', 'trigger'], enums: { type: ['solution', 'outputs', 'type'] }, show: 'name' },
@@ -61,6 +62,9 @@
     { id: 'uat', label: 'Test scenarios', path: 'quality.uat', kind: 'rows', keys: ['fr', 'scenario', 'type', 'expected'], enums: { type: ['quality', 'uat', 'type'] }, show: 'scenario', frRefs: 'fr' },
     { id: 'risks', label: 'Risks & assumptions', path: 'quality.risks', kind: 'rows', keys: ['type', 'text'], enums: { type: ['quality', 'risks', 'type'] }, show: 'text' }
   ];
+
+  /* the text that identifies a row: its show field, else (alt) e.g. the description of an item Copilot left unnamed */
+  function showOf(p, r) { return str(r && r[p.show]) || (p.alt ? str(r && r[p.alt]).slice(0, 80) : ''); }
 
   function normalize(raw) {
     const d = {};
@@ -78,7 +82,7 @@
             o[k] = e ? enumOf(colOptions(e[0], e[1], e[2]), r[k]) : Array.isArray(r[k]) ? lines(r[k]).join('\n') : str(r[k]);
           });
           return o;
-        }).filter(function (o) { return str(o[p.show]); });
+        }).filter(function (o) { return showOf(p, o); });
       }
     });
     return d;
@@ -118,7 +122,7 @@
     const have = [];
     PARTS.forEach(function (p) {
       const v = APB.state.getPath(s, p.path);
-      if (p.kind === 'rows') { const l = (v || []).filter(V.isFilled); if (l.length) have.push(p.label + ': ' + l.map(function (r) { return (r[p.show] || '').trim(); }).filter(Boolean).join(' | ')); }
+      if (p.kind === 'rows') { const l = (v || []).filter(V.isFilled); if (l.length) have.push(p.label + ': ' + l.map(function (r) { return showOf(p, r); }).filter(Boolean).join(' | ')); }
       else if (str(v)) have.push(p.label + ': ' + str(v).replace(/\s*\n\s*/g, ' | '));
     });
     const out = [MARK,
@@ -138,6 +142,7 @@
       '- 3 to 8 functional requirements, each one testable, with 1 to 3 acceptance criteria ("When …, then …"). Reference them as FR-01, FR-02 … in the order you list them.',
       '- Allowed values: priority must|should|could|wont' + (F.isSap(s) ? ' · fit standard|config|custom|tbc (SAP standard, configuration, custom development)' : '') + ' · change unchanged|changed|new|automated · rule type validation|derivation|calculation|authorization|approval · direction inbound|outbound|both · output type form|email|report|file|notification · test type positive|negative · risk type risk|assumption|open|dependency · data usage selection|output|both|input|stored|display (selection = the user enters or filters by it, output = shown in the result, both, input = comes from a file / upload, stored = saved in a table, display = shown only for information).',
       '- Fill every part that applies; leave a list empty when the requirement gives no basis for it.',
+      c.system === 'other' ? '- ricefw: the solution components to build (one per web screen, API, database table, Power App, flow, integration, job …) – type ' + (F.cfg.genericComponents || []).filter(function (o) { return o.value; }).map(function (o) { return o.value; }).join('|') + ', with the FRs each covers.' : '',
       '',
       'Answer with a one-line summary and then exactly one ```json block:',
       '```json',
@@ -153,6 +158,8 @@
         outputs: [{ name: '', type: 'email', trigger: '' }],
         performance: '', volume: '', privacy: '',
         uat: [{ fr: 'FR-01', scenario: '', type: 'positive', expected: '' }],
+        // non-SAP: the solution components (key ricefw) – SAP drafts keep their shape
+        ricefw: c.system === 'other' ? [{ type: 'api', name: '', description: '', frs: 'FR-01', complexity: 'medium' }] : undefined,
         risks: [{ type: 'assumption', text: '' }]
       }, null, 2),
       '```'];
@@ -416,6 +423,7 @@
     const c = s.context;
     const findings = opts && opts.findings;
     const depth = (opts && opts.depth) || 'full'; // chat / clipboard prompt without findings: full | quick | skip
+    const noSap = !!(opts && opts.noSap); // "Other system" / not decided: no SAP at all
     let budget = DOCS_MAX;
     const blocks = docs.filter(function (d) { return d && d.text; }).map(function (d) {
       const role = { brd: 'BRD', solution: 'SOLUTION DOCUMENT' }[d.role] || 'DOCUMENT';
@@ -428,6 +436,8 @@
     const step2 = findings ? [
       '2. SAP findings – already read from the SAP system (read-only) in an earlier step. Use them as they are for module, change type, objects and RICEFW items; do not add other SAP objects and do not claim anything about SAP beyond them:',
       findings
+    ].join('\n') : noSap ? [
+      '2. This is not an SAP system: do not use any tools. List the systems and components the documents name, with the note "named in the documents".'
     ].join('\n') : depth === 'skip' ? [
       '2. Do NOT use the SAP system in this job (the consultant chose to skip the SAP search). List the SAP objects the documents name, with the note "not checked".'
     ].join('\n') : [
@@ -436,6 +446,7 @@
     ].join('\n');
     return [findings ? MARK : PROGRAM_MARK,
       findings ? 'Write a FUNCTIONAL SPECIFICATION from the business documents below (a BRD and/or a solution document with the process details) and the SAP findings. You have no tools in this step.'
+        : noSap ? 'Write a FUNCTIONAL SPECIFICATION from the business documents below (a BRD and/or a solution document with the process details). The solution is not on SAP; you have no tools.'
         : depth === 'skip' ? 'Write a FUNCTIONAL SPECIFICATION from the business documents below (a BRD and/or a solution document with the process details). Do not use the SAP system.'
         : 'Write a FUNCTIONAL SPECIFICATION from the business documents below (a BRD and/or a solution document with the process details), and check the SAP system READ-ONLY for every SAP object they name or imply.',
       '',
@@ -451,16 +462,19 @@
       '   - "asbuilt": the documents describe a solution that is already live (e.g. "as implemented", "created retrospectively", "went live"), and the objects exist in SAP.',
       '   changeNote: the evidence in one or two sentences – the wording in the documents and what you found in SAP.',
       '4. Map the documents to the specification:',
-      '   - title, requirement (the business need in 3–6 sentences), module (one of: ' + (F.field('context', 'module').options || []).filter(function (o) { return o.value; }).map(function (o) { return o.value; }).join(', ') + '), processArea, objectives, kpis (benefits with baseline and target), inScope, outOfScope, stakeholders;',
+      '   - title, requirement (the business need in 3–6 sentences), ' + (noSap ? '' : 'module (one of: ' + (F.field('context', 'module').options || []).filter(function (o) { return o.value; }).map(function (o) { return o.value; }).join(', ') + '), ') + 'processArea, objectives, kpis (benefits with baseline and target), inScope, outOfScope, stakeholders;',
       '   - asIs / toBe: the current and proposed process tables, one step per row (role, transaction / app / system in tx, pain point for AS-IS, change mark for TO-BE: unchanged | changed | new | automated);',
       '   - frs: every requirement (e.g. BR-01) – keep its ID at the start of the title ("BR-01 …"), priority must | should | could from High / Medium / Low, fit standard | config | custom | tbc, description, acceptance criteria;',
       '   - rules: every business rule / validation (e.g. VAL-01) with type, outcome and the FR it belongs to;',
       '   - data: the main fields (business name, table or infotype, field, validation) and what each is used for – usage selection | output | both | input | stored | display (selection = the user filters by it, output = shown in the result);',
       '   - objects: the SAP objects of step 2 (named or implied by the documents) with type (PROG, TRAN, CLAS, FUNC, RFC, DDLS, BDEF, SRVB, PROXY, TABL, BADI, IDOC, WAPA, JOB, OTHER) and a note ("exists in SAP", "not found", "to be built");',
       '   - currentLogic and programs: what the existing objects do today, from what you read in SAP;',
-      '   - ricefw: one item per development object – type (' + ricefwCodes + '), name (the existing object for "enhancement" and "asbuilt", otherwise a proposed name or a short description), description, frs (e.g. "FR-01, FR-03"), existing (the existing SAP objects it changes or uses), complexity low | medium | high;',
+      c.system === 'other'
+        ? '   - ricefw: the solution components to build, one per piece – type (' + (F.cfg.genericComponents || []).filter(function (o) { return o.value; }).map(function (o) { return o.value + ' = ' + o.label; }).join('; ') + '), name (a proposed name or a short description), description, frs (e.g. "FR-01, FR-03"), existing (the existing systems or components it uses), complexity low | medium | high;'
+        : '   - ricefw: one item per development object – type (' + ricefwCodes + '), name (the existing object for "enhancement" and "asbuilt", otherwise a proposed name or a short description), description, frs (e.g. "FR-01, FR-03"), existing (the existing SAP objects it changes or uses), complexity low | medium | high;',
       '   - roles (authorisations), interfaces (e.g. external APIs), outputs, performance, volume, privacy, uat (test scenarios with the FR they test), risks (assumptions, dependencies, risks, open points).',
-      '5. Rules: READ ONLY – never create, change, activate, run or transport anything; do not read table contents. Only report what is in the documents or what a tool returned. Leave a field empty or write [TO BE CONFIRMED] instead of guessing. Write in business words; technical names only where they are SAP objects.',
+      noSap ? '5. Rules: only report what is in the documents. Leave a field empty or write [TO BE CONFIRMED] instead of guessing. Write in business words; technical names only where the documents give them.'
+        : '5. Rules: READ ONLY – never create, change, activate, run or transport anything; do not read table contents. Only report what is in the documents or what a tool returned. Leave a field empty or write [TO BE CONFIRMED] instead of guessing. Write in business words; technical names only where they are SAP objects.',
       '',
       blocks.join('\n\n'),
       '',
@@ -502,10 +516,10 @@
       }
       else if (p.kind === 'lines') { const have = lines(cur).map(function (l) { return l.toLowerCase(); }); items = d[p.id].filter(function (l) { return have.indexOf(l.toLowerCase()) < 0; }); }
       else {
-        const have = (cur || []).filter(V.isFilled).map(function (r) { return str(r[p.show]).toLowerCase(); });
-        const rows = d[p.id].filter(function (r) { return have.indexOf(str(r[p.show]).toLowerCase()) < 0; });
-        keys = rows.map(function (r) { return str(r[p.show]); });
-        items = rows.map(function (r) { return r[p.show] + (p.detail && r[p.detail] ? ' – ' + r[p.detail] : ''); });
+        const have = (cur || []).filter(V.isFilled).map(function (r) { return showOf(p, r).toLowerCase(); });
+        const rows = d[p.id].filter(function (r) { return have.indexOf(showOf(p, r).toLowerCase()) < 0; });
+        keys = rows.map(function (r) { return showOf(p, r); });
+        items = rows.map(function (r) { return showOf(p, r) + (p.detail && r[p.detail] ? ' – ' + r[p.detail] : ''); });
       }
       return { id: p.id, label: p.label, items: items, keys: keys, unticked: !!p.unticked };
     }).filter(function (x) { return x.items.length; });
@@ -530,8 +544,8 @@
         return;
       }
       const list = (cur || []).filter(V.isFilled);
-      const have = list.map(function (r) { return str(r[p.show]).toLowerCase(); });
-      const extra = d[p.id].filter(function (r) { return have.indexOf(str(r[p.show]).toLowerCase()) < 0; }).map(function (r) {
+      const have = list.map(function (r) { return showOf(p, r).toLowerCase(); });
+      const extra = d[p.id].filter(function (r) { return have.indexOf(showOf(p, r).toLowerCase()) < 0; }).map(function (r) {
         const o = Object.assign({}, r);
         if (p.frRefs) o[p.frRefs] = shift(o[p.frRefs]);
         return o;

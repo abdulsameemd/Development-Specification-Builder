@@ -736,3 +736,12 @@ test('ts-draft route: TS-DRAFT v1 only, results as tsdraft-* (FS drafts keep dra
     dr.run = orig;
   }
 });
+
+test('the panel opens Copilot\'s built-in agent mode for non-SAP specs (DEWA-GENERIC v1)', async () => {
+  const vs = fakeVscode();
+  const { r } = router(vs);
+  await r.handle({ type: 'open-chat', agent: 'agent', prompt: 'DEWA-GENERIC v1\nImplement …' });
+  const open = vs.calls.commands.filter((c) => c.id === 'workbench.action.chat.open').pop();
+  assert.ok(open, 'Copilot Chat opened');
+  assert.match(open.args.query, /^DEWA-GENERIC v1/);
+});

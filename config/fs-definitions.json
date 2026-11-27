@@ -12,7 +12,8 @@
     { "value": "HCM", "label": "HCM – Human Capital" },
     { "value": "Cross-module", "label": "Cross-module" }
   ],
-  "ricefw": [
+  "genericComponents": [{"value": "", "label": "— type —", "code": "X"}, {"value": "screen", "label": "Web screen / page", "code": "C", "devType": "G_WEB"}, {"value": "api", "label": "API / service", "code": "C", "devType": "G_API"}, {"value": "data", "label": "Database table / data model", "code": "C", "devType": "G_DATA"}, {"value": "powerapp", "label": "Power App", "code": "C", "devType": "G_POWERAPP"}, {"value": "flow", "label": "Power Automate flow", "code": "C", "devType": "G_FLOW"}, {"value": "integration", "label": "Integration / interface", "code": "C", "devType": "G_INTEG"}, {"value": "job", "label": "Scheduled job", "code": "C", "devType": "G_JOB"}, {"value": "export", "label": "Report / export", "code": "C", "devType": "G_WEB"}, {"value": "notification", "label": "Notification (e-mail / Teams)", "code": "C", "devType": "G_FLOW"}],
+ "ricefw": [
     { "value": "", "label": "— type —", "code": "X" },
     { "value": "report", "label": "Report", "code": "R", "devType": "REPORT" },
     { "value": "interface", "label": "Interface (RFC / API)", "code": "I", "devType": "RFC" },
@@ -154,16 +155,7 @@
       ], "generic": { "hint": "The information the solution needs. Where it is stored is optional – the solution team confirms it." } }
     ] },
     { "id": "solution", "step": 3, "fields": [
-      { "id": "ricefw", "label": "RICEFW items", "kind": "records", "itemLabel": "Item", "titleField": "name", "fields": [
-        { "id": "type", "label": "RICEFW type", "kind": "select", "optionsRef": "ricefw" },
-        { "id": "name", "label": "Proposed object name", "kind": "text", "placeholder": "e.g. ZFI_AP_AGEING" },
-        { "id": "frs", "label": "Covers FRs", "kind": "text", "placeholder": "e.g. FR-01, FR-02" },
-        { "id": "complexity", "label": "Complexity", "kind": "select", "options": [
-          { "value": "", "label": "— select —" }, { "value": "low", "label": "Low" }, { "value": "medium", "label": "Medium" }, { "value": "high", "label": "High" }
-        ] },
-        { "id": "description", "label": "What it does", "kind": "textarea", "placeholder": "e.g. Executable report with selection by company code, vendor and key date; ALV output per vendor with one column per bucket." },
-        { "id": "existing", "label": "Existing objects / enhancement spots to use", "kind": "text", "list": "ds-obj", "placeholder": "e.g. BSIK, LFA1, BAdI FI_ITEMS_CH_DATA" }
-      ], "sapOnly": true },
+      {"id": "ricefw", "label": "RICEFW items", "kind": "records", "itemLabel": "Item", "titleField": "name", "fields": [{"id": "type", "label": "RICEFW type", "kind": "select", "optionsRef": "ricefw", "generic": {"label": "Component type", "optionsRef": "genericComponents"}}, {"id": "name", "label": "Proposed object name", "kind": "text", "placeholder": "e.g. ZFI_AP_AGEING", "generic": {"label": "Proposed name", "placeholder": "e.g. OpenOrdersApi"}}, {"id": "frs", "label": "Covers FRs", "kind": "text", "placeholder": "e.g. FR-01, FR-02"}, {"id": "complexity", "label": "Complexity", "kind": "select", "options": [{"value": "", "label": "— select —"}, {"value": "low", "label": "Low"}, {"value": "medium", "label": "Medium"}, {"value": "high", "label": "High"}]}, {"id": "description", "label": "What it does", "kind": "textarea", "placeholder": "e.g. Executable report with selection by company code, vendor and key date; ALV output per vendor with one column per bucket.", "generic": {"placeholder": "e.g. REST endpoint that returns open orders per sales organization for the portal; paging 50."}}, {"id": "existing", "label": "Existing objects / enhancement spots to use", "kind": "text", "list": "ds-obj", "placeholder": "e.g. BSIK, LFA1, BAdI FI_ITEMS_CH_DATA", "generic": {"label": "Existing systems / components to use", "placeholder": "e.g. Orders database, Customer API", "list": ""}}], "hideTbd": true, "generic": {"label": "Solution components", "itemLabel": "Component", "hint": "One per piece to build: web screen, API, database table, Power App, flow, integration, job … – each becomes a Technical spec."}},
       { "id": "roles", "label": "Roles & authorizations", "kind": "grid", "addLabel": "+ Role", "paste": true, "columns": [
         { "id": "role", "label": "Business role", "w": 170, "placeholder": "e.g. AP accountant" },
         { "id": "tx", "label": "Transaction / app", "w": 140, "placeholder": "e.g. ZFI_AGEING", "list": "ds-tx", "check": "tx", "generic": { "label": "Screens / functions", "placeholder": "e.g. complaint list", "list": "", "check": "" } },
