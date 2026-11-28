@@ -187,6 +187,30 @@ app against the Technical spec. `dewa-fiori` recommends it before deploying.
 5. **Fix:** Y/N per finding → diff → `CONFIRM FIX` → apply → re-run the checks. Never backend objects,
    `metadata.xml` or deploy.
 
+## Testing the agents (evals)
+
+Idea taken from SAP Joule Studio, whose evals check an agent against the intent it was built for. In VS Code run
+**DEWA: Test the agents (evals)**, pick the agents and the Copilot model. Each scenario in
+`vscode-extension-addon/evals/<agent>.json` is sent with the agent's own instructions and **no tools** (a dry run –
+the model says what it would do). Rule checks decide pass or fail. The scenarios cover the guardrails:
+- STOP on an unapproved spec;
+- ask on `[TO BE CONFIRMED]`;
+- never SAP standard, never `metadata.xml`;
+- `CONFIRM CHANGE / DEPLOY / FIX / ARTEFACT` before writing;
+- read-only discovery;
+- report gaps instead of inventing names;
+- the planted security issues for the review agent.
+
+The report (pass rate per agent, failed rules, the start of each answer) opens in an editor and is saved to
+`.dewa/evals/<date>-<model>.md`. The installed copy of an agent file is tested, so your edits are what is checked.
+`dewa-abap` is tested when its agent file is installed (it comes with the DEWA agent kit).
+
+**When to run it:** after Copilot offers a new model, after editing an agent file, and before rolling the extension
+out to the team.
+
+**Add a scenario:** add an entry with `prompt`, `expect` (`mustMatch`, `mustNotMatch`, `anyOf`, `mustAsk`) and a good
+and a bad sample answer (`samples.pass` / `samples.fail`). The unit tests check that the rules tell the two apart.
+
 ## `dewa-codereview`: Review Existing Code
 
 Use for code that already exists when the task is to inspect quality, refactor safely, modernize, or optimize. It is not the primary agent for creating a new application from scratch.

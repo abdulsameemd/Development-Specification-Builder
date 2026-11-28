@@ -192,6 +192,13 @@ The TS document lists its **Design Sources** (FS, SAP, Copilot proposals you acc
 Instructions tell dewa-abap never to replace a [TO BE CONFIRMED] value with an invented name. Before the hand-off to
 Copilot, a hint names the key designer fields that are still empty or unconfirmed.
 
+### Testing the agents
+
+**DEWA: Test the agents (evals)** checks the DEWA agents' guardrails against your Copilot model – 30 dry-run
+scenarios (no tools): STOP, `[TO BE CONFIRMED]`, `CONFIRM …`, no SAP standard, read-only, no invented names, the
+review agent's security findings. The report shows a pass rate per agent and model
+([docs/AGENT_WORKFLOWS.md](docs/AGENT_WORKFLOWS.md#testing-the-agents-evals)).
+
 ### Non-SAP specifications (other platforms)
 
 Choose **Other system** in the FS (or **Other platform** in step 1 of a Technical spec). The FS stays business-first
@@ -260,7 +267,7 @@ The FS then shows a *Current SAP System Context* section, a **reference check** 
 
 ### Inside VS Code (one window)
 
-**Install:** [`dist/dewa-sap-spec-builder-1.0.34.vsix`](dist/dewa-sap-spec-builder-1.0.34.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.34.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
+**Install:** [`dist/dewa-sap-spec-builder-1.0.35.vsix`](dist/dewa-sap-spec-builder-1.0.35.vsix) → VS Code → Extensions → `…` → *Install from VSIX…* (or `code --install-extension dewa-sap-spec-builder-1.0.35.vsix`). It installs next to DEWA's existing extension and adds the `dewa-fs-discovery` agent to your prompts folder. Rebuild it with `node scripts/build-vsix.js` (source: `vscode-extension/` + `vscode-extension-addon/`).
 
 **If the .vsix download is blocked** (the downloaded file is only a few KB, and VS Code says *End of central directory record signature not found*): some company networks replace `.vsix` downloads with a web page. The repository also holds the extension **unpacked** in `dist/vscode-extension/dewa.dewa-sap-spec-builder-<version>/`, as plain files, so no `.vsix` is downloaded:
 

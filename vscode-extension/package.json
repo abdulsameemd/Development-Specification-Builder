@@ -3,7 +3,7 @@
   "name": "dewa-sap-spec-builder",
   "displayName": "DEWA SAP Spec Builder",
   "description": "Functional and development specifications for SAP, inside VS Code – with read-only SAP system discovery through GitHub Copilot and the SAP MCP servers.",
-  "version": "1.0.34",
+  "version": "1.0.35",
   "publisher": "dewa",
   "license": "UNLICENSED",
   "private": true,
@@ -43,6 +43,11 @@
       {
         "command": "dewa.specBuilder.checkFioriMcp",
         "title": "Check Fiori MCP servers (SAP Fiori + UI5 for dewa-fiori)",
+        "category": "DEWA"
+      },
+      {
+        "command": "dewa.specBuilder.testAgents",
+        "title": "Test the agents (evals – dry run with your Copilot model)",
         "category": "DEWA"
       }
     ],

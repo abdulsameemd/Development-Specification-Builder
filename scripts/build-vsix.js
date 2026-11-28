@@ -29,6 +29,7 @@ copy('vscode-extension-addon/agents/dewa-fs-discovery.agent.md', 'agents/dewa-fs
 copy('vscode-extension-addon/agents/dewa-abap-change.agent.md', 'agents/dewa-abap-change.agent.md');
 copy('vscode-extension-addon/agents/dewa-fiori.agent.md', 'agents/dewa-fiori.agent.md');
 copy('vscode-extension-addon/agents/dewa-fiori-review.agent.md', 'agents/dewa-fiori-review.agent.md');
+fs.readdirSync(path.join(root, 'vscode-extension-addon/evals')).filter((f) => f.endsWith('.json')).forEach((f) => copy('vscode-extension-addon/evals/' + f, 'evals/' + f));
 copy('dist/SAP-Development-Specification-Builder.html', 'media/spec-builder.html');
 
 // manifest = base + add-on contributions
