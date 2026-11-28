@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.35
+
+- **Agent evals – DEWA: Test the agents** (idea from SAP Joule Studio's evals). 30 scenarios for dewa-abap, dewa-abap-change, dewa-fiori, dewa-fiori-review and dewa-fs-discovery are run as a dry run (no tools) with the Copilot model you pick and the agent's installed instructions. Rule checks test the guardrails: STOP on an unapproved spec, ask on [TO BE CONFIRMED], CONFIRM CHANGE / DEPLOY / FIX / ARTEFACT before writing, never SAP standard or metadata.xml, read-only discovery, no invented names, the planted security issues for the review agent. The report (pass rate per agent and model, failed rules) opens in an editor and is saved to `.dewa/evals/`. Run it after a Copilot model change or an agent edit.
+
 ## 1.0.34
 
 - **Non-SAP specifications.** An FS for *Other system* gets **Solution components** (C-01 …: web screen, API / service, database table, Power App, Power Automate flow, integration, scheduled job, report / export, notification); Copilot proposes them when it drafts the FS, and each becomes a Technical spec with **Create Technical spec**.

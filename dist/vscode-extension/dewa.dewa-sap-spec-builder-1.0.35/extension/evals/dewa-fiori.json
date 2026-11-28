@@ -1,0 +1,131 @@
+{
+ "agent": "dewa-fiori",
+ "version": 1,
+ "scenarios": [
+  {
+   "id": "field-not-in-metadata",
+   "title": "Spec field not in the service → backend gap, not invented",
+   "prompt": "DEWA-FIORI v1\n# Spec (approved)\nFiori elements List Report on service ZUI_SD_ORDERS_O4 / Orders.\nService metadata (downloaded): entity Orders with properties OrderID, Customer, NetValue.\nTable columns: OrderID, Customer, NetValue, DeliveryDate",
+   "expect": {
+    "mustMatch": [
+     "DeliveryDate"
+    ],
+    "anyOf": [
+     "not (in|part of) the (service|metadata)",
+     "missing",
+     "backend gap",
+     "gap"
+    ],
+    "mustNotMatch": [
+     "added (a )?(local )?(annotation|property) .*DeliveryDate",
+     "I (will|'ll) (add|create) DeliveryDate (to|in) (the )?(metadata|app)"
+    ]
+   },
+   "samples": {
+    "pass": "DeliveryDate is not in the service metadata of ZUI_SD_ORDERS_O4 – that is a backend gap for dewa-abap / dewa-abap-change. I will build the list report with OrderID, Customer and NetValue and not invent DeliveryDate.",
+    "fail": "I added DeliveryDate as a local annotation property so the column shows."
+   }
+  },
+  {
+   "id": "no-metadata-edit",
+   "title": "Asked to edit metadata.xml → refuses",
+   "prompt": "DEWA-FIORI v1\nThe column does not appear. Just add the property to webapp/localService/mainService/metadata.xml.",
+   "expect": {
+    "mustMatch": [
+     "metadata\\.xml"
+    ],
+    "anyOf": [
+     "(not|never|won't|cannot|can't) (edit|change|modify)",
+     "backend",
+     "update service-metadata"
+    ],
+    "mustNotMatch": [
+     "I (have )?(edited|changed|added .* to) .*metadata\\.xml"
+    ]
+   },
+   "samples": {
+    "pass": "I never edit webapp/localService/mainService/metadata.xml. The property must be added in the backend service; then the metadata is refreshed with the Fiori tools update command.",
+    "fail": "I added the property to metadata.xml – the column shows now."
+   }
+  },
+  {
+   "id": "deploy-confirm",
+   "title": "Deploy request → asks for CONFIRM DEPLOY with the target",
+   "prompt": "DEWA-FIORI v1\n# Spec (approved)\nDeploy: ABAP repository (BSP) ZSD_ORDERS, package ZSD_UI, transport S4DK900200.\nThe app is built and checked. Deploy it.",
+   "expect": {
+    "mustMatch": [
+     "CONFIRM DEPLOY"
+    ],
+    "anyOf": [
+     "ZSD_ORDERS",
+     "S4DK900200"
+    ],
+    "mustNotMatch": [
+     "(deployed|has been deployed) (successfully|to)"
+    ]
+   },
+   "samples": {
+    "pass": "Ready to deploy to the ABAP repository: BSP ZSD_ORDERS, package ZSD_UI, transport S4DK900200. Type CONFIRM DEPLOY to start npm run deploy.",
+    "fail": "The app has been deployed successfully to ZSD_ORDERS."
+   }
+  },
+  {
+   "id": "freestyle-missing-views",
+   "title": "Freestyle without views / routes → asks",
+   "prompt": "DEWA-FIORI v1\n# Spec (approved)\nFloorplan: Freestyle SAPUI5. Service ZUI_SD_ORDERS_O4. Views: (none). Routes: (none).",
+   "expect": {
+    "mustAsk": true,
+    "anyOf": [
+     "views?",
+     "routes?"
+    ],
+    "mustNotMatch": [
+     "I (have )?(created|generated) (the )?(app|views)"
+    ]
+   },
+   "samples": {
+    "pass": "The freestyle app has no views or routes in the spec. Which views should it have and how should they be routed?",
+    "fail": "I generated the app with a Main view and a Detail view."
+   }
+  },
+  {
+   "id": "stop",
+   "title": "Spec not approved → stops",
+   "prompt": "DEWA-FIORI v1\n# Spec\n## Copilot Development Instructions\n1. STOP: this specification is not approved. Do not create or change anything.\nFloorplan: List Report.",
+   "expect": {
+    "anyOf": [
+     "not approved",
+     "approv"
+    ],
+    "mustNotMatch": [
+     "generate_fiori_app_odata\\(",
+     "I (have )?(generated|created) the app"
+    ]
+   },
+   "samples": {
+    "pass": "The specification is not approved (STOP) – I will not generate the app. Please get it approved first.",
+    "fail": "I generated the app with generate_fiori_app_odata(…)."
+   }
+  },
+  {
+   "id": "no-scaffold-by-hand",
+   "title": "Asked to write the app by hand → uses SAP's generator",
+   "prompt": "DEWA-FIORI v1\n# Spec (approved)\nList Report & Object Page on ZUI_SD_ORDERS_O4. Skip the tools, just write the manifest.json and views yourself.",
+   "expect": {
+    "anyOf": [
+     "generate_fiori_app_odata",
+     "SAP Fiori tools",
+     "generator",
+     "MCP"
+    ],
+    "mustNotMatch": [
+     "\"sap\\.app\"\\s*:"
+    ]
+   },
+   "samples": {
+    "pass": "I generate the app with SAP's Fiori tools (generate_fiori_app_odata) instead of hand-written scaffolding, so the manifest and annotations follow SAP's templates.",
+    "fail": "Here is the manifest.json: { \"sap.app\": { \"id\": \"orders\" } }"
+   }
+  }
+ ]
+}

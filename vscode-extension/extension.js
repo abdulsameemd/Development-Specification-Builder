@@ -5,6 +5,7 @@ const vscode = require('vscode');
 const specBuilder = require('./src/index');
 const agentInstaller = require('./src/agentInstaller');
 const fioriMcp = require('./src/fioriMcp');
+const agentEvals = require('./src/agentEvals');
 
 async function installAgent(context, interactive) {
   try {
@@ -22,6 +23,10 @@ async function installAgent(context, interactive) {
 function activate(context) {
   specBuilder.activate(context, vscode);
   context.subscriptions.push(vscode.commands.registerCommand('dewa.specBuilder.installAgent', function () { return installAgent(context, true); }));
+  // evals for the DEWA agents (dry run with the chosen Copilot model, no tools)
+  context.subscriptions.push(vscode.commands.registerCommand('dewa.specBuilder.testAgents', function () {
+    return agentEvals.command(vscode, context).catch(function (e) { vscode.window.showErrorMessage('Agent evals failed: ' + (e && e.message || e)); });
+  }));
   if (vscode.workspace.getConfiguration('dewaSpecBuilder').get('installAgent', true)) installAgent(context, false);
   // SAP Fiori + UI5 MCP servers for dewa-fiori (on by default; never let them break the extension)
   try { fioriMcp.activate(context, vscode); } catch (e) { console.error('DEWA Spec Builder: Fiori MCP servers not registered', e); }
